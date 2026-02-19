@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naas Today - Local Events & What's On</title>
+    <meta name="description" content="Find local events and what's on in Naas, County Kildare. Updated daily.">
+    <meta property="og:title" content="Naas Today – Local Events & What's On">
+    <meta property="og:description" content="Find local events and what's on in Naas, County Kildare. Updated daily.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://naastoday.ie">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><rect width='48' height='48' rx='8' fill='%23E67E22'/><text x='24' y='34' font-size='20' font-family='serif' font-weight='bold' fill='white' text-anchor='middle'>NT</text></svg>">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --white: #FFFFFF;
+            --cream: #FFFBF5;
+            --warm-gray: #F5F1E8;
+            --medium-gray: #8B8276;
+            --dark-gray: #4A4238;
+            --near-black: #2C2520;
+            --accent: #E67E22;
+            --accent-hover: #D35400;
+            --accent-light: #FDF3E7;
+            --green: #27AE60;
+            --green-light: #E8F5E9;
+            --border: #E0D5C7;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--cream);
+            color: var(--near-black);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(230, 126, 34, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(39, 174, 96, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        header, .date-section, footer {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .container {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+        
+        /* Header */
+        header {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+        }
+        
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .logo {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            font-size: 1.5rem;
+            font-family: 'Libre Baskerville', serif;
+            box-shadow: 0 2px 8px rgba(230, 126, 34, 0.15);
+        }
+        
+        .site-title {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        h1 {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--near-black);
+            line-height: 1.2;
+            letter-spacing: -0.01em;
+        }
+        
+        .tagline {
+            font-size: 0.875rem;
+            color: var(--medium-gray);
+            font-weight: 400;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        
+        .feedback-header-btn {
+            padding: 0.625rem 1.25rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--dark-gray);
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .feedback-header-btn:hover {
+            background: var(--accent-light);
+            border-color: var(--accent);
+            color: var(--accent-hover);
+        }
+        
+        /* Date Section */
+        .date-section {
+            background: var(--warm-gray);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 0;
+        }
+        
+        .date-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .current-date {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--near-black);
+        }
+        
+        .date-nav {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .date-nav-btn {
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 1px solid var(--border);
+            color: var(--dark-gray);
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .date-nav-btn:hover {
+            background: var(--warm-gray);
+            border-color: var(--accent);
+            color: var(--accent-hover);
+        }
+        
+        .date-nav-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Controls */
+        .controls {
+            padding: 2rem 0 1.5rem;
+        }
+        
+        .controls-inner {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .controls-label {
+            font-size: 0.875rem;
+            color: var(--medium-gray);
+            font-weight: 500;
+        }
+        
+        .filter-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            background: white;
+            color: var(--dark-gray);
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .filter-btn:hover {
+            background: var(--warm-gray);
+            border-color: var(--accent);
+        }
+        
+        .filter-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        
+        .filter-btn:active {
+            transform: translateY(0);
+        }
+        
+        .submit-btn {
+            padding: 0.5rem 1.25rem;
+            background: var(--accent);
+            border: none;
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: auto;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .submit-btn:hover {
+            background: var(--accent-hover);
+        }
+        
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Events Grid */
+        .events-container {
+            padding: 0 0 4rem;
+        }
+        
+        .events-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .event-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .event-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--green));
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+        
+        .event-card:hover {
+            box-shadow: 0 8px 24px rgba(230, 126, 34, 0.12);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+        
+        .event-card:hover::before {
+            opacity: 1;
+        }
+        
+        .event-time {
+            display: inline-block;
+            background: var(--accent-light);
+            color: var(--accent-hover);
+            padding: 0.375rem 0.875rem;
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            letter-spacing: 0.01em;
+        }
+        
+        .event-title {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--near-black);
+            margin-bottom: 0.75rem;
+            line-height: 1.3;
+        }
+        
+        .event-location {
+            color: var(--medium-gray);
+            font-size: 0.875rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .event-description {
+            color: var(--dark-gray);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+            font-size: 0.9375rem;
+        }
+        
+        .event-tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .tag {
+            background: var(--warm-gray);
+            color: var(--dark-gray);
+            padding: 0.25rem 0.625rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .tag.free {
+            background: var(--green-light);
+            color: var(--green);
+            border: 1px solid rgba(39, 174, 96, 0.2);
+        }
+        
+        .tag.kids {
+            background: var(--accent-light);
+            color: var(--accent-hover);
+            border: 1px solid rgba(230, 126, 34, 0.2);
+        }
+        
+        /* Loading State */
+        .loading-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            display: none;
+            color: var(--medium-gray);
+            font-size: 0.9375rem;
+        }
+
+        .loading-state.visible {
+            display: block;
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .date-nav-btn.today-btn {
+            background: var(--accent-light);
+            border-color: var(--accent);
+            color: var(--accent-hover);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            display: none;
+        }
+        
+        .empty-state.visible {
+            display: block;
+        }
+        
+        .empty-state h3 {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 1.5rem;
+            color: var(--dark-gray);
+            margin-bottom: 0.5rem;
+        }
+        
+        .empty-state p {
+            color: var(--medium-gray);
+        }
+        
+        /* Footer */
+        footer {
+            background: var(--white);
+            border-top: 1px solid var(--border);
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+        
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            font-size: 0.875rem;
+            color: var(--medium-gray);
+        }
+        
+        .footer-links {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .footer-links a,
+        .footer-links button {
+            color: var(--medium-gray);
+            text-decoration: none;
+            background: none;
+            border: none;
+            padding: 0;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: color 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .footer-links a:hover,
+        .footer-links button:hover {
+            color: var(--near-black);
+        }
+        
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--near-black);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--medium-gray);
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .modal-close:hover {
+            background: var(--warm-gray);
+            color: var(--accent);
+        }
+        
+        .modal-body {
+            padding: 1.5rem;
+        }
+        
+        .modal-body p {
+            color: var(--medium-gray);
+            margin-bottom: 1.5rem;
+        }
+        
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--near-black);
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9375rem;
+            background: white;
+            color: var(--near-black);
+            transition: border-color 0.2s;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 0.75rem;
+        }
+        
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-weight: 400;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        
+        .form-actions button {
+            flex: 1;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--dark-gray);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--warm-gray);
+            border-color: var(--accent);
+        }
+        
+        /* Feedback Modal Specific */
+        .feedback-buttons {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .feedback-btn {
+            flex: 1;
+            padding: 0.875rem;
+            border: 1px solid var(--border);
+            background: white;
+            color: var(--dark-gray);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .feedback-btn:hover {
+            background: var(--warm-gray);
+            border-color: var(--accent);
+        }
+        
+        .feedback-btn.selected {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        
+        .feedback-comment {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9375rem;
+            background: white;
+            color: var(--near-black);
+            resize: vertical;
+            min-height: 100px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .feedback-comment:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .feedback-thanks {
+            text-align: center;
+            padding: 2rem 0;
+        }
+        
+        .feedback-thanks h3 {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 1.5rem;
+            color: var(--near-black);
+            margin-bottom: 0.75rem;
+        }
+        
+        .feedback-thanks p {
+            color: var(--medium-gray);
+            margin-bottom: 1.5rem;
+        }
+        
+        /* Date Input */
+        input[type="date"],
+        input[type="time"] {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .logo {
+                width: 40px;
+                height: 40px;
+                font-size: 1.25rem;
+            }
+            
+            .header-content {
+                flex-wrap: wrap;
+            }
+            
+            .header-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+            
+            .current-date {
+                font-size: 1.25rem;
+            }
+            
+            .date-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .date-nav {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .controls-inner {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-group {
+                width: 100%;
+            }
+            
+            .filter-btn,
+            .submit-btn {
+                flex: 1;
+            }
+            
+            .submit-btn {
+                margin-left: 0;
+            }
+            
+            .events-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .footer-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .footer-links {
+                justify-content: center;
+            }
+            
+            .feedback-buttons {
+                flex-direction: column;
+            }
+        }
+        
+        /* Fix for button active state on mobile */
+        @media (hover: none) {
+            .filter-btn:active:not(.active),
+            .date-nav-btn:active,
+            .submit-btn:active {
+                background: inherit;
+                transform: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo">NT</div>
+                    <div class="site-title">
+                        <h1>Naas Today</h1>
+                        <div class="tagline">Local events & what's on</div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="feedback-header-btn" id="feedbackHeaderBtn">Give Feedback</button>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <div class="date-section">
+        <div class="container">
+            <div class="date-header">
+                <div class="current-date" id="currentDateDisplay">Today</div>
+                <div class="date-nav">
+                    <button class="date-nav-btn" id="prevDay">← Previous</button>
+                    <button class="date-nav-btn today-btn" id="todayBtn" style="display:none">Today</button>
+                    <button class="date-nav-btn" id="changeDateBtn">📅 Change date</button>
+                    <button class="date-nav-btn" id="nextDay">Next →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="controls">
+            <div class="controls-inner">
+                <span class="controls-label">Filter:</span>
+                <div class="filter-group">
+                    <button class="filter-btn" id="filterFree" aria-pressed="false">
+                        <span>Free events</span>
+                    </button>
+                    <button class="filter-btn" id="filterKids" aria-pressed="false">
+                        <span>Family friendly</span>
+                    </button>
+                </div>
+                <button class="submit-btn" id="submitEventBtn">+ Submit Event</button>
+            </div>
+        </div>
+        
+        <div class="events-container">
+            <div class="events-grid" id="eventsGrid">
+                <!-- Events will be loaded here -->
+            </div>
+            
+            <div class="empty-state" id="emptyState">
+                <h3>No events found</h3>
+                <p>There are no events matching your criteria for this date.</p>
+            </div>
+
+            <div class="loading-state" id="loadingState">
+                <div class="loading-spinner"></div>
+                <p>Loading events…</p>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div>© 2026 Naas Today</div>
+                <div class="footer-links">
+                    <button id="aboutBtn">About</button>
+                    <button id="contactBtn">Contact</button>
+                    <button id="submitEventFooterBtn">Submit Event</button>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Date Picker Modal -->
+    <div class="modal" id="dateModal" role="dialog" aria-modal="true" aria-labelledby="dateModalTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="dateModalTitle">Select a Date</h2>
+                <button class="modal-close" id="closeDateModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <input type="date" id="dateInput">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Submit Event Modal -->
+    <div class="modal" id="submitModal" role="dialog" aria-modal="true" aria-labelledby="submitModalTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="submitModalTitle">Submit an Event</h2>
+                <button class="modal-close" id="closeSubmitModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="eventForm">
+                    <div class="form-group">
+                        <label for="eventTitle">Event Title *</label>
+                        <input type="text" id="eventTitle" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="eventDate">Date *</label>
+                        <input type="date" id="eventDate" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="eventTime">Time *</label>
+                        <input type="time" id="eventTime" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="eventLocation">Location *</label>
+                        <input type="text" id="eventLocation" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="eventDescription">Description *</label>
+                        <textarea id="eventDescription" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="eventContact">Your email (optional – for follow-up)</label>
+                        <input type="email" id="eventContact" placeholder="you@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Event Tags</label>
+                        <div class="checkbox-group">
+                            <label>
+                                <input type="checkbox" id="isFree">
+                                Free Event
+                            </label>
+                            <label>
+                                <input type="checkbox" id="isKidsFriendly">
+                                Family Friendly
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="cancelSubmit">Cancel</button>
+                        <button type="submit" class="btn-primary">Submit Event</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Feedback Modal -->
+    <div class="modal" id="feedbackModal" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="feedbackTitle">Would you use Naas Today?</h2>
+                <button class="modal-close" id="closeFeedbackModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="feedbackForm">
+                    <p>Help us understand if this is valuable for the Naas community</p>
+                    
+                    <div class="feedback-buttons">
+                        <button class="feedback-btn" data-response="yes">👍 Yes</button>
+                        <button class="feedback-btn" data-response="maybe">🤔 Maybe</button>
+                        <button class="feedback-btn" data-response="no">👎 No</button>
+                    </div>
+                    
+                    <textarea 
+                        class="feedback-comment" 
+                        id="feedbackComment" 
+                        placeholder="Any thoughts on what would make this better? (optional)"
+                    ></textarea>
+                    
+                    <div class="form-actions">
+                        <button class="btn-secondary" id="cancelFeedback">Cancel</button>
+                        <button class="btn-primary" id="sendFeedback">Send Feedback</button>
+                    </div>
+                </div>
+                
+                <div id="feedbackThanks" class="feedback-thanks" style="display: none;">
+                    <h3>Thank you! 🎉</h3>
+                    <p>Your feedback helps us make Naas Today better for everyone.</p>
+                    <button class="feedback-btn" onclick="document.getElementById('feedbackModal').classList.remove('active'); resetFeedbackForm();">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- About Modal -->
+    <div class="modal" id="aboutModal" role="dialog" aria-modal="true" aria-labelledby="aboutModalTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="aboutModalTitle">About Naas Today</h2>
+                <button class="modal-close" id="closeAboutModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>Naas Today is a community calendar showcasing local events and activities happening in Naas, County Kildare.</p>
+                <p style="margin-bottom: 0;">We're currently in beta. Your feedback helps us build something valuable for the community.</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Contact Modal -->
+    <div class="modal" id="contactModal" role="dialog" aria-modal="true" aria-labelledby="contactModalTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="contactModalTitle">Contact</h2>
+                <button class="modal-close" id="closeContactModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>Have questions or want to get in touch?</p>
+                <p style="margin-bottom: 0;">Email: <a href="mailto:hello@naastoday.ie" style="color: var(--accent);">hello@naastoday.ie</a></p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ── Utilities ──────────────────────────────────────────────────────
+
+        // Returns the local date as YYYY-MM-DD (avoids UTC offset issues with toISOString)
+        function localDateStr(date) {
+            const d = date instanceof Date ? date : new Date(date);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        // ── Sample Events (fallback) ────────────────────────────────────────
+        const SAMPLE_EVENTS = [
+            {
+                id: 1,
+                title: "Farmers' Market",
+                date: localDateStr(new Date()),
+                time: "09:00",
+                location: "Market Square",
+                description: "Fresh local produce, artisan foods, and crafts from County Kildare farmers and makers.",
+                isFree: true,
+                isKidsFriendly: true
+            },
+            {
+                id: 2,
+                title: "Yoga in the Park",
+                date: localDateStr(new Date()),
+                time: "10:30",
+                location: "Naas Town Park",
+                description: "All-levels yoga class in the fresh air. Bring your own mat.",
+                isFree: true,
+                isKidsFriendly: false
+            },
+            {
+                id: 3,
+                title: "Live Music at The Tap House",
+                date: localDateStr(new Date()),
+                time: "20:00",
+                location: "The Tap House",
+                description: "Local musicians performing acoustic sets. Great atmosphere and craft beers.",
+                isFree: false,
+                isKidsFriendly: false
+            },
+            {
+                id: 4,
+                title: "Story Time at the Library",
+                date: localDateStr(new Date()),
+                time: "15:00",
+                location: "Naas Library",
+                description: "Interactive story time for children aged 3-7. Booking recommended.",
+                isFree: true,
+                isKidsFriendly: true
+            }
+        ];
+
+        // ── State ───────────────────────────────────────────────────────────
+        let events = [];
+        let currentDate = new Date();
+        let filterFreeActive = false;
+        let filterKidsActive = false;
+
+        // ── Loading State ───────────────────────────────────────────────────
+        function showLoading() {
+            document.getElementById('eventsGrid').style.display = 'none';
+            document.getElementById('emptyState').classList.remove('visible');
+            document.getElementById('loadingState').classList.add('visible');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingState').classList.remove('visible');
+        }
+
+        // ── Data Fetching ───────────────────────────────────────────────────
+        async function fetchEvents() {
+            showLoading();
+            try {
+                const response = await fetch('/.netlify/functions/get-events');
+                if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
+                const data = await response.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    events = data.map((row, index) => ({
+                        id: row.id || index + 1,
+                        title: row.title || '',
+                        date: row.date || '',
+                        // Postgres TIME returns "HH:MM:SS", trim to "HH:MM"
+                        time: row.time ? row.time.substring(0, 5) : '',
+                        location: row.location || '',
+                        description: row.description || '',
+                        isFree: Boolean(row.is_free),
+                        isKidsFriendly: Boolean(row.is_kids_friendly)
+                    }));
+                } else {
+                    events = SAMPLE_EVENTS;
+                }
+            } catch (error) {
+                console.error('Error fetching events:', error);
+                events = SAMPLE_EVENTS;
+            }
+            renderEvents();
+        }
+
+        // ── Rendering ───────────────────────────────────────────────────────
+        function formatDateDisplay(date) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const compareDate = new Date(date);
+            compareDate.setHours(0, 0, 0, 0);
+            if (compareDate.getTime() === today.getTime()) {
+                const dayName = date.toLocaleDateString('en-IE', { weekday: 'long' });
+                const fullDate = date.toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' });
+                return `Today – ${dayName}, ${fullDate}`;
+            }
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            if (compareDate.getTime() === tomorrow.getTime()) {
+                const fullDate = date.toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' });
+                return `Tomorrow – ${fullDate}`;
+            }
+            return date.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
+        function formatTime(time) {
+            const [hours, minutes] = time.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour % 12 || 12;
+            return `${displayHour}:${minutes} ${ampm}`;
+        }
+
+        // Builds an event card using DOM methods (avoids XSS from raw data)
+        function createEventCard(event) {
+            const card = document.createElement('div');
+            card.className = 'event-card';
+
+            const time = document.createElement('div');
+            time.className = 'event-time';
+            time.textContent = formatTime(event.time);
+            card.appendChild(time);
+
+            const title = document.createElement('h3');
+            title.className = 'event-title';
+            title.textContent = event.title;
+            card.appendChild(title);
+
+            const location = document.createElement('div');
+            location.className = 'event-location';
+            location.textContent = '📍 ' + event.location;
+            card.appendChild(location);
+
+            const desc = document.createElement('p');
+            desc.className = 'event-description';
+            desc.textContent = event.description;
+            card.appendChild(desc);
+
+            if (event.isFree || event.isKidsFriendly) {
+                const tags = document.createElement('div');
+                tags.className = 'event-tags';
+                if (event.isFree) {
+                    const tag = document.createElement('span');
+                    tag.className = 'tag free';
+                    tag.textContent = 'Free';
+                    tags.appendChild(tag);
+                }
+                if (event.isKidsFriendly) {
+                    const tag = document.createElement('span');
+                    tag.className = 'tag kids';
+                    tag.textContent = 'Family Friendly';
+                    tags.appendChild(tag);
+                }
+                card.appendChild(tags);
+            }
+
+            return card;
+        }
+
+        function renderEvents() {
+            hideLoading();
+            const grid = document.getElementById('eventsGrid');
+            const emptyState = document.getElementById('emptyState');
+            const dateStr = localDateStr(currentDate);
+
+            let filteredEvents = events.filter(event => event.date === dateStr);
+            if (filterFreeActive) filteredEvents = filteredEvents.filter(e => e.isFree);
+            if (filterKidsActive) filteredEvents = filteredEvents.filter(e => e.isKidsFriendly);
+
+            if (filteredEvents.length === 0) {
+                grid.style.display = 'none';
+                emptyState.classList.add('visible');
+                updateJsonLd([]);
+                return;
+            }
+
+            grid.style.display = 'grid';
+            emptyState.classList.remove('visible');
+            filteredEvents.sort((a, b) => a.time.localeCompare(b.time));
+            grid.innerHTML = '';
+            filteredEvents.forEach(event => grid.appendChild(createEventCard(event)));
+            updateJsonLd(filteredEvents);
+        }
+
+        // ── JSON-LD Structured Data ─────────────────────────────────────────
+        function updateJsonLd(evts) {
+            const existing = document.getElementById('jsonld-events');
+            if (existing) existing.remove();
+            if (!evts.length) return;
+            const schema = {
+                '@context': 'https://schema.org',
+                '@graph': evts.map(e => ({
+                    '@type': 'Event',
+                    name: e.title,
+                    startDate: e.date + (e.time ? 'T' + e.time : ''),
+                    location: {
+                        '@type': 'Place',
+                        name: e.location,
+                        address: { '@type': 'PostalAddress', addressLocality: 'Naas', addressCountry: 'IE' }
+                    },
+                    description: e.description,
+                    isAccessibleForFree: e.isFree,
+                    organizer: { '@type': 'Organization', name: 'Naas Today' }
+                }))
+            };
+            const s = document.createElement('script');
+            s.type = 'application/ld+json';
+            s.id = 'jsonld-events';
+            s.textContent = JSON.stringify(schema);
+            document.head.appendChild(s);
+        }
+
+        // ── Date Navigation ─────────────────────────────────────────────────
+        function updateDateDisplay() {
+            document.getElementById('currentDateDisplay').textContent = formatDateDisplay(currentDate);
+            const isToday = localDateStr(currentDate) === localDateStr(new Date());
+            document.getElementById('todayBtn').style.display = isToday ? 'none' : '';
+        }
+
+        function changeDate(days) {
+            currentDate.setDate(currentDate.getDate() + days);
+            updateDateDisplay();
+            renderEvents();
+        }
+
+        // ── Focus Trap (for accessible modals) ─────────────────────────────
+        let previouslyFocused = null;
+
+        function trapFocus(modal) {
+            const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            modal._trapHandler = function(e) {
+                if (e.key !== 'Tab') return;
+                if (e.shiftKey) {
+                    if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+                } else {
+                    if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+                }
+            };
+            modal.addEventListener('keydown', modal._trapHandler);
+        }
+
+        // ── Modal Helpers ───────────────────────────────────────────────────
+        function openModal(id) {
+            previouslyFocused = document.activeElement;
+            const modal = document.getElementById(id);
+            modal.classList.add('active');
+            const firstFocusable = modal.querySelector('button, [href], input, select, textarea');
+            if (firstFocusable) firstFocusable.focus();
+            trapFocus(modal);
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.remove('active');
+            if (modal._trapHandler) {
+                modal.removeEventListener('keydown', modal._trapHandler);
+                delete modal._trapHandler;
+            }
+            if (previouslyFocused) previouslyFocused.focus();
+        }
+
+        // ── Event Listeners ─────────────────────────────────────────────────
+        document.getElementById('prevDay').addEventListener('click', () => changeDate(-1));
+        document.getElementById('nextDay').addEventListener('click', () => changeDate(1));
+
+        document.getElementById('todayBtn').addEventListener('click', () => {
+            currentDate = new Date();
+            updateDateDisplay();
+            renderEvents();
+        });
+
+        document.getElementById('changeDateBtn').addEventListener('click', () => {
+            document.getElementById('dateInput').value = localDateStr(currentDate);
+            openModal('dateModal');
+        });
+
+        document.getElementById('closeDateModal').addEventListener('click', () => closeModal('dateModal'));
+
+        document.getElementById('dateInput').addEventListener('change', (e) => {
+            currentDate = new Date(e.target.value + 'T00:00:00');
+            updateDateDisplay();
+            renderEvents();
+            closeModal('dateModal');
+        });
+
+        document.getElementById('filterFree').addEventListener('click', function() {
+            filterFreeActive = !filterFreeActive;
+            this.classList.toggle('active');
+            this.setAttribute('aria-pressed', filterFreeActive);
+            renderEvents();
+        });
+
+        document.getElementById('filterKids').addEventListener('click', function() {
+            filterKidsActive = !filterKidsActive;
+            this.classList.toggle('active');
+            this.setAttribute('aria-pressed', filterKidsActive);
+            renderEvents();
+        });
+
+        document.getElementById('submitEventBtn').addEventListener('click', () => {
+            document.getElementById('eventDate').value = localDateStr(currentDate);
+            openModal('submitModal');
+        });
+
+        document.getElementById('submitEventFooterBtn').addEventListener('click', () => {
+            document.getElementById('eventDate').value = localDateStr(currentDate);
+            openModal('submitModal');
+        });
+
+        document.getElementById('closeSubmitModal').addEventListener('click', () => closeModal('submitModal'));
+        document.getElementById('cancelSubmit').addEventListener('click', () => {
+            closeModal('submitModal');
+            document.getElementById('eventForm').reset();
+        });
+
+        document.getElementById('eventForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Submitting...';
+            submitBtn.disabled = true;
+
+            const payload = {
+                title: document.getElementById('eventTitle').value.trim(),
+                date: document.getElementById('eventDate').value,
+                time: document.getElementById('eventTime').value,
+                location: document.getElementById('eventLocation').value.trim(),
+                description: document.getElementById('eventDescription').value.trim(),
+                isFree: document.getElementById('isFree').checked,
+                isKidsFriendly: document.getElementById('isKidsFriendly').checked,
+                contactEmail: document.getElementById('eventContact').value.trim()
+            };
+
+            try {
+                const response = await fetch('/.netlify/functions/submit-event', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error(`Submit failed: ${response.status}`);
+                closeModal('submitModal');
+                document.getElementById('eventForm').reset();
+                alert('Event submitted for review. Thank you!');
+            } catch (error) {
+                console.error('Error submitting event:', error);
+                alert('Sorry, something went wrong. Please try again or email hello@naastoday.ie.');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+
+        // ── Feedback ────────────────────────────────────────────────────────
+        let selectedResponse = null;
+        const sendFeedbackBtn = document.getElementById('sendFeedback');
+        sendFeedbackBtn.disabled = true;
+        sendFeedbackBtn.style.opacity = '0.5';
+
+        document.getElementById('feedbackHeaderBtn').addEventListener('click', () => openModal('feedbackModal'));
+        document.getElementById('closeFeedbackModal').addEventListener('click', () => {
+            closeModal('feedbackModal');
+            resetFeedbackForm();
+        });
+        document.getElementById('cancelFeedback').addEventListener('click', () => {
+            closeModal('feedbackModal');
+            resetFeedbackForm();
+        });
+
+        document.querySelectorAll('.feedback-btn[data-response]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.feedback-btn[data-response]').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedResponse = btn.dataset.response;
+                sendFeedbackBtn.disabled = false;
+                sendFeedbackBtn.style.opacity = '';
+            });
+        });
+
+        sendFeedbackBtn.addEventListener('click', async () => {
+            const comment = document.getElementById('feedbackComment').value.trim();
+            const feedbackData = {
+                response: selectedResponse,
+                comment,
+                timestamp: new Date().toISOString(),
+                url: window.location.href
+            };
+            try {
+                const response = await fetch('/.netlify/functions/submit-feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(feedbackData)
+                });
+                showThanks();
+                if (!response.ok) console.log('Feedback submitted (locally):', feedbackData);
+            } catch (error) {
+                console.log('Feedback submitted (locally):', feedbackData);
+                showThanks();
+            }
+        });
+
+        function showThanks() {
+            document.getElementById('feedbackForm').style.display = 'none';
+            document.getElementById('feedbackThanks').style.display = 'block';
+            setTimeout(() => {
+                closeModal('feedbackModal');
+                resetFeedbackForm();
+            }, 3000);
+        }
+
+        function resetFeedbackForm() {
+            document.getElementById('feedbackForm').style.display = 'block';
+            document.getElementById('feedbackThanks').style.display = 'none';
+            document.querySelectorAll('.feedback-btn[data-response]').forEach(b => b.classList.remove('selected'));
+            document.getElementById('feedbackComment').value = '';
+            selectedResponse = null;
+            sendFeedbackBtn.disabled = true;
+            sendFeedbackBtn.style.opacity = '0.5';
+        }
+
+        // ── Footer Modals ────────────────────────────────────────────────────
+        document.getElementById('aboutBtn').addEventListener('click', () => openModal('aboutModal'));
+        document.getElementById('closeAboutModal').addEventListener('click', () => closeModal('aboutModal'));
+        document.getElementById('contactBtn').addEventListener('click', () => openModal('contactModal'));
+        document.getElementById('closeContactModal').addEventListener('click', () => closeModal('contactModal'));
+
+        // Close modals on background click or Escape key
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal(modal.id);
+                    if (modal.id === 'feedbackModal') resetFeedbackForm();
+                    if (modal.id === 'submitModal') document.getElementById('eventForm').reset();
+                }
+            });
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            const activeModal = document.querySelector('.modal.active');
+            if (activeModal) {
+                closeModal(activeModal.id);
+                if (activeModal.id === 'feedbackModal') resetFeedbackForm();
+                if (activeModal.id === 'submitModal') document.getElementById('eventForm').reset();
+            }
+        });
+
+        // ── Init ─────────────────────────────────────────────────────────────
+        updateDateDisplay();
+        fetchEvents();
+    </script>
+</body>
+</html>
