@@ -986,7 +986,7 @@
                 <span class="controls-label">Filter:</span>
                 <div class="filter-group">
                     <button class="filter-btn" id="filterFree" aria-pressed="false">
-                        <span>Free events</span>
+                        <span>Free</span>
                     </button>
                     <button class="filter-btn" id="filterKids" aria-pressed="false">
                         <span>For kids</span>
@@ -1112,7 +1112,11 @@
                         <div class="checkbox-group">
                             <label>
                                 <input type="checkbox" id="isFree">
-                                Free event
+                                Free
+                            </label>
+                            <label>
+                                <input type="checkbox" id="isForKids">
+                                For kids
                             </label>
                         </div>
                     </div>
@@ -1299,7 +1303,7 @@
                         location: row.location || '',
                         description: row.description || '',
                         isFree: Boolean(row.is_free),
-                        isKidsFriendly: Boolean(row.is_kids_friendly)
+                        isForKids: Boolean(row.is_for_kids)
                     }));
                 } else {
                     events = SAMPLE_EVENTS;
@@ -1407,7 +1411,7 @@
                 tag.textContent = 'Free';
                 tags.appendChild(tag);
             }
-            if (event.isKidsFriendly) {
+            if (event.isForKids) {
                 const tag = document.createElement('span');
                 tag.className = 'tag kids';
                 tag.textContent = 'Kids';
@@ -1455,14 +1459,14 @@
             // Update filter button count badges
             const freeCount = filteredEvents.filter(e => e.isFree).length;
             document.querySelector('#filterFree span').textContent =
-                freeCount > 0 ? `Free (${freeCount})` : 'Free events';
+                freeCount > 0 ? `Free (${freeCount})` : 'Free';
 
-            const kidsCount = filteredEvents.filter(e => e.isKidsFriendly).length;
+            const kidsCount = filteredEvents.filter(e => e.isForKids).length;
             document.querySelector('#filterKids span').textContent =
                 kidsCount > 0 ? `For kids (${kidsCount})` : 'For kids';
 
             if (filterFreeActive) filteredEvents = filteredEvents.filter(e => e.isFree);
-            if (filterKidsActive) filteredEvents = filteredEvents.filter(e => e.isKidsFriendly);
+            if (filterKidsActive) filteredEvents = filteredEvents.filter(e => e.isForKids);
 
             if (filteredEvents.length === 0) {
                 grid.style.display = 'none';
@@ -1656,7 +1660,8 @@
                 timeEnd: timeMode === 'range' ? document.getElementById('eventTimeEnd').value : null,
                 location: document.getElementById('eventLocation').value.trim(),
                 description: document.getElementById('eventDescription').value.trim(),
-                isFree: document.getElementById('isFree').checked
+                isFree: document.getElementById('isFree').checked,
+                isForKids: document.getElementById('isForKids').checked
             };
 
             if (payload.endDate && payload.endDate < payload.date) {
