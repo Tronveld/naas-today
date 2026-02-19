@@ -9,6 +9,11 @@
     <meta property="og:description" content="Find local events and what's on in Naas, County Kildare. Updated daily.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://naastoday.ie">
+    <meta property="og:site_name" content="Naas Today">
+    <meta property="og:locale" content="en_IE">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Naas Today – Local Events & What's On">
+    <meta name="twitter:description" content="Find local events and what's on in Naas, County Kildare. Updated daily.">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><rect width='48' height='48' rx='8' fill='%23E67E22'/><text x='24' y='34' font-size='20' font-family='serif' font-weight='bold' fill='white' text-anchor='middle'>NT</text></svg>">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap');
@@ -893,9 +898,51 @@
                 transform: none;
             }
         }
+
+        /* Skip link (keyboard navigation) */
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: 1rem;
+            background: var(--near-black);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-radius: 0 0 6px 6px;
+            z-index: 9999;
+        }
+
+        .skip-link:focus {
+            top: 0;
+        }
+
+        /* Error State */
+        .error-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            display: none;
+        }
+
+        .error-state.visible {
+            display: block;
+        }
+
+        .error-state h3 {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 1.5rem;
+            color: var(--dark-gray);
+            margin-bottom: 0.5rem;
+        }
+
+        .error-state p {
+            color: var(--medium-gray);
+        }
     </style>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <header>
         <div class="container">
             <div class="header-content">
@@ -917,17 +964,17 @@
         <div class="container">
             <div class="date-header">
                 <div class="current-date" id="currentDateDisplay">Today</div>
-                <div class="date-nav">
-                    <button class="date-nav-btn" id="prevDay">← Previous</button>
+                <nav class="date-nav" aria-label="Date navigation">
+                    <button class="date-nav-btn" id="prevDay" aria-label="Previous day">← Previous</button>
                     <button class="date-nav-btn today-btn" id="todayBtn" style="display:none">Today</button>
-                    <button class="date-nav-btn" id="changeDateBtn">📅 Change date</button>
-                    <button class="date-nav-btn" id="nextDay">Next →</button>
-                </div>
+                    <button class="date-nav-btn" id="changeDateBtn">Change date</button>
+                    <button class="date-nav-btn" id="nextDay" aria-label="Next day">Next →</button>
+                </nav>
             </div>
         </div>
     </div>
     
-    <div class="container">
+    <div class="container" id="main-content" role="main">
         <div class="controls">
             <div class="controls-inner">
                 <span class="controls-label">Filter:</span>
@@ -956,6 +1003,12 @@
                 <div class="loading-spinner"></div>
                 <p>Loading events…</p>
             </div>
+
+            <div class="error-state" id="errorState">
+                <h3>Couldn't load events</h3>
+                <p>We had trouble connecting to the server. Please check your connection and try again.</p>
+                <button class="submit-btn" style="margin-left: 0; margin-top: 1rem;" onclick="fetchEvents()">Try again</button>
+            </div>
         </div>
     </div>
     
@@ -977,7 +1030,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="dateModalTitle">Select a Date</h2>
-                <button class="modal-close" id="closeDateModal">✕</button>
+                <button class="modal-close" id="closeDateModal" aria-label="Close">✕</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -992,7 +1045,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="submitModalTitle">Add an Event</h2>
-                <button class="modal-close" id="closeSubmitModal">✕</button>
+                <button class="modal-close" id="closeSubmitModal" aria-label="Close">✕</button>
             </div>
             <div class="modal-body">
                 <p>Spotted something happening in Naas? Let everyone know!</p>
@@ -1074,7 +1127,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="feedbackTitle">How can we improve?</h2>
-                <button class="modal-close" id="closeFeedbackModal">✕</button>
+                <button class="modal-close" id="closeFeedbackModal" aria-label="Close">✕</button>
             </div>
             <div class="modal-body">
                 <div id="feedbackForm">
@@ -1113,7 +1166,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="aboutModalTitle">About Naas Today</h2>
-                <button class="modal-close" id="closeAboutModal">✕</button>
+                <button class="modal-close" id="closeAboutModal" aria-label="Close">✕</button>
             </div>
             <div class="modal-body">
                 <p>Hi! Naas Today was created to solve a simple problem: it's hard to know what's happening around town.</p>
@@ -1129,7 +1182,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="contactModalTitle">Get in Touch</h2>
-                <button class="modal-close" id="closeContactModal">✕</button>
+                <button class="modal-close" id="closeContactModal" aria-label="Close">✕</button>
             </div>
             <div class="modal-body">
                 <p>Have feedback on the site? Spotted a bug? Just want to say hello?</p>
@@ -1207,6 +1260,7 @@
         let events = [];
         let currentDate = new Date();
         let filterFreeActive = false;
+        let isError = false;
 
         // ── Loading State ───────────────────────────────────────────────────
         function showLoading() {
@@ -1222,6 +1276,7 @@
         // ── Data Fetching ───────────────────────────────────────────────────
         async function fetchEvents() {
             showLoading();
+            isError = false;
             try {
                 const response = await fetch('/.netlify/functions/get-events');
                 if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
@@ -1245,7 +1300,8 @@
                 }
             } catch (error) {
                 console.error('Error fetching events:', error);
-                events = SAMPLE_EVENTS;
+                isError = true;
+                events = [];
             }
             renderEvents();
         }
@@ -1363,11 +1419,27 @@
             hideLoading();
             const grid = document.getElementById('eventsGrid');
             const emptyState = document.getElementById('emptyState');
+            const errorState = document.getElementById('errorState');
             const dateStr = localDateStr(currentDate);
+
+            if (isError) {
+                grid.style.display = 'none';
+                emptyState.classList.remove('visible');
+                errorState.classList.add('visible');
+                updateJsonLd([]);
+                return;
+            }
+            errorState.classList.remove('visible');
 
             let filteredEvents = events.filter(event =>
                 event.date <= dateStr && (!event.endDate || event.endDate >= dateStr)
             );
+
+            // Update free event count badge on filter button
+            const freeCount = filteredEvents.filter(e => e.isFree).length;
+            document.querySelector('#filterFree span').textContent =
+                freeCount > 0 ? `Free (${freeCount})` : 'Free events';
+
             if (filterFreeActive) filteredEvents = filteredEvents.filter(e => e.isFree);
 
             if (filteredEvents.length === 0) {
@@ -1558,6 +1630,13 @@
                 isFree: document.getElementById('isFree').checked,
                 contactEmail: document.getElementById('eventContact').value.trim()
             };
+
+            if (payload.endDate && payload.endDate < payload.date) {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                alert('The end date must be on or after the start date.');
+                return;
+            }
 
             try {
                 const response = await fetch('/.netlify/functions/submit-event', {
