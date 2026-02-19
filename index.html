@@ -394,6 +394,12 @@
             color: var(--green);
             border: 1px solid rgba(39, 174, 96, 0.2);
         }
+
+        .tag.kids {
+            background: #EBF5FB;
+            color: #2471A3;
+            border: 1px solid rgba(36, 113, 163, 0.2);
+        }
         
         /* Card footer — tags + share button */
         .card-footer {
@@ -982,6 +988,9 @@
                     <button class="filter-btn" id="filterFree" aria-pressed="false">
                         <span>Free events</span>
                     </button>
+                    <button class="filter-btn" id="filterKids" aria-pressed="false">
+                        <span>For kids</span>
+                    </button>
                 </div>
                 <button class="submit-btn" id="submitEventBtn">+ Submit Event</button>
             </div>
@@ -1099,11 +1108,6 @@
                         <textarea id="eventDescription" required></textarea>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="eventContact">Your email (optional – for follow-up)</label>
-                        <input type="email" id="eventContact" placeholder="you@example.com">
-                    </div>
-
                     <div class="form-group">
                         <div class="checkbox-group">
                             <label>
@@ -1260,6 +1264,7 @@
         let events = [];
         let currentDate = new Date();
         let filterFreeActive = false;
+        let filterKidsActive = false;
         let isError = false;
 
         // ── Loading State ───────────────────────────────────────────────────
@@ -1293,7 +1298,8 @@
                         isAllDay: Boolean(row.is_all_day),
                         location: row.location || '',
                         description: row.description || '',
-                        isFree: Boolean(row.is_free)
+                        isFree: Boolean(row.is_free),
+                        isKidsFriendly: Boolean(row.is_kids_friendly)
                     }));
                 } else {
                     events = SAMPLE_EVENTS;
@@ -1401,6 +1407,12 @@
                 tag.textContent = 'Free';
                 tags.appendChild(tag);
             }
+            if (event.isKidsFriendly) {
+                const tag = document.createElement('span');
+                tag.className = 'tag kids';
+                tag.textContent = 'Kids';
+                tags.appendChild(tag);
+            }
             footer.appendChild(tags);
 
             const shareBtn = document.createElement('button');
@@ -1431,16 +1443,26 @@
             }
             errorState.classList.remove('visible');
 
-            let filteredEvents = events.filter(event =>
-                event.date <= dateStr && (!event.endDate || event.endDate >= dateStr)
-            );
+            let filteredEvents = events.filter(event => {
+                if (event.endDate) {
+                    // Multi-day event: show across its full date range
+                    return event.date <= dateStr && event.endDate >= dateStr;
+                }
+                // Single-day event: show only on its exact date
+                return event.date === dateStr;
+            });
 
-            // Update free event count badge on filter button
+            // Update filter button count badges
             const freeCount = filteredEvents.filter(e => e.isFree).length;
             document.querySelector('#filterFree span').textContent =
                 freeCount > 0 ? `Free (${freeCount})` : 'Free events';
 
+            const kidsCount = filteredEvents.filter(e => e.isKidsFriendly).length;
+            document.querySelector('#filterKids span').textContent =
+                kidsCount > 0 ? `For kids (${kidsCount})` : 'For kids';
+
             if (filterFreeActive) filteredEvents = filteredEvents.filter(e => e.isFree);
+            if (filterKidsActive) filteredEvents = filteredEvents.filter(e => e.isKidsFriendly);
 
             if (filteredEvents.length === 0) {
                 grid.style.display = 'none';
@@ -1568,6 +1590,13 @@
             renderEvents();
         });
 
+        document.getElementById('filterKids').addEventListener('click', function() {
+            filterKidsActive = !filterKidsActive;
+            this.classList.toggle('active');
+            this.setAttribute('aria-pressed', filterKidsActive);
+            renderEvents();
+        });
+
         // Time mode toggle in submit form
         document.querySelectorAll('input[name="timeMode"]').forEach(radio => {
             radio.addEventListener('change', function() {
@@ -1627,8 +1656,7 @@
                 timeEnd: timeMode === 'range' ? document.getElementById('eventTimeEnd').value : null,
                 location: document.getElementById('eventLocation').value.trim(),
                 description: document.getElementById('eventDescription').value.trim(),
-                isFree: document.getElementById('isFree').checked,
-                contactEmail: document.getElementById('eventContact').value.trim()
+                isFree: document.getElementById('isFree').checked
             };
 
             if (payload.endDate && payload.endDate < payload.date) {
