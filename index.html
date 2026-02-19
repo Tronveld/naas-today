@@ -903,7 +903,7 @@
                     <div class="logo">NT</div>
                     <div class="site-title">
                         <h1>Naas Today</h1>
-                        <div class="tagline">Local events & what's on</div>
+                        <div class="tagline">Your daily guide to what's happening in Naas</div>
                     </div>
                 </div>
                 <div class="header-actions">
@@ -946,8 +946,10 @@
             </div>
             
             <div class="empty-state" id="emptyState">
-                <h3>No events found</h3>
-                <p>There are no events matching your criteria for this date.</p>
+                <h3>No events today</h3>
+                <p>Looks like we don't have anything listed for this date yet.</p>
+                <p style="margin-top: 0.75rem; margin-bottom: 1.25rem;">Know of an event? Submit it and help spread the word!</p>
+                <button class="submit-btn" style="margin-left: 0;" onclick="document.getElementById('eventDate').value = localDateStr(currentDate); openModal('submitModal');">Submit Event</button>
             </div>
 
             <div class="loading-state" id="loadingState">
@@ -960,7 +962,7 @@
     <footer>
         <div class="container">
             <div class="footer-content">
-                <div>© 2026 Naas Today</div>
+                <div>© 2026 Naas Today — A free community resource</div>
                 <div class="footer-links">
                     <button id="aboutBtn">About</button>
                     <button id="contactBtn">Contact</button>
@@ -989,10 +991,12 @@
     <div class="modal" id="submitModal" role="dialog" aria-modal="true" aria-labelledby="submitModalTitle">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="submitModalTitle">Submit an Event</h2>
+                <h2 id="submitModalTitle">Add an Event</h2>
                 <button class="modal-close" id="closeSubmitModal">✕</button>
             </div>
             <div class="modal-body">
+                <p>Spotted something happening in Naas? Let everyone know!</p>
+                <p>All submissions are reviewed to keep the calendar accurate and spam-free.</p>
                 <form id="eventForm">
                     <div class="form-group">
                         <label for="eventTitle">Event Title *</label>
@@ -1069,23 +1073,24 @@
     <div class="modal" id="feedbackModal" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="feedbackTitle">Would you use Naas Today?</h2>
+                <h2 id="feedbackTitle">How can we improve?</h2>
                 <button class="modal-close" id="closeFeedbackModal">✕</button>
             </div>
             <div class="modal-body">
                 <div id="feedbackForm">
-                    <p>Help us understand if this is valuable for the Naas community</p>
-                    
+                    <p>Naas Today is built for the local community. What would make it more useful?</p>
+                    <p>What do you think?</p>
+
                     <div class="feedback-buttons">
-                        <button class="feedback-btn" data-response="yes">👍 Yes</button>
-                        <button class="feedback-btn" data-response="maybe">🤔 Maybe</button>
-                        <button class="feedback-btn" data-response="no">👎 No</button>
+                        <button class="feedback-btn" data-response="great">⭐ It's great</button>
+                        <button class="feedback-btn" data-response="ideas">💡 I have ideas</button>
+                        <button class="feedback-btn" data-response="broken">🐛 Something's broken</button>
                     </div>
-                    
-                    <textarea 
-                        class="feedback-comment" 
-                        id="feedbackComment" 
-                        placeholder="Any thoughts on what would make this better? (optional)"
+
+                    <textarea
+                        class="feedback-comment"
+                        id="feedbackComment"
+                        placeholder="Tell us what you think: (optional)"
                     ></textarea>
                     
                     <div class="form-actions">
@@ -1111,8 +1116,10 @@
                 <button class="modal-close" id="closeAboutModal">✕</button>
             </div>
             <div class="modal-body">
-                <p>Naas Today is a community calendar showcasing local events and activities happening in Naas, County Kildare.</p>
-                <p style="margin-bottom: 0;">We're currently in beta. Your feedback helps us build something valuable for the community.</p>
+                <p>Hi! Naas Today was created to solve a simple problem: it's hard to know what's happening around town.</p>
+                <p>Events get posted across different Facebook pages, websites, and newsletters. This site brings them all together in one place so you never miss what's on.</p>
+                <p>All events are submitted by the community and moderated before publication.</p>
+                <p style="margin-bottom: 0;">Got feedback or an event to share? <button onclick="closeModal('aboutModal'); openModal('contactModal');" style="background:none;border:none;padding:0;color:var(--accent);font-size:inherit;font-family:inherit;cursor:pointer;text-decoration:underline;">Get in touch!</button></p>
             </div>
         </div>
     </div>
@@ -1121,12 +1128,13 @@
     <div class="modal" id="contactModal" role="dialog" aria-modal="true" aria-labelledby="contactModalTitle">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="contactModalTitle">Contact</h2>
+                <h2 id="contactModalTitle">Get in Touch</h2>
                 <button class="modal-close" id="closeContactModal">✕</button>
             </div>
             <div class="modal-body">
-                <p>Have questions or want to get in touch?</p>
-                <p style="margin-bottom: 0;">Email: <a href="mailto:hello@naastoday.ie" style="color: var(--accent);">hello@naastoday.ie</a></p>
+                <p>Have feedback on the site? Spotted a bug? Just want to say hello?</p>
+                <p>Drop us a line: <a href="mailto:naastoday.tile693@passinbox.com" style="color: var(--accent);">naastoday.tile693@passinbox.com</a></p>
+                <p style="margin-bottom: 0;">We read every message.</p>
             </div>
         </div>
     </div>
@@ -1560,10 +1568,10 @@
                 if (!response.ok) throw new Error(`Submit failed: ${response.status}`);
                 closeModal('submitModal');
                 document.getElementById('eventForm').reset();
-                alert('Event submitted for review. Thank you!');
+                alert('Event Submitted! 🎉\n\nThanks for your help! We\'ll review your submission and it should appear on the site within a day.\n\nQuestions? Email us at naastoday.tile693@passinbox.com');
             } catch (error) {
                 console.error('Error submitting event:', error);
-                alert('Sorry, something went wrong. Please try again or email hello@naastoday.ie.');
+                alert('Sorry, something went wrong. Please try again or email naastoday.tile693@passinbox.com.');
             } finally {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
