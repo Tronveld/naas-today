@@ -23,13 +23,21 @@ exports.handler = async function(event, context) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
   }
 
-  const { title, date, time, location, description, isFree, isKidsFriendly, contactEmail } = data;
+  const { title, date, endDate, time, timeEnd, isAllDay, location, description, isFree, contactEmail } = data;
 
-  if (!title || !date || !time || !location) {
+  if (!title || !date || !location) {
     return {
       statusCode: 400,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Missing required fields: title, date, time, location' })
+      body: JSON.stringify({ error: 'Missing required fields: title, date, location' })
+    };
+  }
+
+  if (!isAllDay && !time) {
+    return {
+      statusCode: 400,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Missing required field: time (or mark as all day)' })
     };
   }
 
@@ -45,11 +53,13 @@ exports.handler = async function(event, context) {
       body: JSON.stringify({
         title,
         date,
-        time,
+        end_date: endDate || null,
+        time: time || null,
+        time_end: timeEnd || null,
+        is_all_day: Boolean(isAllDay),
         location,
         description: description || '',
         is_free: Boolean(isFree),
-        is_kids_friendly: Boolean(isKidsFriendly),
         contact_email: contactEmail || null,
         status: 'pending'
       })

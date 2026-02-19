@@ -390,10 +390,88 @@
             border: 1px solid rgba(39, 174, 96, 0.2);
         }
         
-        .tag.kids {
-            background: var(--accent-light);
+        /* Card footer — tags + share button */
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+            min-height: 28px;
+        }
+
+        .share-btn {
+            background: none;
+            border: none;
+            color: var(--medium-gray);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            transition: color 0.2s;
+            white-space: nowrap;
+        }
+
+        .share-btn:hover {
             color: var(--accent-hover);
-            border: 1px solid rgba(230, 126, 34, 0.2);
+        }
+
+        /* Location as a Maps link */
+        a.event-location {
+            text-decoration: none;
+            color: var(--medium-gray);
+        }
+
+        a.event-location:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        /* Time mode selector in submit form */
+        .time-mode-group {
+            display: flex;
+            gap: 1.25rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 400;
+            cursor: pointer;
+        }
+
+        .radio-label input[type="radio"] {
+            width: auto;
+            cursor: pointer;
+        }
+
+        .time-inputs {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .time-inputs input[type="time"] {
+            flex: 1;
+        }
+
+        .time-sep {
+            color: var(--medium-gray);
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+
+        .form-hint {
+            font-weight: 400;
+            color: var(--medium-gray);
         }
         
         /* Loading State */
@@ -857,9 +935,6 @@
                     <button class="filter-btn" id="filterFree" aria-pressed="false">
                         <span>Free events</span>
                     </button>
-                    <button class="filter-btn" id="filterKids" aria-pressed="false">
-                        <span>Family friendly</span>
-                    </button>
                 </div>
                 <button class="submit-btn" id="submitEventBtn">+ Submit Event</button>
             </div>
@@ -925,13 +1000,36 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="eventDate">Date *</label>
+                        <label for="eventDate">Start date *</label>
                         <input type="date" id="eventDate" required>
                     </div>
-                    
+
                     <div class="form-group">
-                        <label for="eventTime">Time *</label>
-                        <input type="time" id="eventTime" required>
+                        <label for="eventEndDate">End date <span class="form-hint">(leave blank for single-day events)</span></label>
+                        <input type="date" id="eventEndDate">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Time *</label>
+                        <div class="time-mode-group">
+                            <label class="radio-label">
+                                <input type="radio" name="timeMode" value="specific" checked>
+                                Specific time
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="timeMode" value="range">
+                                Time range
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="timeMode" value="allday">
+                                All day
+                            </label>
+                        </div>
+                        <div class="time-inputs" id="timeInputs">
+                            <input type="time" id="eventTimeStart" required>
+                            <span class="time-sep" id="timeRangeSep" style="display:none">to</span>
+                            <input type="time" id="eventTimeEnd" style="display:none">
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -950,15 +1048,10 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Event Tags</label>
                         <div class="checkbox-group">
                             <label>
                                 <input type="checkbox" id="isFree">
-                                Free Event
-                            </label>
-                            <label>
-                                <input type="checkbox" id="isKidsFriendly">
-                                Family Friendly
+                                Free event
                             </label>
                         </div>
                     </div>
@@ -1056,41 +1149,49 @@
                 id: 1,
                 title: "Farmers' Market",
                 date: localDateStr(new Date()),
+                endDate: '',
                 time: "09:00",
+                timeEnd: "14:00",
+                isAllDay: false,
                 location: "Market Square",
                 description: "Fresh local produce, artisan foods, and crafts from County Kildare farmers and makers.",
-                isFree: true,
-                isKidsFriendly: true
+                isFree: true
             },
             {
                 id: 2,
                 title: "Yoga in the Park",
                 date: localDateStr(new Date()),
+                endDate: '',
                 time: "10:30",
+                timeEnd: '',
+                isAllDay: false,
                 location: "Naas Town Park",
                 description: "All-levels yoga class in the fresh air. Bring your own mat.",
-                isFree: true,
-                isKidsFriendly: false
+                isFree: true
             },
             {
                 id: 3,
                 title: "Live Music at The Tap House",
                 date: localDateStr(new Date()),
+                endDate: '',
                 time: "20:00",
+                timeEnd: '',
+                isAllDay: false,
                 location: "The Tap House",
                 description: "Local musicians performing acoustic sets. Great atmosphere and craft beers.",
-                isFree: false,
-                isKidsFriendly: false
+                isFree: false
             },
             {
                 id: 4,
-                title: "Story Time at the Library",
+                title: "Naas Arts Festival",
                 date: localDateStr(new Date()),
-                time: "15:00",
-                location: "Naas Library",
-                description: "Interactive story time for children aged 3-7. Booking recommended.",
-                isFree: true,
-                isKidsFriendly: true
+                endDate: localDateStr(new Date(Date.now() + 2 * 86400000)),
+                time: '',
+                timeEnd: '',
+                isAllDay: true,
+                location: "Naas Town Centre",
+                description: "Three days of visual art, live performances, and workshops celebrating local creativity.",
+                isFree: true
             }
         ];
 
@@ -1098,7 +1199,6 @@
         let events = [];
         let currentDate = new Date();
         let filterFreeActive = false;
-        let filterKidsActive = false;
 
         // ── Loading State ───────────────────────────────────────────────────
         function showLoading() {
@@ -1123,12 +1223,14 @@
                         id: row.id || index + 1,
                         title: row.title || '',
                         date: row.date || '',
+                        endDate: row.end_date || '',
                         // Postgres TIME returns "HH:MM:SS", trim to "HH:MM"
                         time: row.time ? row.time.substring(0, 5) : '',
+                        timeEnd: row.time_end ? row.time_end.substring(0, 5) : '',
+                        isAllDay: Boolean(row.is_all_day),
                         location: row.location || '',
                         description: row.description || '',
-                        isFree: Boolean(row.is_free),
-                        isKidsFriendly: Boolean(row.is_kids_friendly)
+                        isFree: Boolean(row.is_free)
                     }));
                 } else {
                     events = SAMPLE_EVENTS;
@@ -1168,48 +1270,83 @@
             return `${displayHour}:${minutes} ${ampm}`;
         }
 
+        function formatEventTime(event) {
+            if (event.isAllDay) return 'All day';
+            if (!event.time) return '';
+            const start = formatTime(event.time);
+            if (event.timeEnd) return start + ' – ' + formatTime(event.timeEnd);
+            return start;
+        }
+
+        function formatDateForShare(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long' });
+        }
+
+        function shareEvent(event) {
+            const timeStr = formatEventTime(event);
+            const dateDisplay = formatDateForShare(event.date);
+            const when = timeStr ? `${dateDisplay} · ${timeStr}` : dateDisplay;
+            const text = `${event.title}\n${when}\n📍 ${event.location}\n\nnaas.today`;
+            if (navigator.share) {
+                navigator.share({ title: event.title, text, url: 'https://naas.today' }).catch(() => {});
+            } else {
+                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+            }
+        }
+
         // Builds an event card using DOM methods (avoids XSS from raw data)
         function createEventCard(event) {
             const card = document.createElement('div');
             card.className = 'event-card';
 
-            const time = document.createElement('div');
-            time.className = 'event-time';
-            time.textContent = formatTime(event.time);
-            card.appendChild(time);
+            const timeStr = formatEventTime(event);
+            if (timeStr) {
+                const timeEl = document.createElement('div');
+                timeEl.className = 'event-time';
+                timeEl.textContent = timeStr;
+                card.appendChild(timeEl);
+            }
 
             const title = document.createElement('h3');
             title.className = 'event-title';
             title.textContent = event.title;
             card.appendChild(title);
 
-            const location = document.createElement('div');
-            location.className = 'event-location';
-            location.textContent = '📍 ' + event.location;
-            card.appendChild(location);
+            const loc = document.createElement('a');
+            loc.className = 'event-location';
+            loc.href = `https://maps.google.com/?q=${encodeURIComponent(event.location + ', Naas, Ireland')}`;
+            loc.target = '_blank';
+            loc.rel = 'noopener noreferrer';
+            loc.textContent = '📍 ' + event.location;
+            card.appendChild(loc);
 
             const desc = document.createElement('p');
             desc.className = 'event-description';
             desc.textContent = event.description;
             card.appendChild(desc);
 
-            if (event.isFree || event.isKidsFriendly) {
-                const tags = document.createElement('div');
-                tags.className = 'event-tags';
-                if (event.isFree) {
-                    const tag = document.createElement('span');
-                    tag.className = 'tag free';
-                    tag.textContent = 'Free';
-                    tags.appendChild(tag);
-                }
-                if (event.isKidsFriendly) {
-                    const tag = document.createElement('span');
-                    tag.className = 'tag kids';
-                    tag.textContent = 'Family Friendly';
-                    tags.appendChild(tag);
-                }
-                card.appendChild(tags);
+            const footer = document.createElement('div');
+            footer.className = 'card-footer';
+
+            const tags = document.createElement('div');
+            tags.className = 'event-tags';
+            if (event.isFree) {
+                const tag = document.createElement('span');
+                tag.className = 'tag free';
+                tag.textContent = 'Free';
+                tags.appendChild(tag);
             }
+            footer.appendChild(tags);
+
+            const shareBtn = document.createElement('button');
+            shareBtn.className = 'share-btn';
+            shareBtn.textContent = 'Share ↗';
+            shareBtn.setAttribute('aria-label', `Share ${event.title}`);
+            shareBtn.addEventListener('click', () => shareEvent(event));
+            footer.appendChild(shareBtn);
+
+            card.appendChild(footer);
 
             return card;
         }
@@ -1220,9 +1357,10 @@
             const emptyState = document.getElementById('emptyState');
             const dateStr = localDateStr(currentDate);
 
-            let filteredEvents = events.filter(event => event.date === dateStr);
+            let filteredEvents = events.filter(event =>
+                event.date <= dateStr && (!event.endDate || event.endDate >= dateStr)
+            );
             if (filterFreeActive) filteredEvents = filteredEvents.filter(e => e.isFree);
-            if (filterKidsActive) filteredEvents = filteredEvents.filter(e => e.isKidsFriendly);
 
             if (filteredEvents.length === 0) {
                 grid.style.display = 'none';
@@ -1249,7 +1387,8 @@
                 '@graph': evts.map(e => ({
                     '@type': 'Event',
                     name: e.title,
-                    startDate: e.date + (e.time ? 'T' + e.time : ''),
+                    startDate: e.date + (e.isAllDay || !e.time ? '' : 'T' + e.time),
+                    ...(e.endDate ? { endDate: e.endDate } : {}),
                     location: {
                         '@type': 'Place',
                         name: e.location,
@@ -1349,11 +1488,30 @@
             renderEvents();
         });
 
-        document.getElementById('filterKids').addEventListener('click', function() {
-            filterKidsActive = !filterKidsActive;
-            this.classList.toggle('active');
-            this.setAttribute('aria-pressed', filterKidsActive);
-            renderEvents();
+        // Time mode toggle in submit form
+        document.querySelectorAll('input[name="timeMode"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const isAllDay = this.value === 'allday';
+                const isRange = this.value === 'range';
+                const timeInputsEl = document.getElementById('timeInputs');
+                const timeEndEl = document.getElementById('eventTimeEnd');
+                const timeSepEl = document.getElementById('timeRangeSep');
+                const timeStartEl = document.getElementById('eventTimeStart');
+                timeInputsEl.style.display = isAllDay ? 'none' : 'flex';
+                timeEndEl.style.display = isRange ? '' : 'none';
+                timeSepEl.style.display = isRange ? '' : 'none';
+                timeStartEl.required = !isAllDay;
+            });
+        });
+
+        // Reset time mode UI when form resets
+        document.getElementById('eventForm').addEventListener('reset', () => {
+            setTimeout(() => {
+                document.getElementById('timeInputs').style.display = 'flex';
+                document.getElementById('eventTimeEnd').style.display = 'none';
+                document.getElementById('timeRangeSep').style.display = 'none';
+                document.getElementById('eventTimeStart').required = true;
+            }, 0);
         });
 
         document.getElementById('submitEventBtn').addEventListener('click', () => {
@@ -1379,14 +1537,17 @@
             submitBtn.textContent = 'Submitting...';
             submitBtn.disabled = true;
 
+            const timeMode = document.querySelector('input[name="timeMode"]:checked').value;
             const payload = {
                 title: document.getElementById('eventTitle').value.trim(),
                 date: document.getElementById('eventDate').value,
-                time: document.getElementById('eventTime').value,
+                endDate: document.getElementById('eventEndDate').value || null,
+                isAllDay: timeMode === 'allday',
+                time: timeMode !== 'allday' ? document.getElementById('eventTimeStart').value : null,
+                timeEnd: timeMode === 'range' ? document.getElementById('eventTimeEnd').value : null,
                 location: document.getElementById('eventLocation').value.trim(),
                 description: document.getElementById('eventDescription').value.trim(),
                 isFree: document.getElementById('isFree').checked,
-                isKidsFriendly: document.getElementById('isKidsFriendly').checked,
                 contactEmail: document.getElementById('eventContact').value.trim()
             };
 
