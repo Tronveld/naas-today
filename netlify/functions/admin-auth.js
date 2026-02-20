@@ -40,11 +40,11 @@ exports.handler = async function(event) {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  const SUPABASE_URL     = process.env.SUPABASE_URL;
-  const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const SUPABASE_URL  = process.env.SUPABASE_URL;
+  const SECRET_KEY    = process.env.SUPABASE_SECRET_KEY;
 
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-    console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+  if (!SUPABASE_URL || !SECRET_KEY) {
+    console.error('Missing SUPABASE_URL or SUPABASE_SECRET_KEY');
     return json(500, { error: 'Server not configured' });
   }
 
@@ -57,10 +57,11 @@ exports.handler = async function(event) {
 
   const { action, password } = body || {};
 
+  // Secret keys (sb_secret_…) are not JWTs — use only the apikey header,
+  // not Authorization: Bearer, which expects a JWT and will reject this format.
   const supabaseHeaders = {
-    'apikey':        SERVICE_ROLE_KEY,
-    'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
-    'Content-Type':  'application/json',
+    'apikey':       SECRET_KEY,
+    'Content-Type': 'application/json',
   };
 
   // ── check_setup ──────────────────────────────────────────────────────────
