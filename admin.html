@@ -797,7 +797,10 @@
             headers: { 'x-admin-password': getPassword() },
         });
         if (res.status === 401) { handleUnauthorized(); return []; }
-        if (!res.ok) throw new Error('Failed to load events');
+        if (!res.ok) {
+            const errBody = await res.json().catch(() => ({}));
+            throw new Error(`${res.status}: ${errBody.error || 'unknown error'}`);
+        }
         return await res.json();
     }
 
@@ -852,7 +855,7 @@
             allEvents = await apiFetchEvents(activeFilter);
             renderTable(allEvents);
         } catch (err) {
-            document.getElementById('tableLoading').textContent = 'Error loading events. Try refreshing.';
+            document.getElementById('tableLoading').textContent = `Error loading events (${err.message}) — check function logs for details.`;
         } finally {
             refreshBtn.disabled = false;
         }
