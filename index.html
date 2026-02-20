@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Naas Today - Local Events & What's On</title>
-    <meta name="description" content="Find local events and what's on in Naas, County Kildare. Updated daily.">
-    <meta property="og:title" content="Naas Today – Local Events & What's On">
-    <meta property="og:description" content="Find local events and what's on in Naas, County Kildare. Updated daily.">
+    <title>Naas Today — Your daily guide to what's happening in Naas</title>
+    <meta name="description" content="Your daily guide to what's happening in Naas, County Kildare. Find local events, updated daily.">
+    <meta property="og:title" content="Naas Today — Your daily guide to what's happening in Naas">
+    <meta property="og:description" content="Your daily guide to what's happening in Naas, County Kildare. Find local events, updated daily.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://naastoday.ie">
     <meta property="og:site_name" content="Naas Today">
     <meta property="og:locale" content="en_IE">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Naas Today – Local Events & What's On">
-    <meta name="twitter:description" content="Find local events and what's on in Naas, County Kildare. Updated daily.">
+    <meta name="twitter:title" content="Naas Today — Your daily guide to what's happening in Naas">
+    <meta name="twitter:description" content="Your daily guide to what's happening in Naas, County Kildare. Find local events, updated daily.">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><rect width='48' height='48' rx='8' fill='%23E67E22'/><text x='24' y='34' font-size='20' font-family='serif' font-weight='bold' fill='white' text-anchor='middle'>NT</text></svg>">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap');
@@ -1198,7 +1198,7 @@
                 <p>Hi! Naas Today was created to solve a simple problem: it's hard to know what's happening around town.</p>
                 <p>Events get posted across different Facebook pages, websites, and newsletters. This site brings them all together in one place so you never miss what's on.</p>
                 <p>All events are submitted by the community and moderated before publication.</p>
-                <p style="margin-bottom: 0;">Got feedback or an event to share? <button onclick="closeModal('aboutModal'); openModal('contactModal');" style="background:none;border:none;padding:0;color:var(--accent);font-size:inherit;font-family:inherit;cursor:pointer;text-decoration:underline;">Get in touch!</button></p>
+                <p style="margin-bottom: 0;">All events are free to submit — use the button above to share yours.</p>
             </div>
         </div>
     </div>
@@ -1211,9 +1211,7 @@
                 <button class="modal-close" id="closeContactModal" aria-label="Close">✕</button>
             </div>
             <div class="modal-body">
-                <p>Have feedback on the site? Spotted a bug? Just want to say hello?</p>
-                <p>Drop us a line: <a href="mailto:naastoday.tile693@passinbox.com" style="color: var(--accent);">naastoday.tile693@passinbox.com</a></p>
-                <p style="margin-bottom: 0;">We read every message.</p>
+                <p style="margin-bottom: 0;">Get in touch: <a href="mailto:hello@naastoday.com" style="color: var(--accent);">hello@naastoday.com</a><br>Every message is read and appreciated.</p>
             </div>
         </div>
     </div>
@@ -1380,11 +1378,11 @@
             const timeStr = formatEventTime(event);
             const dateDisplay = formatDateForShare(event.date);
             const when = timeStr ? `${dateDisplay} · ${timeStr}` : dateDisplay;
-            const text = `${event.title}\n${when}\n📍 ${event.location}\n\nnaas.today`;
+            const text = `${event.title}\n${when}\n${event.location}`;
             if (navigator.share) {
                 navigator.share({ title: event.title, text, url: 'https://naas.today' }).catch(() => {});
             } else {
-                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                window.open(`https://wa.me/?text=${encodeURIComponent(text + '\n\nhttps://naas.today')}`, '_blank');
             }
         }
 
@@ -1447,7 +1445,7 @@
             if (event.isForKids) {
                 const tag = document.createElement('span');
                 tag.className = 'tag kids';
-                tag.textContent = 'Kids';
+                tag.textContent = 'For kids';
                 tags.appendChild(tag);
             }
             footer.appendChild(tags);
