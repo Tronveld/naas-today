@@ -430,6 +430,19 @@
             color: var(--accent-hover);
         }
 
+        .event-url {
+            display: inline-block;
+            color: var(--accent);
+            font-size: 0.875rem;
+            text-decoration: none;
+            margin-bottom: 0.75rem;
+        }
+
+        .event-url:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
         /* Location as a Maps link */
         a.event-location {
             text-decoration: none;
@@ -1107,7 +1120,12 @@
                         <label for="eventDescription">Description *</label>
                         <textarea id="eventDescription" required></textarea>
                     </div>
-                    
+
+                    <div class="form-group">
+                        <label for="eventUrl">Web page <span class="form-hint">(optional)</span></label>
+                        <input type="url" id="eventUrl" placeholder="https://...">
+                    </div>
+
                     <div class="form-group">
                         <div class="checkbox-group">
                             <label>
@@ -1303,7 +1321,8 @@
                         location: row.location || '',
                         description: row.description || '',
                         isFree: Boolean(row.is_free),
-                        isForKids: Boolean(row.is_for_kids)
+                        isForKids: Boolean(row.is_for_kids),
+                        url: row.url || ''
                     }));
                 } else {
                     events = SAMPLE_EVENTS;
@@ -1399,6 +1418,20 @@
             desc.className = 'event-description';
             desc.textContent = event.description;
             card.appendChild(desc);
+
+            if (event.url) {
+                const urlEl = document.createElement('a');
+                urlEl.className = 'event-url';
+                urlEl.href = event.url;
+                urlEl.target = '_blank';
+                urlEl.rel = 'noopener noreferrer';
+                try {
+                    urlEl.textContent = '🔗 ' + new URL(event.url).hostname.replace(/^www\./, '');
+                } catch {
+                    urlEl.textContent = '🔗 Visit website';
+                }
+                card.appendChild(urlEl);
+            }
 
             const footer = document.createElement('div');
             footer.className = 'card-footer';
@@ -1661,7 +1694,8 @@
                 location: document.getElementById('eventLocation').value.trim(),
                 description: document.getElementById('eventDescription').value.trim(),
                 isFree: document.getElementById('isFree').checked,
-                isForKids: document.getElementById('isForKids').checked
+                isForKids: document.getElementById('isForKids').checked,
+                url: document.getElementById('eventUrl').value.trim() || null
             };
 
             if (payload.endDate && payload.endDate < payload.date) {
