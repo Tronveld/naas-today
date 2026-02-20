@@ -55,8 +55,12 @@ Table: `events`
 | `time` | time | Returned as `HH:MM:SS` by Postgres — frontend trims to `HH:MM` |
 | `location` | text | |
 | `description` | text | |
+| `end_date` | date | Optional end date for multi-day events |
+| `time_end` | time | Optional end time; returned as `HH:MM:SS` by Postgres |
+| `is_all_day` | boolean | When true, no time is required or shown |
 | `is_free` | boolean | |
-| `is_kids_friendly` | boolean | |
+| `is_for_kids` | boolean | |
+| `url` | text | Optional event website URL |
 | `status` | text | `'pending'` (submitted) or `'approved'` (visible on site) |
 | `contact_email` | text | Optional organiser contact |
 | `created_at` | timestamptz | |
