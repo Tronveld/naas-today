@@ -23,7 +23,7 @@ exports.handler = async function(event, context) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
   }
 
-  const { title, date, endDate, time, timeEnd, isAllDay, location, description, isFree, contactEmail } = data;
+  const { title, date, endDate, time, timeEnd, isAllDay, location, description, isFree, isForKids, url } = data;
 
   if (!title || !date || !location) {
     return {
@@ -60,7 +60,8 @@ exports.handler = async function(event, context) {
         location,
         description: description || '',
         is_free: Boolean(isFree),
-        contact_email: contactEmail || null,
+        is_kids_friendly: Boolean(isForKids),
+        url: url || null,
         status: 'pending'
       })
     });
