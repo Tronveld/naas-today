@@ -60,7 +60,7 @@ exports.handler = async function(event, context) {
         location,
         description: description || '',
         is_free: Boolean(isFree),
-        is_kids_friendly: Boolean(isForKids),
+        is_for_kids: Boolean(isForKids),
         url: url || null,
         status: 'pending'
       })
