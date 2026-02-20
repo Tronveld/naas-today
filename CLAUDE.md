@@ -62,7 +62,6 @@ Table: `events`
 | `is_for_kids` | boolean | |
 | `url` | text | Optional event website URL |
 | `status` | text | `'pending'` (submitted) or `'approved'` (visible on site) |
-| `contact_email` | text | Optional organiser contact |
 | `created_at` | timestamptz | |
 
 To approve a submitted event, change its `status` to `'approved'` in the Supabase Table Editor. Events only appear on the site when `status = 'approved'`.
