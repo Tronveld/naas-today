@@ -973,7 +973,7 @@
                     </div>
                 </div>
                 <div class="header-actions">
-                    <button class="feedback-header-btn" id="feedbackHeaderBtn">Give Feedback</button>
+                    <button class="feedback-header-btn" id="feedbackHeaderBtn">Give feedback</button>
                 </div>
             </div>
         </div>
@@ -1152,24 +1152,23 @@
     <div class="modal" id="feedbackModal" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="feedbackTitle">How can we improve?</h2>
+                <h2 id="feedbackTitle">Give Feedback</h2>
                 <button class="modal-close" id="closeFeedbackModal" aria-label="Close">✕</button>
             </div>
             <div class="modal-body">
                 <div id="feedbackForm">
-                    <p>Naas Today is built for the local community. What would make it more useful?</p>
-                    <p>What do you think?</p>
+                    <p>What do you think about Naas Today?</p>
 
                     <div class="feedback-buttons">
                         <button class="feedback-btn" data-response="great">⭐ It's great</button>
-                        <button class="feedback-btn" data-response="ideas">💡 I have ideas</button>
-                        <button class="feedback-btn" data-response="broken">🐛 Something's broken</button>
+                        <button class="feedback-btn" data-response="ideas">💡 I have a suggestion</button>
+                        <button class="feedback-btn" data-response="broken">🐛 Something's not working</button>
                     </div>
 
                     <textarea
                         class="feedback-comment"
                         id="feedbackComment"
-                        placeholder="Tell us what you think: (optional)"
+                        placeholder="Share more about what you think: (optional)"
                     ></textarea>
                     
                     <div class="form-actions">
@@ -1180,7 +1179,7 @@
                 
                 <div id="feedbackThanks" class="feedback-thanks" style="display: none;">
                     <h3>Thank you! 🎉</h3>
-                    <p>Your feedback helps us make Naas Today better for everyone.</p>
+                    <p>Your feedback helps improve Naas Today for everyone.</p>
                     <button class="feedback-btn" onclick="document.getElementById('feedbackModal').classList.remove('active'); resetFeedbackForm();">Close</button>
                 </div>
             </div>
@@ -1196,9 +1195,8 @@
             </div>
             <div class="modal-body">
                 <p>Hi! Naas Today was created to solve a simple problem: it's hard to know what's happening around town.</p>
-                <p>Events get posted across different Facebook pages, websites, and newsletters. This site brings them all together in one place so you never miss what's on.</p>
+                <p>Events get posted across different Facebook pages, websites, and newsletters. This site brings them all together in one place, so you never miss what's on.</p>
                 <p>All events are submitted by the community and moderated before publication.</p>
-                <p style="margin-bottom: 0;">All events are free to submit — use the button above to share yours.</p>
             </div>
         </div>
     </div>
@@ -1207,11 +1205,11 @@
     <div class="modal" id="contactModal" role="dialog" aria-modal="true" aria-labelledby="contactModalTitle">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="contactModalTitle">Get in Touch</h2>
+                <h2 id="contactModalTitle">Contact</h2>
                 <button class="modal-close" id="closeContactModal" aria-label="Close">✕</button>
             </div>
             <div class="modal-body">
-                <p style="margin-bottom: 0;">Get in touch: <a href="mailto:hello@naastoday.com" style="color: var(--accent);">hello@naastoday.com</a><br>Every message is read and appreciated.</p>
+                <p style="margin-bottom: 0;">To get in touch: <a href="mailto:hello@naastoday.com" style="color: var(--accent);">hello@naastoday.com</a><br>Every message is read and appreciated!</p>
             </div>
         </div>
     </div>
@@ -1380,9 +1378,9 @@
             const when = timeStr ? `${dateDisplay} · ${timeStr}` : dateDisplay;
             const text = `${event.title}\n${when}\n${event.location}`;
             if (navigator.share) {
-                navigator.share({ title: event.title, text, url: 'https://naas.today' }).catch(() => {});
+                navigator.share({ title: event.title, text, url: 'https://naastoday.com' }).catch(() => {});
             } else {
-                window.open(`https://wa.me/?text=${encodeURIComponent(text + '\n\nhttps://naas.today')}`, '_blank');
+                window.open(`https://wa.me/?text=${encodeURIComponent(text + '\n\nhttps://naastoday.com')}`, '_blank');
             }
         }
 
@@ -1712,7 +1710,7 @@
                 if (!response.ok) throw new Error(`Submit failed: ${response.status}`);
                 closeModal('submitModal');
                 document.getElementById('eventForm').reset();
-                alert('Event Submitted! 🎉\n\nThanks for your help! We\'ll review your submission and it should appear on the site within a day.\n\nQuestions? Email us at naastoday.tile693@passinbox.com');
+                alert('Event Submitted! 🎉\n\nThanks for your help! I\'ll review your submission and it should appear on the site within a day or two.\n\nQuestions? Email me at naastoday.tile693@passinbox.com');
             } catch (error) {
                 console.error('Error submitting event:', error);
                 alert('Sorry, something went wrong. Please try again or email naastoday.tile693@passinbox.com.');
