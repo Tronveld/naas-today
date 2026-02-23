@@ -1,4 +1,34 @@
 // Netlify function – submit a new event (saved as 'pending' for review)
+
+// Simple in-memory rate limiter: max 5 submissions per IP per hour
+const rateLimitMap = new Map();
+const RATE_LIMIT = 5;
+const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now - entry.windowStart > RATE_WINDOW_MS) {
+    rateLimitMap.set(ip, { windowStart: now, count: 1 });
+    return false;
+  }
+  entry.count++;
+  if (entry.count > RATE_LIMIT) return true;
+  return false;
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
+
+function validUrl(value) {
+  try {
+    const parsed = new URL(value);
+    return ['http:', 'https:'].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
 exports.handler = async function(event, context) {
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -16,6 +46,16 @@ exports.handler = async function(event, context) {
     };
   }
 
+  // Rate limiting
+  const ip = event.headers['x-forwarded-for']?.split(',')[0].trim() || 'unknown';
+  if (isRateLimited(ip)) {
+    return {
+      statusCode: 429,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Too many submissions. Please try again later.' })
+    };
+  }
+
   let data;
   try {
     data = JSON.parse(event.body);
@@ -25,6 +65,7 @@ exports.handler = async function(event, context) {
 
   const { title, date, endDate, time, timeEnd, isAllDay, location, description, isFree, isForKids, url } = data;
 
+  // Required field presence
   if (!title || !date || !location) {
     return {
       statusCode: 400,
@@ -39,6 +80,45 @@ exports.handler = async function(event, context) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ error: 'Missing required field: time (or mark as all day)' })
     };
+  }
+
+  // Type validation
+  if (typeof title !== 'string' || typeof date !== 'string' || typeof location !== 'string') {
+    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid field types' }) };
+  }
+  if (typeof isAllDay !== 'boolean' || typeof isFree !== 'boolean' || typeof isForKids !== 'boolean') {
+    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid boolean fields' }) };
+  }
+
+  // Length limits
+  if (title.length > 150) {
+    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Title too long (max 150 characters)' }) };
+  }
+  if (location.length > 150) {
+    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Location too long (max 150 characters)' }) };
+  }
+  if (description && description.length > 2000) {
+    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Description too long (max 2000 characters)' }) };
+  }
+  if (url && url.length > 500) {
+    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'URL too long (max 500 characters)' }) };
+  }
+
+  // Format validation
+  if (!DATE_RE.test(date)) {
+    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid date format' }) };
+  }
+  if (endDate && !DATE_RE.test(endDate)) {
+    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid end date format' }) };
+  }
+  if (time && !TIME_RE.test(time)) {
+    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid time format' }) };
+  }
+  if (timeEnd && !TIME_RE.test(timeEnd)) {
+    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid end time format' }) };
+  }
+  if (url && !validUrl(url)) {
+    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid URL (must start with http:// or https://)' }) };
   }
 
   try {
@@ -56,11 +136,11 @@ exports.handler = async function(event, context) {
         end_date: endDate || null,
         time: time || null,
         time_end: timeEnd || null,
-        is_all_day: Boolean(isAllDay),
+        is_all_day: isAllDay,
         location,
         description: description || '',
-        is_free: Boolean(isFree),
-        is_for_kids: Boolean(isForKids),
+        is_free: isFree,
+        is_for_kids: isForKids,
         url: url || null,
         status: 'pending'
       })

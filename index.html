@@ -8,7 +8,7 @@
     <meta property="og:title" content="Naas Today — Your daily guide to what's happening in Naas">
     <meta property="og:description" content="Your daily guide to what's happening in Naas, County Kildare. Find local events, updated daily.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://naastoday.ie">
+    <meta property="og:url" content="https://naastoday.com">
     <meta property="og:site_name" content="Naas Today">
     <meta property="og:locale" content="en_IE">
     <meta name="twitter:card" content="summary">
@@ -1076,7 +1076,7 @@
                 <form id="eventForm">
                     <div class="form-group">
                         <label for="eventTitle">Event Title *</label>
-                        <input type="text" id="eventTitle" required>
+                        <input type="text" id="eventTitle" required maxlength="150">
                     </div>
                     
                     <div class="form-group">
@@ -1114,17 +1114,17 @@
                     
                     <div class="form-group">
                         <label for="eventLocation">Location *</label>
-                        <input type="text" id="eventLocation" required>
+                        <input type="text" id="eventLocation" required maxlength="150">
                     </div>
                     
                     <div class="form-group">
                         <label for="eventDescription">Description *</label>
-                        <textarea id="eventDescription" required></textarea>
+                        <textarea id="eventDescription" required maxlength="2000"></textarea>
                     </div>
 
                     <div class="form-group">
                         <label for="eventUrl">Web page <span class="form-hint">(optional)</span></label>
-                        <input type="url" id="eventUrl" placeholder="https://...">
+                        <input type="url" id="eventUrl" placeholder="https://..." maxlength="500">
                     </div>
 
                     <div class="form-group">
@@ -1417,17 +1417,20 @@
             card.appendChild(desc);
 
             if (event.url) {
-                const urlEl = document.createElement('a');
-                urlEl.className = 'event-url';
-                urlEl.href = event.url;
-                urlEl.target = '_blank';
-                urlEl.rel = 'noopener noreferrer';
                 try {
-                    urlEl.textContent = '🔗 ' + new URL(event.url).hostname.replace(/^www\./, '');
+                    const parsed = new URL(event.url);
+                    if (['http:', 'https:'].includes(parsed.protocol)) {
+                        const urlEl = document.createElement('a');
+                        urlEl.className = 'event-url';
+                        urlEl.href = parsed.href;
+                        urlEl.target = '_blank';
+                        urlEl.rel = 'noopener noreferrer';
+                        urlEl.textContent = '🔗 ' + parsed.hostname.replace(/^www\./, '');
+                        card.appendChild(urlEl);
+                    }
                 } catch {
-                    urlEl.textContent = '🔗 Visit website';
+                    // Invalid URL — skip rendering the link
                 }
-                card.appendChild(urlEl);
             }
 
             const footer = document.createElement('div');
@@ -1762,9 +1765,7 @@
                     body: JSON.stringify(feedbackData)
                 });
                 showThanks();
-                if (!response.ok) console.log('Feedback submitted (locally):', feedbackData);
             } catch (error) {
-                console.log('Feedback submitted (locally):', feedbackData);
                 showThanks();
             }
         });

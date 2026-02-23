@@ -14,12 +14,6 @@ exports.handler = async function(event, context) {
   try {
     const feedback = JSON.parse(event.body);
     
-    console.log('Feedback received:', {
-      response: feedback.response,
-      comment: feedback.comment,
-      timestamp: feedback.timestamp
-    });
-    
     // Send to Google Apps Script webhook
     if (FEEDBACK_WEBHOOK) {
       await fetch(FEEDBACK_WEBHOOK, {
@@ -28,12 +22,12 @@ exports.handler = async function(event, context) {
         body: JSON.stringify(feedback)
       });
     }
-    
+
     return {
       statusCode: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://naastoday.com',
       },
       body: JSON.stringify({ 
         success: true,

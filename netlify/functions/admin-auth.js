@@ -13,6 +13,23 @@ const ITERATIONS = 310_000; // OWASP 2023 recommendation for PBKDF2-SHA256
 const KEYLEN     = 64;      // bytes → 128-char hex output
 const DIGEST     = 'sha256';
 
+// Rate limit login attempts: max 10 per IP per 15 minutes
+const loginAttempts = new Map();
+const LOGIN_LIMIT   = 10;
+const LOGIN_WINDOW  = 15 * 60 * 1000;
+
+function isLoginRateLimited(ip) {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+  if (!entry || now - entry.windowStart > LOGIN_WINDOW) {
+    loginAttempts.set(ip, { windowStart: now, count: 1 });
+    return false;
+  }
+  entry.count++;
+  if (entry.count > LOGIN_LIMIT) return true;
+  return false;
+}
+
 function hashPassword(plaintext) {
   const salt = crypto.randomBytes(32).toString('hex');
   const hash = crypto.pbkdf2Sync(plaintext, salt, ITERATIONS, KEYLEN, DIGEST).toString('hex');
@@ -121,6 +138,11 @@ exports.handler = async function(event) {
   if (action === 'login') {
     if (!password) {
       return json(400, { error: 'Password required' });
+    }
+
+    const ip = event.headers['x-forwarded-for']?.split(',')[0].trim() || 'unknown';
+    if (isLoginRateLimited(ip)) {
+      return json(429, { error: 'Too many login attempts. Please wait before trying again.' });
     }
 
     try {
