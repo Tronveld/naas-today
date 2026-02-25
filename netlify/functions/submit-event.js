@@ -20,6 +20,19 @@ function isRateLimited(ip) {
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
 
+function validDate(s) {
+  if (!DATE_RE.test(s)) return false;
+  const parts = s.split('-').map(Number);
+  const m = parts[1], d = parts[2];
+  return m >= 1 && m <= 12 && d >= 1 && d <= 31;
+}
+
+function validTime(s) {
+  if (!TIME_RE.test(s)) return false;
+  const parts = s.split(':').map(Number);
+  return parts[0] <= 23 && parts[1] <= 59;
+}
+
 function validUrl(value) {
   try {
     const parsed = new URL(value);
@@ -34,7 +47,7 @@ exports.handler = async function(event, context) {
   const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return { statusCode: 405, headers: { 'Content-Type': 'text/plain' }, body: 'Method Not Allowed' };
   }
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -46,12 +59,14 @@ exports.handler = async function(event, context) {
     };
   }
 
-  // Rate limiting
-  const ip = event.headers['x-forwarded-for']?.split(',')[0].trim() || 'unknown';
+  // Rate limiting — prefer Netlify's non-spoofable header over x-forwarded-for
+  const ip = event.headers['x-nf-client-connection-ip']
+    || event.headers['x-forwarded-for']?.split(',')[0].trim()
+    || 'unknown';
   if (isRateLimited(ip)) {
     return {
       statusCode: 429,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Retry-After': '3600' },
       body: JSON.stringify({ error: 'Too many submissions. Please try again later.' })
     };
   }
@@ -89,6 +104,9 @@ exports.handler = async function(event, context) {
   if (typeof isAllDay !== 'boolean' || typeof isFree !== 'boolean' || typeof isForKids !== 'boolean') {
     return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid boolean fields' }) };
   }
+  if (description !== undefined && typeof description !== 'string') {
+    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid field types' }) };
+  }
 
   // Length limits
   if (title.length > 150) {
@@ -104,17 +122,17 @@ exports.handler = async function(event, context) {
     return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'URL too long (max 500 characters)' }) };
   }
 
-  // Format validation
-  if (!DATE_RE.test(date)) {
+  // Format validation (regex + numeric range check)
+  if (!validDate(date)) {
     return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid date format' }) };
   }
-  if (endDate && !DATE_RE.test(endDate)) {
+  if (endDate && !validDate(endDate)) {
     return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid end date format' }) };
   }
-  if (time && !TIME_RE.test(time)) {
+  if (time && !validTime(time)) {
     return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid time format' }) };
   }
-  if (timeEnd && !TIME_RE.test(timeEnd)) {
+  if (timeEnd && !validTime(timeEnd)) {
     return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid end time format' }) };
   }
   if (url && !validUrl(url)) {

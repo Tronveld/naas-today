@@ -54,7 +54,7 @@ function json(statusCode, body) {
 
 exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return { statusCode: 405, headers: { 'Content-Type': 'text/plain' }, body: 'Method Not Allowed' };
   }
 
   const SUPABASE_URL  = process.env.SUPABASE_URL;
@@ -140,9 +140,16 @@ exports.handler = async function(event) {
       return json(400, { error: 'Password required' });
     }
 
-    const ip = event.headers['x-forwarded-for']?.split(',')[0].trim() || 'unknown';
+    // Prefer Netlify's non-spoofable header over x-forwarded-for
+    const ip = event.headers['x-nf-client-connection-ip']
+      || event.headers['x-forwarded-for']?.split(',')[0].trim()
+      || 'unknown';
     if (isLoginRateLimited(ip)) {
-      return json(429, { error: 'Too many login attempts. Please wait before trying again.' });
+      return {
+        statusCode: 429,
+        headers: { 'Content-Type': 'application/json', 'Retry-After': '900' },
+        body: JSON.stringify({ error: 'Too many login attempts. Please wait before trying again.' }),
+      };
     }
 
     try {
