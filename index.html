@@ -372,6 +372,7 @@
             line-height: 1.6;
             margin-bottom: 1rem;
             font-size: 0.9375rem;
+            white-space: pre-wrap;
         }
         
         .event-tags {
@@ -985,7 +986,7 @@
             <div class="date-header">
                 <div class="current-date" id="currentDateDisplay">Today</div>
                 <nav class="date-nav" aria-label="Date navigation">
-                    <button class="date-nav-btn" id="prevDay" aria-label="Previous day">← Previous</button>
+                    <button class="date-nav-btn" id="prevDay" aria-label="Previous day" style="display:none">← Previous</button>
                     <button class="date-nav-btn today-btn" id="todayBtn" style="display:none">Today</button>
                     <button class="date-nav-btn" id="changeDateBtn">Change date</button>
                     <button class="date-nav-btn" id="nextDay" aria-label="Next day">Next →</button>
@@ -1550,10 +1551,14 @@
             document.getElementById('currentDateDisplay').textContent = formatDateDisplay(currentDate);
             const isToday = localDateStr(currentDate) === localDateStr(new Date());
             document.getElementById('todayBtn').style.display = isToday ? 'none' : '';
+            document.getElementById('prevDay').style.display = isToday ? 'none' : '';
         }
 
         function changeDate(days) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
             currentDate.setDate(currentDate.getDate() + days);
+            if (currentDate < today) currentDate = today;
             updateDateDisplay();
             renderEvents();
         }
@@ -1607,7 +1612,9 @@
         });
 
         document.getElementById('changeDateBtn').addEventListener('click', () => {
-            document.getElementById('dateInput').value = localDateStr(currentDate);
+            const dateInput = document.getElementById('dateInput');
+            dateInput.min = localDateStr(new Date());
+            dateInput.value = localDateStr(currentDate);
             openModal('dateModal');
         });
 
@@ -1751,6 +1758,8 @@
         });
 
         sendFeedbackBtn.addEventListener('click', async () => {
+            sendFeedbackBtn.disabled = true;
+            sendFeedbackBtn.textContent = 'Sending\u2026';
             const comment = document.getElementById('feedbackComment').value.trim();
             const feedbackData = {
                 response: selectedResponse,
@@ -1787,6 +1796,7 @@
             selectedResponse = null;
             sendFeedbackBtn.disabled = true;
             sendFeedbackBtn.style.opacity = '0.5';
+            sendFeedbackBtn.textContent = 'Send Feedback';
         }
 
         // ── Footer Modals ────────────────────────────────────────────────────
