@@ -1219,6 +1219,14 @@
     <script>
         // ── Utilities ──────────────────────────────────────────────────────
 
+        // Decodes HTML entities (e.g. &eacute; → é) safely via a textarea element
+        function decodeHTML(str) {
+            if (!str) return str;
+            const t = document.createElement('textarea');
+            t.innerHTML = str;
+            return t.value;
+        }
+
         // Returns the local date as YYYY-MM-DD (avoids UTC offset issues with toISOString)
         function localDateStr(date) {
             const d = date instanceof Date ? date : new Date(date);
@@ -1309,15 +1317,15 @@
                 if (Array.isArray(data) && data.length > 0) {
                     events = data.map((row, index) => ({
                         id: row.id || index + 1,
-                        title: row.title || '',
+                        title: decodeHTML(row.title || ''),
                         date: row.date || '',
                         endDate: row.end_date || '',
                         // Postgres TIME returns "HH:MM:SS", trim to "HH:MM"
                         time: row.time ? row.time.substring(0, 5) : '',
                         timeEnd: row.time_end ? row.time_end.substring(0, 5) : '',
                         isAllDay: Boolean(row.is_all_day),
-                        location: row.location || '',
-                        description: row.description || '',
+                        location: decodeHTML(row.location || ''),
+                        description: decodeHTML(row.description || ''),
                         isFree: Boolean(row.is_free),
                         isForKids: Boolean(row.is_for_kids),
                         url: row.url || ''

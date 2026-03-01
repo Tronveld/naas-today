@@ -721,6 +721,15 @@
     let editFocusPrev = null;
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    // Decodes HTML entities (e.g. &eacute; → é) safely via a textarea element
+    function decodeHTML(str) {
+        if (!str) return str;
+        const t = document.createElement('textarea');
+        t.innerHTML = str;
+        return t.value;
+    }
+
     function getPassword() { return sessionStorage.getItem('adminPw') || ''; }
     function setPassword(pw) { sessionStorage.setItem('adminPw', pw); }
     function clearPassword() { sessionStorage.removeItem('adminPw'); }
@@ -801,7 +810,13 @@
             const errBody = await res.json().catch(() => ({}));
             throw new Error(`${res.status}: ${errBody.error || 'unknown error'}`);
         }
-        return await res.json();
+        const data = await res.json();
+        return data.map(ev => ({
+            ...ev,
+            title: decodeHTML(ev.title),
+            location: decodeHTML(ev.location),
+            description: decodeHTML(ev.description),
+        }));
     }
 
     async function apiPatch(id, fields) {

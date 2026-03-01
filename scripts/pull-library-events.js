@@ -67,6 +67,23 @@ const HTML_ENT = {
   mdash: '\u2014', ndash: '\u2013', hellip: '\u2026', bull: '\u2022',
   amp: '&', lt: '<', gt: '>', quot: '"', apos: "'",
   copy: '\u00A9', reg: '\u00AE', trade: '\u2122', euro: '\u20AC', pound: '\u00A3',
+  // Latin-1 supplement — accented characters common in European text
+  aacute: 'á', Aacute: 'Á', agrave: 'à', Agrave: 'À', acirc: 'â', Acirc: 'Â',
+  auml: 'ä', Auml: 'Ä', atilde: 'ã', Atilde: 'Ã', aring: 'å', Aring: 'Å',
+  aelig: 'æ', AElig: 'Æ',
+  eacute: 'é', Eacute: 'É', egrave: 'è', Egrave: 'È', ecirc: 'ê', Ecirc: 'Ê',
+  euml: 'ë', Euml: 'Ë',
+  iacute: 'í', Iacute: 'Í', igrave: 'ì', Igrave: 'Ì', icirc: 'î', Icirc: 'Î',
+  iuml: 'ï', Iuml: 'Ï',
+  oacute: 'ó', Oacute: 'Ó', ograve: 'ò', Ograve: 'Ò', ocirc: 'ô', Ocirc: 'Ô',
+  ouml: 'ö', Ouml: 'Ö', otilde: 'õ', Otilde: 'Õ', oslash: 'ø', Oslash: 'Ø',
+  uacute: 'ú', Uacute: 'Ú', ugrave: 'ù', Ugrave: 'Ù', ucirc: 'û', Ucirc: 'Û',
+  uuml: 'ü', Uuml: 'Ü',
+  ntilde: 'ñ', Ntilde: 'Ñ', ccedil: 'ç', Ccedil: 'Ç', szlig: 'ß',
+  yacute: 'ý', Yacute: 'Ý', yuml: 'ÿ',
+  // Math / misc
+  times: '×', divide: '÷', frac12: '½', frac14: '¼', frac34: '¾',
+  iexcl: '¡', iquest: '¿', ordf: 'ª', ordm: 'º', deg: '°',
 };
 
 // ── HTML → plain text ─────────────────────────────────────────────────────────
@@ -159,7 +176,12 @@ function itemToEvent(item) {
   if (desc.length > 2000) desc = desc.slice(0, 1997) + '…';
 
   // Title: use RSS title if meaningful, otherwise generate from first sentence
-  let title = item.title || '';
+  // item.title comes through tagContent() which only XML-decodes, so named HTML
+  // entities (e.g. &eacute;) survive — decode them here.
+  let title = (item.title || '')
+    .replace(/&([a-zA-Z]+);/g, (m, n) => HTML_ENT[n] ?? m)
+    .replace(/&#(\d+);/g,      (_, n) => String.fromCharCode(+n))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
   if (!title && desc) {
     const first = desc.match(/^[\s\S]{10,}?[.!?](?=\s|$)/);
     title = first ? first[0].trim() : desc.slice(0, 80).trim();
