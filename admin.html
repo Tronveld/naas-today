@@ -604,8 +604,8 @@
 
     <div class="dashboard-body">
         <div class="dashboard-controls">
-            <button class="tab-btn active" data-filter="all">All</button>
-            <button class="tab-btn" data-filter="pending">Pending</button>
+            <button class="tab-btn" data-filter="all">All</button>
+            <button class="tab-btn active" data-filter="pending">Pending</button>
             <button class="tab-btn" data-filter="approved">Approved</button>
             <span class="event-count" id="eventCount"></span>
             <button class="btn-refresh" id="refreshBtn">Refresh</button>
@@ -717,7 +717,7 @@
 <script>
     // ── State ────────────────────────────────────────────────────────────────
     let allEvents    = [];   // full list from last fetch
-    let activeFilter = 'all';
+    let activeFilter = 'pending';
     let editFocusPrev = null;
 
     // ── Helpers ──────────────────────────────────────────────────────────────
