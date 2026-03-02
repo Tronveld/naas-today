@@ -522,6 +522,99 @@
         .time-inputs input { flex: 1; }
         .time-sep { color: var(--medium-gray); font-size: 0.875rem; flex-shrink: 0; }
 
+        /* ── Recurring ───────────────────────────────────────────────────── */
+        .badge-recurring {
+            font-size: 0.7em;
+            background: #e8f4fd;
+            color: #1a6fa0;
+            border-radius: 3px;
+            padding: 1px 5px;
+            margin-left: 6px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .recurring-info-bar {
+            background: #e8f4fd;
+            color: #1a6fa0;
+            border-radius: 6px;
+            padding: 0.6rem 0.9rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .recurring-apply-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+
+        /* ── Delete series modal ─────────────────────────────────────────── */
+        #deleteSeriesModal .modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        #deleteSeriesModal p {
+            color: var(--dark-gray);
+            font-size: 0.9375rem;
+            line-height: 1.5;
+        }
+
+        .delete-series-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+        }
+
+        .btn-delete-this {
+            padding: 0.6rem 1rem;
+            background: var(--red-light);
+            color: var(--red);
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9375rem;
+            text-align: left;
+        }
+
+        .btn-delete-this:hover { background: var(--red); color: white; }
+
+        .btn-delete-series {
+            padding: 0.6rem 1rem;
+            background: #fff0f0;
+            color: #8b0000;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9375rem;
+            text-align: left;
+        }
+
+        .btn-delete-series:hover { background: #8b0000; color: white; }
+
+        .btn-cancel-delete {
+            padding: 0.6rem 1rem;
+            background: var(--warm-gray);
+            color: var(--dark-gray);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9375rem;
+        }
+
+        .btn-cancel-delete:hover { background: var(--border); }
+
         /* ── Responsive ──────────────────────────────────────────────────── */
         @media (max-width: 640px) {
             .admin-header { padding: 0.75rem 1rem; }
@@ -607,6 +700,7 @@
             <button class="tab-btn" data-filter="all">All</button>
             <button class="tab-btn active" data-filter="pending">Pending</button>
             <button class="tab-btn" data-filter="approved">Approved</button>
+            <button class="tab-btn" data-filter="recurring">Recurring</button>
             <span class="event-count" id="eventCount"></span>
             <button class="btn-refresh" id="refreshBtn">Refresh</button>
         </div>
@@ -641,6 +735,15 @@
         <div class="modal-body">
             <form id="editForm" novalidate>
                 <input type="hidden" id="editEventId">
+
+                <div id="editRecurringInfoBar" class="recurring-info-bar" style="display:none">
+                    <span>↻</span> <span id="editRecurringInfoText"></span>
+                </div>
+
+                <div id="editApplyToSeriesRow" class="recurring-apply-row" style="display:none">
+                    <input type="checkbox" id="editApplyToSeries" checked>
+                    <label for="editApplyToSeries">Apply changes to all future events in this series</label>
+                </div>
 
                 <div class="form-group">
                     <label for="editTitle">Title *</label>
@@ -710,6 +813,24 @@
                     <button type="submit" class="btn-primary" id="saveEditBtn">Save changes</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete series modal -->
+<div id="deleteSeriesModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteSeriesTitle">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="deleteSeriesTitle">Delete Event</h2>
+            <button class="modal-close" id="closeDeleteSeriesModal" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <p id="deleteSeriesMsg"></p>
+            <div class="delete-series-btns">
+                <button class="btn-delete-this" id="deleteThisOnlyBtn">Delete this event only</button>
+                <button class="btn-delete-series" id="deleteAllFutureBtn">Delete all future events in this series</button>
+                <button class="btn-cancel-delete" id="cancelDeleteSeriesBtn">Cancel</button>
+            </div>
         </div>
     </div>
 </div>
@@ -801,7 +922,11 @@
     // ── Events API ───────────────────────────────────────────────────────────
     async function apiFetchEvents(statusFilter) {
         let url = '/.netlify/functions/admin-events';
-        if (statusFilter && statusFilter !== 'all') url += '?status=' + statusFilter;
+        if (statusFilter === 'recurring') {
+            url += '?recurring=true';
+        } else if (statusFilter && statusFilter !== 'all') {
+            url += '?status=' + statusFilter;
+        }
         const res = await fetch(url, {
             headers: { 'x-admin-password': getPassword() },
         });
@@ -842,6 +967,37 @@
                 'x-admin-password': getPassword(),
             },
             body: JSON.stringify({ id }),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || 'Delete failed');
+        }
+    }
+
+    async function apiPatchGroup(group_id, from_date, fields) {
+        const res = await fetch('/.netlify/functions/admin-events', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-password': getPassword(),
+            },
+            body: JSON.stringify({ group_id, from_date, fields }),
+        });
+        if (res.status === 401) { handleUnauthorized(); return null; }
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Update failed');
+        return data;
+    }
+
+    async function apiDeleteGroup(group_id, from_date) {
+        const res = await fetch('/.netlify/functions/admin-events', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-password': getPassword(),
+            },
+            body: JSON.stringify({ group_id, from_date }),
         });
         if (res.status === 401) { handleUnauthorized(); return; }
         if (!res.ok) {
@@ -914,6 +1070,12 @@
             titleSpan.className = 'td-title-text';
             titleSpan.textContent = ev.title;
             tdTitle.appendChild(titleSpan);
+            if (ev.recurring_group_id) {
+                const recurBadge = document.createElement('span');
+                recurBadge.className = 'badge-recurring';
+                recurBadge.textContent = '↻ Recurring';
+                tdTitle.appendChild(recurBadge);
+            }
             tr.appendChild(tdTitle);
 
             // Date
@@ -969,11 +1131,15 @@
             actionsDiv.appendChild(editBtn);
 
             const deleteBtn = makeActionBtn('Delete', 'btn-delete', async () => {
-                if (!confirm('Delete "' + ev.title + '"?\n\nThis cannot be undone.')) return;
-                await rowAction(deleteBtn, async () => {
-                    await apiDelete(ev.id);
-                    await loadEvents();
-                });
+                if (ev.recurring_group_id) {
+                    openDeleteSeriesModal(ev, deleteBtn);
+                } else {
+                    if (!confirm('Delete "' + ev.title + '"?\n\nThis cannot be undone.')) return;
+                    await rowAction(deleteBtn, async () => {
+                        await apiDelete(ev.id);
+                        await loadEvents();
+                    });
+                }
             });
             actionsDiv.appendChild(deleteBtn);
 
@@ -1037,7 +1203,31 @@
         updateEditTimeUI();
         hideError('editError');
 
+        // Recurring series info
+        const infoBar = document.getElementById('editRecurringInfoBar');
+        const applyRow = document.getElementById('editApplyToSeriesRow');
         const modal = document.getElementById('editModal');
+
+        if (ev.recurring_group_id) {
+            const groupEvents = allEvents
+                .filter(e => e.recurring_group_id === ev.recurring_group_id)
+                .sort((a, b) => (a.date > b.date ? 1 : -1));
+            const idx = groupEvents.findIndex(e => e.id === ev.id);
+            const total = groupEvents.length;
+            document.getElementById('editRecurringInfoText').textContent =
+                `Recurring series — event ${idx + 1} of ${total}`;
+            infoBar.style.display = '';
+            applyRow.style.display = '';
+            document.getElementById('editApplyToSeries').checked = true;
+            modal._recurringGroupId = ev.recurring_group_id;
+            modal._recurringFromDate = ev.date;
+        } else {
+            infoBar.style.display = 'none';
+            applyRow.style.display = 'none';
+            modal._recurringGroupId = null;
+            modal._recurringFromDate = null;
+        }
+
         modal.classList.add('active');
         trapFocus(modal);
         document.getElementById('editTitle').focus();
@@ -1208,8 +1398,22 @@
         btn.disabled    = true;
         btn.textContent = 'Saving…';
 
+        const modal = document.getElementById('editModal');
+        const groupId   = modal._recurringGroupId;
+        const fromDate  = modal._recurringFromDate;
+        const applyToSeries = document.getElementById('editApplyToSeries').checked;
+
         try {
-            await apiPatch(id, fields);
+            if (groupId && applyToSeries) {
+                // Bulk update: this event and all future in the series
+                await apiPatchGroup(groupId, fromDate, fields);
+            } else if (groupId && !applyToSeries) {
+                // Single update: detach from series
+                await apiPatch(id, { ...fields, recurring_group_id: null });
+            } else {
+                // Normal single event
+                await apiPatch(id, fields);
+            }
             closeEditModal();
             await loadEvents();
         } catch (err) {
@@ -1217,6 +1421,55 @@
         } finally {
             btn.disabled    = false;
             btn.textContent = 'Save changes';
+        }
+    });
+
+    // ── Delete series modal ──────────────────────────────────────────────────
+    let _deleteSeriesEv   = null;
+    let _deleteSeriesBtn  = null;
+
+    function openDeleteSeriesModal(ev, triggerBtn) {
+        _deleteSeriesEv  = ev;
+        _deleteSeriesBtn = triggerBtn;
+        const msg = document.getElementById('deleteSeriesMsg');
+        msg.textContent = `"${ev.title}" is part of a recurring series. What would you like to delete?`;
+        document.getElementById('deleteSeriesModal').classList.add('active');
+    }
+
+    function closeDeleteSeriesModal() {
+        document.getElementById('deleteSeriesModal').classList.remove('active');
+        _deleteSeriesEv  = null;
+        _deleteSeriesBtn = null;
+    }
+
+    document.getElementById('closeDeleteSeriesModal').addEventListener('click', closeDeleteSeriesModal);
+    document.getElementById('cancelDeleteSeriesBtn').addEventListener('click', closeDeleteSeriesModal);
+
+    document.getElementById('deleteThisOnlyBtn').addEventListener('click', async () => {
+        const ev  = _deleteSeriesEv;
+        const btn = _deleteSeriesBtn;
+        closeDeleteSeriesModal();
+        if (!ev) return;
+        await rowAction(btn || document.createElement('button'), async () => {
+            await apiDelete(ev.id);
+            await loadEvents();
+        });
+    });
+
+    document.getElementById('deleteAllFutureBtn').addEventListener('click', async () => {
+        const ev  = _deleteSeriesEv;
+        const btn = _deleteSeriesBtn;
+        closeDeleteSeriesModal();
+        if (!ev) return;
+        await rowAction(btn || document.createElement('button'), async () => {
+            await apiDeleteGroup(ev.recurring_group_id, ev.date);
+            await loadEvents();
+        });
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.getElementById('deleteSeriesModal').classList.contains('active')) {
+            closeDeleteSeriesModal();
         }
     });
 

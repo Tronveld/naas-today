@@ -1091,6 +1091,31 @@
                     </div>
 
                     <div class="form-group">
+                        <div class="checkbox-group">
+                            <label>
+                                <input type="checkbox" id="isRecurring">
+                                Recurring event
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="recurringSection" style="display:none">
+                        <div class="form-group">
+                            <label for="recurrenceFrequency">Repeats</label>
+                            <select id="recurrenceFrequency">
+                                <option value="weekly">Weekly</option>
+                                <option value="fortnightly">Fortnightly</option>
+                                <option value="monthly">Monthly (same day each month)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="recurrenceEndDate">Repeat until <span aria-hidden="true">*</span></label>
+                            <input type="date" id="recurrenceEndDate">
+                            <p class="field-hint" id="recurrenceHint" style="margin-top:4px;color:#666;font-size:0.875em"></p>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
                         <label>Time *</label>
                         <div class="time-mode-group">
                             <label class="radio-label">
@@ -1140,7 +1165,7 @@
                             </label>
                         </div>
                     </div>
-                    
+
                     <div class="form-actions">
                         <button type="button" class="btn-secondary" id="cancelSubmit">Cancel</button>
                         <button type="submit" class="btn-primary">Submit Event</button>
@@ -1691,6 +1716,45 @@
             document.getElementById('eventForm').reset();
         });
 
+        // ── Recurring toggle ─────────────────────────────────────────────────
+        function updateRecurrenceHint() {
+            const startDate = document.getElementById('eventDate').value;
+            const endDate   = document.getElementById('recurrenceEndDate').value;
+            const freq      = document.getElementById('recurrenceFrequency').value;
+            const hint      = document.getElementById('recurrenceHint');
+            if (!startDate || !endDate || endDate <= startDate) { hint.textContent = ''; return; }
+            let count = 0, cur = new Date(startDate + 'T00:00:00');
+            const end = endDate;
+            while (count < 104) {
+                const s = cur.toISOString().slice(0, 10);
+                if (s > end) break;
+                count++;
+                if (freq === 'weekly')       cur.setDate(cur.getDate() + 7);
+                else if (freq === 'fortnightly') cur.setDate(cur.getDate() + 14);
+                else cur.setMonth(cur.getMonth() + 1);
+            }
+            hint.textContent = count > 0 ? `~${count} occurrence${count !== 1 ? 's' : ''}` : '';
+        }
+
+        document.getElementById('isRecurring').addEventListener('change', function() {
+            const section = document.getElementById('recurringSection');
+            section.style.display = this.checked ? '' : 'none';
+            document.getElementById('recurrenceEndDate').required = this.checked;
+        });
+
+        document.getElementById('recurrenceFrequency').addEventListener('change', updateRecurrenceHint);
+        document.getElementById('recurrenceEndDate').addEventListener('change', updateRecurrenceHint);
+        document.getElementById('eventDate').addEventListener('change', updateRecurrenceHint);
+
+        // Also hide recurring section on form reset
+        document.getElementById('eventForm').addEventListener('reset', () => {
+            setTimeout(() => {
+                document.getElementById('recurringSection').style.display = 'none';
+                document.getElementById('recurrenceEndDate').required = false;
+                document.getElementById('recurrenceHint').textContent = '';
+            }, 0);
+        });
+
         document.getElementById('eventForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -1699,7 +1763,7 @@
             submitBtn.disabled = true;
 
             const timeMode = document.querySelector('input[name="timeMode"]:checked').value;
-            const payload = {
+            const baseEvent = {
                 title: document.getElementById('eventTitle').value.trim(),
                 date: document.getElementById('eventDate').value,
                 endDate: document.getElementById('eventEndDate').value || null,
@@ -1713,29 +1777,65 @@
                 url: document.getElementById('eventUrl').value.trim() || null
             };
 
-            if (payload.endDate && payload.endDate < payload.date) {
+            if (baseEvent.endDate && baseEvent.endDate < baseEvent.date) {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
                 alert('The end date must be on or after the start date.');
                 return;
             }
 
-            try {
-                const response = await fetch('/.netlify/functions/submit-event', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (!response.ok) throw new Error(`Submit failed: ${response.status}`);
-                closeModal('submitModal');
-                document.getElementById('eventForm').reset();
-                alert('Event Submitted! 🎉\n\nThanks for your help! I\'ll review your submission and it should appear on the site within a day or two.\n\nQuestions? Email me at naastoday.tile693@passinbox.com');
-            } catch (error) {
-                console.error('Error submitting event:', error);
-                alert('Sorry, something went wrong. Please try again or email naastoday.tile693@passinbox.com.');
-            } finally {
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
+            const isRecurring = document.getElementById('isRecurring').checked;
+
+            if (isRecurring) {
+                const recEndDate  = document.getElementById('recurrenceEndDate').value;
+                const frequency   = document.getElementById('recurrenceFrequency').value;
+
+                if (!recEndDate || recEndDate <= baseEvent.date) {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                    alert('Please set a "Repeat until" date that is after the event start date.');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/.netlify/functions/submit-recurring', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            baseEvent,
+                            recurrence: { frequency, endDate: recEndDate }
+                        })
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || `Submit failed: ${response.status}`);
+                    closeModal('submitModal');
+                    document.getElementById('eventForm').reset();
+                    alert(`Events Submitted!\n\nThanks for your help! Your ${result.count} events have been submitted. They'll appear once approved.\n\nQuestions? Email me at naastoday.tile693@passinbox.com`);
+                } catch (error) {
+                    console.error('Error submitting recurring events:', error);
+                    alert('Sorry, something went wrong. Please try again or email naastoday.tile693@passinbox.com.');
+                } finally {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                }
+            } else {
+                try {
+                    const response = await fetch('/.netlify/functions/submit-event', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(baseEvent)
+                    });
+                    if (!response.ok) throw new Error(`Submit failed: ${response.status}`);
+                    closeModal('submitModal');
+                    document.getElementById('eventForm').reset();
+                    alert('Event Submitted! 🎉\n\nThanks for your help! I\'ll review your submission and it should appear on the site within a day or two.\n\nQuestions? Email me at naastoday.tile693@passinbox.com');
+                } catch (error) {
+                    console.error('Error submitting event:', error);
+                    alert('Sorry, something went wrong. Please try again or email naastoday.tile693@passinbox.com.');
+                } finally {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                }
             }
         });
 

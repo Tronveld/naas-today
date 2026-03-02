@@ -50,9 +50,10 @@ Both pages are standalone HTML files with all HTML, CSS, and JavaScript inline. 
 |---|---|---|
 | `get-events.js` | GET | Queries Supabase for `status = 'approved'` events, returns JSON |
 | `submit-event.js` | POST | Inserts a new event with `status = 'pending'`; rate-limited (5/IP/hour) |
+| `submit-recurring.js` | POST | Submits a recurring event series (weekly/fortnightly/monthly); each occurrence stored as a separate row sharing a `recurring_group_id`; rate-limited (5/IP/hour) |
 | `submit-feedback.js` | POST | Forwards feedback to an optional `FEEDBACK_WEBHOOK_URL` |
 | `admin-auth.js` | POST | First-time setup + login. Actions: `check_setup`, `setup`, `login`. Rate-limited (10/IP/15 min) |
-| `admin-events.js` | GET / PATCH / DELETE | Protected event management. Requires `x-admin-password` header on every call |
+| `admin-events.js` | GET / PATCH / DELETE | Protected event management. Requires `x-admin-password` header on every call. Supports bulk update/delete of recurring event groups from a given date forward |
 
 All functions use the Supabase REST API directly (`fetch` to `/rest/v1/`) — no Supabase client library.
 
@@ -77,6 +78,7 @@ Table: `events`
 | `is_for_kids` | boolean | |
 | `url` | text | Optional event website URL |
 | `status` | text | `'pending'` (submitted) or `'approved'` (visible on site) |
+| `recurring_group_id` | uuid | Optional; shared by all occurrences in a recurring series |
 | `created_at` | timestamptz | |
 
 To approve a submitted event, change its `status` to `'approved'` — either in the Supabase Table Editor or via the admin panel at `/admin.html`. Events only appear on the public site when `status = 'approved'`.
@@ -90,6 +92,16 @@ To approve a submitted event, change its `status` to `'approved'` — either in 
 | `salt` | text | 32-byte random hex salt |
 
 This table must exist before `admin.html` can be used. Create it in Supabase with the columns above. Only one row should ever exist.
+
+### Scripts — `scripts/`
+
+Node.js utility scripts run locally (not deployed). All require Node.js 18+ and read `SUPABASE_URL` and `SUPABASE_SECRET_KEY` from `.env`.
+
+| File | Purpose |
+|---|---|
+| `pull-library-events.js` | Fetches upcoming events from the Naas Library RSS feed and imports them into Supabase as `pending` (use `--auto-approve` to insert as `approved` directly). Skips duplicates via fuzzy title matching. |
+| `weekly-post.js` | Generates a social media post for the upcoming week's approved events and copies it to the clipboard. Flags: `--list` (output raw JSON), `--select=id1,id2` (pin specific events). |
+| `fix-library-entities.js` | One-time migration: decodes HTML entities in existing Naas Library event records stored in Supabase. |
 
 ## Deployment
 
