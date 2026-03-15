@@ -220,18 +220,28 @@ const jsonLd = todayEvents.length > 0 ? {
         card.className = 'event-card';
         card.dataset.eventId = event.id;
 
+        const inner = document.createElement('div');
+        inner.className = 'event-card-inner';
+
+        const accent = document.createElement('div');
+        accent.className = 'event-card-accent';
+        inner.appendChild(accent);
+
+        const body = document.createElement('div');
+        body.className = 'event-card-body';
+
         const timeStr = formatEventTime(event);
         if (timeStr) {
             const timeEl = document.createElement('div');
             timeEl.className = 'event-time';
             timeEl.textContent = timeStr;
-            card.appendChild(timeEl);
+            body.appendChild(timeEl);
         }
 
         const title = document.createElement('h3');
         title.className = 'event-title';
         title.textContent = event.title;
-        card.appendChild(title);
+        body.appendChild(title);
 
         const loc = document.createElement('a');
         loc.className = 'event-location';
@@ -239,12 +249,12 @@ const jsonLd = todayEvents.length > 0 ? {
         loc.target = '_blank';
         loc.rel = 'noopener noreferrer';
         loc.textContent = '📍 ' + event.location;
-        card.appendChild(loc);
+        body.appendChild(loc);
 
         const desc = document.createElement('p');
         desc.className = 'event-description';
         desc.textContent = event.description;
-        card.appendChild(desc);
+        body.appendChild(desc);
 
         if (event.url) {
             try {
@@ -255,8 +265,8 @@ const jsonLd = todayEvents.length > 0 ? {
                     urlEl.href = parsed.href;
                     urlEl.target = '_blank';
                     urlEl.rel = 'noopener noreferrer';
-                    urlEl.textContent = '🔗 ' + parsed.hostname.replace(/^www\./, '');
-                    card.appendChild(urlEl);
+                    urlEl.textContent = parsed.hostname.replace(/^www\./, '') + ' ↗';
+                    body.appendChild(urlEl);
                 }
             } catch {
                 // Invalid URL — skip rendering the link
@@ -289,7 +299,9 @@ const jsonLd = todayEvents.length > 0 ? {
         shareBtn.addEventListener('click', () => shareEvent(event));
         footer.appendChild(shareBtn);
 
-        card.appendChild(footer);
+        body.appendChild(footer);
+        inner.appendChild(body);
+        card.appendChild(inner);
 
         return card;
     }
