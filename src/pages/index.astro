@@ -7,7 +7,6 @@ import EventsGrid from '../components/EventsGrid.astro';
 import Footer from '../components/Footer.astro';
 import DatePickerModal from '../components/modals/DatePickerModal.astro';
 import SubmitEventModal from '../components/modals/SubmitEventModal.astro';
-import FeedbackModal from '../components/modals/FeedbackModal.astro';
 import AboutModal from '../components/modals/AboutModal.astro';
 import ContactModal from '../components/modals/ContactModal.astro';
 
@@ -68,7 +67,6 @@ const jsonLd = todayEvents.length > 0 ? {
   <Footer />
   <DatePickerModal />
   <SubmitEventModal />
-  <FeedbackModal />
   <AboutModal />
   <ContactModal />
 
@@ -752,74 +750,6 @@ const jsonLd = todayEvents.length > 0 ? {
         }
     });
 
-    // ── Feedback ────────────────────────────────────────────────────────
-    let selectedResponse = null;
-    const sendFeedbackBtn = document.getElementById('sendFeedback');
-    sendFeedbackBtn.disabled = true;
-    sendFeedbackBtn.style.opacity = '0.5';
-
-    document.getElementById('feedbackHeaderBtn').addEventListener('click', () => openModal('feedbackModal'));
-    document.getElementById('closeFeedbackModal').addEventListener('click', () => {
-        closeModal('feedbackModal');
-        resetFeedbackForm();
-    });
-    document.getElementById('cancelFeedback').addEventListener('click', () => {
-        closeModal('feedbackModal');
-        resetFeedbackForm();
-    });
-
-    document.querySelectorAll('.feedback-btn[data-response]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.feedback-btn[data-response]').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            selectedResponse = btn.dataset.response;
-            sendFeedbackBtn.disabled = false;
-            sendFeedbackBtn.style.opacity = '';
-        });
-    });
-
-    sendFeedbackBtn.addEventListener('click', async () => {
-        sendFeedbackBtn.disabled = true;
-        sendFeedbackBtn.textContent = 'Sending\u2026';
-        const comment = document.getElementById('feedbackComment').value.trim();
-        const feedbackData = {
-            response: selectedResponse,
-            comment,
-            timestamp: new Date().toISOString(),
-            url: window.location.href
-        };
-        try {
-            const response = await fetch('/.netlify/functions/submit-feedback', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(feedbackData)
-            });
-            showThanks();
-        } catch (error) {
-            showThanks();
-        }
-    });
-
-    function showThanks() {
-        document.getElementById('feedbackForm').style.display = 'none';
-        document.getElementById('feedbackThanks').style.display = 'block';
-        setTimeout(() => {
-            closeModal('feedbackModal');
-            resetFeedbackForm();
-        }, 3000);
-    }
-
-    function resetFeedbackForm() {
-        document.getElementById('feedbackForm').style.display = 'block';
-        document.getElementById('feedbackThanks').style.display = 'none';
-        document.querySelectorAll('.feedback-btn[data-response]').forEach(b => b.classList.remove('selected'));
-        document.getElementById('feedbackComment').value = '';
-        selectedResponse = null;
-        sendFeedbackBtn.disabled = true;
-        sendFeedbackBtn.style.opacity = '0.5';
-        sendFeedbackBtn.textContent = 'Send Feedback';
-    }
-
     // ── Footer Modals ────────────────────────────────────────────────────
     document.getElementById('aboutBtn').addEventListener('click', () => openModal('aboutModal'));
     document.getElementById('closeAboutModal').addEventListener('click', () => closeModal('aboutModal'));
@@ -831,7 +761,6 @@ const jsonLd = todayEvents.length > 0 ? {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 closeModal(modal.id);
-                if (modal.id === 'feedbackModal') resetFeedbackForm();
                 if (modal.id === 'submitModal') document.getElementById('eventForm').reset();
             }
         });
@@ -842,7 +771,6 @@ const jsonLd = todayEvents.length > 0 ? {
         const activeModal = document.querySelector('.modal.active');
         if (activeModal) {
             closeModal(activeModal.id);
-            if (activeModal.id === 'feedbackModal') resetFeedbackForm();
             if (activeModal.id === 'submitModal') document.getElementById('eventForm').reset();
         }
     });
