@@ -381,6 +381,32 @@ const {
             font-size: 0.9375rem;
             white-space: pre-wrap;
         }
+        .event-description.is-truncatable {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .event-description.is-truncatable.is-collapsed {
+            -webkit-line-clamp: 4;
+            white-space: normal;
+        }
+        .desc-toggle-btn {
+            display: block;
+            background: none;
+            border: none;
+            padding: 0;
+            margin-top: 0.25rem;
+            margin-bottom: 0.875rem;
+            color: var(--orange);
+            font-size: 0.8125rem;
+            font-family: 'Instrument Sans', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: left;
+        }
+        .desc-toggle-btn:hover {
+            color: var(--orange-hover);
+        }
 
         .event-url {
             display: inline-block;

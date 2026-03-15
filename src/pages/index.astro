@@ -97,6 +97,25 @@ const jsonLd = todayEvents.length > 0 ? {
         return `${y}-${m}-${day}`;
     }
 
+    const DESC_THRESHOLD = 220;
+
+    function setupDescriptionToggle(p) {
+        if (p.dataset.toggleInit === 'true') return;
+        p.dataset.toggleInit = 'true';
+        const btn = p.nextElementSibling;
+        if (!btn || !btn.classList.contains('desc-toggle-btn')) return;
+        p.classList.add('is-truncatable', 'is-collapsed');
+        btn.addEventListener('click', () => {
+            const collapsed = p.classList.toggle('is-collapsed');
+            btn.textContent = collapsed ? 'Read more ↓' : 'Show less ↑';
+            btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        });
+    }
+
+    function initDescriptionToggles(root) {
+        root.querySelectorAll('p.event-description[data-truncatable="true"]').forEach(setupDescriptionToggle);
+    }
+
     // ── State ───────────────────────────────────────────────────────────
     // Use build-time events as initial state (mapped to camelCase)
     let events = (window.__INITIAL_EVENTS__ || []).map((row, index) => ({
@@ -161,7 +180,19 @@ const jsonLd = todayEvents.length > 0 ? {
                 isError = true;
             }
         }
+        populateLocationSuggestions();
         renderEvents();
+    }
+
+    function populateLocationSuggestions() {
+        const dl = document.getElementById('location-suggestions');
+        if (!dl) return;
+        const locations = [...new Set(events.map(e => e.location).filter(Boolean))].sort();
+        dl.replaceChildren(...locations.map(loc => {
+            const opt = document.createElement('option');
+            opt.value = loc;
+            return opt;
+        }));
     }
 
     // ── Rendering ───────────────────────────────────────────────────────
@@ -255,10 +286,24 @@ const jsonLd = todayEvents.length > 0 ? {
         loc.textContent = '📍 ' + event.location;
         body.appendChild(loc);
 
+        const descText = event.description || '';
+        const isLong = descText.length > DESC_THRESHOLD;
         const desc = document.createElement('p');
         desc.className = 'event-description';
-        desc.textContent = event.description;
+        desc.textContent = descText;
+        if (isLong) {
+            desc.dataset.truncatable = 'true';
+            desc.style.marginBottom = '0';
+        }
         body.appendChild(desc);
+        if (isLong) {
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'desc-toggle-btn';
+            toggleBtn.type = 'button';
+            toggleBtn.textContent = 'Read more ↓';
+            toggleBtn.setAttribute('aria-expanded', 'false');
+            body.appendChild(toggleBtn);
+        }
 
         if (event.url) {
             try {
@@ -359,6 +404,7 @@ const jsonLd = todayEvents.length > 0 ? {
         filteredEvents.sort((a, b) => a.time.localeCompare(b.time));
         grid.innerHTML = '';
         filteredEvents.forEach(event => grid.appendChild(createEventCard(event)));
+        initDescriptionToggles(grid);
         updateJsonLd(filteredEvents);
         renderUpcoming();
     }
@@ -823,6 +869,7 @@ const jsonLd = todayEvents.length > 0 ? {
 
     // ── Init ─────────────────────────────────────────────────────────────
     updateDateDisplay();
+    initDescriptionToggles(document.getElementById('eventsGrid'));
     fetchEvents().then(handleDeepLink);
   </script>
 </BaseLayout>

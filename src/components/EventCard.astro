@@ -57,7 +57,26 @@ if (event.url) {
       {timeStr && <div class="event-time">{timeStr}</div>}
       <h3 class="event-title">{event.title}</h3>
       <a class="event-location" href={mapsUrl} target="_blank" rel="noopener noreferrer">📍 {event.location}</a>
-      <p class="event-description">{event.description}</p>
+      {(() => {
+        const desc = event.description ?? '';
+        const isLong = desc.length > 220;
+        return (
+          <>
+            <p
+              class="event-description"
+              data-truncatable={isLong ? 'true' : undefined}
+              style={isLong ? 'margin-bottom: 0;' : undefined}
+            >
+              {desc}
+            </p>
+            {isLong && (
+              <button class="desc-toggle-btn" aria-expanded="false" type="button">
+                Read more ↓
+              </button>
+            )}
+          </>
+        );
+      })()}
       {parsedUrl && (
         <a class="event-url" href={parsedUrl.href} target="_blank" rel="noopener noreferrer">
           {parsedUrl.hostname.replace(/^www\./, '')} ↗
