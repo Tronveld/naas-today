@@ -16,7 +16,29 @@ const DIGEST     = 'sha256';
 const ALLOWED_PATCH_FIELDS = new Set([
   'status', 'title', 'date', 'end_date', 'time', 'time_end',
   'is_all_day', 'location', 'description', 'is_free', 'is_for_kids', 'url',
+  'recurring_group_id',
 ]);
+
+const UUID_RE   = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DATE_RE   = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE   = /^\d{2}:\d{2}(:\d{2})?$/;
+const BOOL_FIELDS    = new Set(['is_all_day', 'is_free', 'is_for_kids']);
+const DATE_FIELDS    = new Set(['date', 'end_date']);
+const TIME_FIELDS    = new Set(['time', 'time_end']);
+const STR_FIELDS     = new Set(['title', 'location', 'description', 'url', 'status']);
+const STR_MAX_LENGTHS = { title: 150, location: 150, description: 2000, url: 500, status: 10 };
+
+function validDate(s) {
+  if (!DATE_RE.test(s)) return false;
+  const parts = s.split('-').map(Number);
+  return parts[1] >= 1 && parts[1] <= 12 && parts[2] >= 1 && parts[2] <= 31;
+}
+
+function validTime(s) {
+  if (!TIME_RE.test(s)) return false;
+  const parts = s.split(':').map(Number);
+  return parts[0] <= 23 && parts[1] <= 59;
+}
 
 function json(statusCode, body) {
   return {
@@ -59,9 +81,12 @@ async function handleGet(event, supabaseUrl, secretKey) {
   const params  = event.queryStringParameters || {};
   const status  = params.status; // 'pending' | 'approved' | undefined
 
-  let url = `${supabaseUrl}/rest/v1/events?order=created_at.desc&select=id,title,date,end_date,time,time_end,is_all_day,location,description,is_free,is_for_kids,url,status,created_at`;
+  let url = `${supabaseUrl}/rest/v1/events?order=date.asc,time.asc&select=id,title,date,end_date,time,time_end,is_all_day,location,description,is_free,is_for_kids,url,status,created_at,recurring_group_id`;
   if (status === 'pending' || status === 'approved') {
     url += `&status=eq.${status}`;
+  }
+  if (params.recurring === 'true') {
+    url += '&recurring_group_id=not.is.null';
   }
 
   const res = await fetch(url, {
@@ -71,28 +96,96 @@ async function handleGet(event, supabaseUrl, secretKey) {
   return json(200, await res.json());
 }
 
-async function handlePatch(event, supabaseUrl, secretKey) {
-  let body;
-  try { body = JSON.parse(event.body); } catch { return json(400, { error: 'Invalid JSON' }); }
-
-  const { id, fields } = body || {};
-  if (!id || !fields || typeof fields !== 'object' || Object.keys(fields).length === 0) {
-    return json(400, { error: 'Missing id or empty fields' });
-  }
-
-  // Whitelist — strip any keys not in ALLOWED_PATCH_FIELDS
+function validatePatchFields(fields) {
+  // Returns an error string, or null if valid
   const safeFields = {};
   for (const [k, v] of Object.entries(fields)) {
     if (ALLOWED_PATCH_FIELDS.has(k)) safeFields[k] = v;
   }
-  if (Object.keys(safeFields).length === 0) {
-    return json(400, { error: 'No valid fields provided' });
+  if (Object.keys(safeFields).length === 0) return [null, 'No valid fields provided'];
+
+  if ('status' in safeFields && !['pending', 'approved'].includes(safeFields.status)) {
+    return [null, 'status must be "pending" or "approved"'];
   }
 
-  // Validate status value if present
-  if ('status' in safeFields && !['pending', 'approved'].includes(safeFields.status)) {
-    return json(400, { error: 'status must be "pending" or "approved"' });
+  for (const [k, v] of Object.entries(safeFields)) {
+    if (BOOL_FIELDS.has(k) && typeof v !== 'boolean') {
+      return [null, `Field "${k}" must be a boolean`];
+    }
+    if (STR_FIELDS.has(k) && typeof v !== 'string') {
+      return [null, `Field "${k}" must be a string`];
+    }
+    if (STR_FIELDS.has(k) && typeof v === 'string' && STR_MAX_LENGTHS[k] && v.length > STR_MAX_LENGTHS[k]) {
+      return [null, `Field "${k}" exceeds maximum length of ${STR_MAX_LENGTHS[k]}`];
+    }
+    if (DATE_FIELDS.has(k) && v !== null && !validDate(v)) {
+      return [null, `Field "${k}" must be a valid date (YYYY-MM-DD)`];
+    }
+    if (TIME_FIELDS.has(k) && v !== null && !validTime(v)) {
+      return [null, `Field "${k}" must be a valid time (HH:MM)`];
+    }
+    if (k === 'url' && v !== null) {
+      try {
+        const parsed = new URL(v);
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+          return [null, 'Field "url" must use http:// or https://'];
+        }
+      } catch {
+        return [null, 'Field "url" must be a valid URL'];
+      }
+    }
+    if (k === 'recurring_group_id' && v !== null && !UUID_RE.test(v)) {
+      return [null, 'Field "recurring_group_id" must be a valid UUID or null'];
+    }
   }
+  return [safeFields, null];
+}
+
+async function handlePatch(event, supabaseUrl, secretKey) {
+  let body;
+  try { body = JSON.parse(event.body); } catch { return json(400, { error: 'Invalid JSON' }); }
+
+  const { id, fields, group_id, from_date } = body || {};
+
+  // ── Bulk mode: update all future events in a recurring series ──
+  if (group_id !== undefined) {
+    if (!UUID_RE.test(group_id)) return json(400, { error: 'Invalid group_id' });
+    if (!from_date || !DATE_RE.test(from_date)) return json(400, { error: 'Invalid or missing from_date' });
+    if (!fields || typeof fields !== 'object' || Object.keys(fields).length === 0) {
+      return json(400, { error: 'Missing or empty fields' });
+    }
+
+    const [safeFields, fieldErr] = validatePatchFields(fields);
+    if (fieldErr) return json(400, { error: fieldErr });
+
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/events?recurring_group_id=eq.${encodeURIComponent(group_id)}&date=gte.${encodeURIComponent(from_date)}`,
+      {
+        method:  'PATCH',
+        headers: {
+          'apikey':       secretKey,
+          'Content-Type': 'application/json',
+          'Prefer':       'return=representation',
+        },
+        body: JSON.stringify(safeFields),
+      }
+    );
+    if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
+
+    const updated = await res.json();
+    return json(200, { success: true, count: updated.length });
+  }
+
+  // ── Single event mode ──
+  if (!id || !fields || typeof fields !== 'object' || Object.keys(fields).length === 0) {
+    return json(400, { error: 'Missing id or empty fields' });
+  }
+  if (!UUID_RE.test(id)) {
+    return json(400, { error: 'Invalid id' });
+  }
+
+  const [safeFields, fieldErr] = validatePatchFields(fields);
+  if (fieldErr) return json(400, { error: fieldErr });
 
   const res = await fetch(
     `${supabaseUrl}/rest/v1/events?id=eq.${encodeURIComponent(id)}`,
@@ -119,8 +212,30 @@ async function handleDelete(event, supabaseUrl, secretKey) {
   let body;
   try { body = JSON.parse(event.body); } catch { return json(400, { error: 'Invalid JSON' }); }
 
-  const { id } = body || {};
+  const { id, group_id, from_date } = body || {};
+
+  // ── Bulk mode: delete all future events in a recurring series ──
+  if (group_id !== undefined) {
+    if (!UUID_RE.test(group_id)) return json(400, { error: 'Invalid group_id' });
+    if (!from_date || !DATE_RE.test(from_date)) return json(400, { error: 'Invalid or missing from_date' });
+
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/events?recurring_group_id=eq.${encodeURIComponent(group_id)}&date=gte.${encodeURIComponent(from_date)}`,
+      {
+        method:  'DELETE',
+        headers: {
+          'apikey': secretKey,
+          'Prefer': 'return=minimal',
+        },
+      }
+    );
+    if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
+    return json(200, { success: true });
+  }
+
+  // ── Single event mode ──
   if (!id) return json(400, { error: 'Missing id' });
+  if (!UUID_RE.test(id)) return json(400, { error: 'Invalid id' });
 
   const res = await fetch(
     `${supabaseUrl}/rest/v1/events?id=eq.${encodeURIComponent(id)}`,
@@ -163,7 +278,7 @@ exports.handler = async function(event) {
     if (method === 'GET')    return await handleGet(event, SUPABASE_URL, SECRET_KEY);
     if (method === 'PATCH')  return await handlePatch(event, SUPABASE_URL, SECRET_KEY);
     if (method === 'DELETE') return await handleDelete(event, SUPABASE_URL, SECRET_KEY);
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return { statusCode: 405, headers: { 'Content-Type': 'text/plain' }, body: 'Method Not Allowed' };
   } catch (err) {
     console.error('admin-events error:', err);
     return json(500, { error: 'Operation failed' });

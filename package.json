@@ -1,0 +1,15 @@
+{
+  "name": "naas-today",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "netlify-dev": "netlify dev"
+  },
+  "dependencies": {
+    "astro": "^5.0.0",
+    "@astrojs/netlify": "^6.0.0",
+    "@astrojs/sitemap": "^3.0.0"
+  }
+}
