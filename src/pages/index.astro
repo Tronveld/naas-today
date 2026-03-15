@@ -1,0 +1,733 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import DateNav from '../components/DateNav.astro';
+import FilterControls from '../components/FilterControls.astro';
+import EventsGrid from '../components/EventsGrid.astro';
+import Footer from '../components/Footer.astro';
+import DatePickerModal from '../components/modals/DatePickerModal.astro';
+import SubmitEventModal from '../components/modals/SubmitEventModal.astro';
+import FeedbackModal from '../components/modals/FeedbackModal.astro';
+import AboutModal from '../components/modals/AboutModal.astro';
+import ContactModal from '../components/modals/ContactModal.astro';
+
+const SUPABASE_URL = import.meta.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.SUPABASE_ANON_KEY;
+
+let initialEvents: any[] = [];
+try {
+  if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/events?status=eq.approved&order=date.asc,time.asc&select=id,title,date,end_date,time,time_end,is_all_day,location,description,is_free,is_for_kids,url`,
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+    );
+    if (res.ok) initialEvents = await res.json();
+  }
+} catch (e) {
+  // silently fall back to empty array; client-side fetch will populate
+}
+
+const todayStr = new Date().toISOString().split('T')[0];
+const todayEvents = initialEvents.filter(e => {
+  if (e.end_date) return e.date <= todayStr && e.end_date >= todayStr;
+  return e.date === todayStr;
+});
+
+// Build JSON-LD for today's events
+const jsonLd = todayEvents.length > 0 ? {
+  '@context': 'https://schema.org',
+  '@graph': todayEvents.map(e => ({
+    '@type': 'Event',
+    name: e.title,
+    startDate: e.date + (e.is_all_day || !e.time ? '' : 'T' + e.time.substring(0, 5)),
+    ...(e.end_date ? { endDate: e.end_date } : {}),
+    location: {
+      '@type': 'Place',
+      name: e.location,
+      address: { '@type': 'PostalAddress', addressLocality: 'Naas', addressCountry: 'IE' }
+    },
+    description: e.description,
+    isAccessibleForFree: e.is_free,
+    organizer: { '@type': 'Organization', name: 'Naas Today' }
+  }))
+} : undefined;
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <Header />
+  <DateNav />
+  <main id="main-content" role="main" class="container">
+    <FilterControls />
+    <EventsGrid events={initialEvents} todayStr={todayStr} />
+  </main>
+  <Footer />
+  <DatePickerModal />
+  <SubmitEventModal />
+  <FeedbackModal />
+  <AboutModal />
+  <ContactModal />
+
+  <!-- Expose build-time events to client JS -->
+  <script define:vars={{ initialEvents }}>
+    window.__INITIAL_EVENTS__ = initialEvents;
+  </script>
+
+  <script>
+    // ── Utilities ──────────────────────────────────────────────────────
+
+    // Decodes HTML entities (e.g. &eacute; → é) safely via a textarea element
+    function decodeHTML(str) {
+        if (!str) return str;
+        const t = document.createElement('textarea');
+        t.innerHTML = str;
+        return t.value;
+    }
+
+    // Returns the local date as YYYY-MM-DD (avoids UTC offset issues with toISOString)
+    function localDateStr(date) {
+        const d = date instanceof Date ? date : new Date(date);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    // ── State ───────────────────────────────────────────────────────────
+    // Use build-time events as initial state (mapped to camelCase)
+    let events = (window.__INITIAL_EVENTS__ || []).map((row, index) => ({
+        id: row.id || index + 1,
+        title: decodeHTML(row.title || ''),
+        date: row.date || '',
+        endDate: row.end_date || '',
+        time: row.time ? row.time.substring(0, 5) : '',
+        timeEnd: row.time_end ? row.time_end.substring(0, 5) : '',
+        isAllDay: Boolean(row.is_all_day),
+        location: decodeHTML(row.location || ''),
+        description: decodeHTML(row.description || ''),
+        isFree: Boolean(row.is_free),
+        isForKids: Boolean(row.is_for_kids),
+        url: row.url || ''
+    }));
+    let currentDate = new Date();
+    let filterFreeActive = false;
+    let filterKidsActive = false;
+    let isError = false;
+
+    // ── Loading State ───────────────────────────────────────────────────
+    function showLoading() {
+        document.getElementById('eventsGrid').style.display = 'none';
+        document.getElementById('emptyState').classList.remove('visible');
+        document.getElementById('loadingState').classList.add('visible');
+    }
+
+    function hideLoading() {
+        document.getElementById('loadingState').classList.remove('visible');
+    }
+
+    // ── Data Fetching ───────────────────────────────────────────────────
+    async function fetchEvents() {
+        // Only show loading spinner if no pre-rendered content is visible
+        if (events.length === 0) showLoading();
+        isError = false;
+        try {
+            const response = await fetch('/.netlify/functions/get-events');
+            if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
+            const data = await response.json();
+            if (Array.isArray(data) && data.length > 0) {
+                events = data.map((row, index) => ({
+                    id: row.id || index + 1,
+                    title: decodeHTML(row.title || ''),
+                    date: row.date || '',
+                    endDate: row.end_date || '',
+                    time: row.time ? row.time.substring(0, 5) : '',
+                    timeEnd: row.time_end ? row.time_end.substring(0, 5) : '',
+                    isAllDay: Boolean(row.is_all_day),
+                    location: decodeHTML(row.location || ''),
+                    description: decodeHTML(row.description || ''),
+                    isFree: Boolean(row.is_free),
+                    isForKids: Boolean(row.is_for_kids),
+                    url: row.url || ''
+                }));
+            }
+        } catch (error) {
+            console.error('Error fetching events:', error);
+            // Only show error state if we have no pre-rendered events
+            if (events.length === 0) {
+                isError = true;
+            }
+        }
+        renderEvents();
+    }
+
+    // ── Rendering ───────────────────────────────────────────────────────
+    function formatDateDisplay(date) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const compareDate = new Date(date);
+        compareDate.setHours(0, 0, 0, 0);
+        if (compareDate.getTime() === today.getTime()) {
+            const dayName = date.toLocaleDateString('en-IE', { weekday: 'long' });
+            const fullDate = date.toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' });
+            return `Today – ${dayName}, ${fullDate}`;
+        }
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        if (compareDate.getTime() === tomorrow.getTime()) {
+            const fullDate = date.toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' });
+            return `Tomorrow – ${fullDate}`;
+        }
+        return date.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function formatTime(time) {
+        const [hours, minutes] = time.split(':');
+        const hour = parseInt(hours);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour % 12 || 12;
+        return `${displayHour}:${minutes} ${ampm}`;
+    }
+
+    function formatEventTime(event) {
+        if (event.isAllDay) return 'All day';
+        if (!event.time) return '';
+        const start = formatTime(event.time);
+        if (event.timeEnd) return start + ' – ' + formatTime(event.timeEnd);
+        return start;
+    }
+
+    function formatDateForShare(dateStr) {
+        const d = new Date(dateStr + 'T00:00:00');
+        return d.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long' });
+    }
+
+    function shareEvent(event) {
+        const timeStr = formatEventTime(event);
+        const dateDisplay = formatDateForShare(event.date);
+        const when = timeStr ? `${dateDisplay} · ${timeStr}` : dateDisplay;
+        const text = `${event.title}\n${when}\n${event.location}`;
+        if (navigator.share) {
+            navigator.share({ title: event.title, text, url: 'https://naastoday.com' }).catch(() => {});
+        } else {
+            window.open(`https://wa.me/?text=${encodeURIComponent(text + '\n\nhttps://naastoday.com')}`, '_blank');
+        }
+    }
+
+    // Builds an event card using DOM methods (avoids XSS from raw data)
+    function createEventCard(event) {
+        const card = document.createElement('div');
+        card.className = 'event-card';
+
+        const timeStr = formatEventTime(event);
+        if (timeStr) {
+            const timeEl = document.createElement('div');
+            timeEl.className = 'event-time';
+            timeEl.textContent = timeStr;
+            card.appendChild(timeEl);
+        }
+
+        const title = document.createElement('h3');
+        title.className = 'event-title';
+        title.textContent = event.title;
+        card.appendChild(title);
+
+        const loc = document.createElement('a');
+        loc.className = 'event-location';
+        loc.href = `https://maps.google.com/?q=${encodeURIComponent(event.location + ', Naas, Ireland')}`;
+        loc.target = '_blank';
+        loc.rel = 'noopener noreferrer';
+        loc.textContent = '📍 ' + event.location;
+        card.appendChild(loc);
+
+        const desc = document.createElement('p');
+        desc.className = 'event-description';
+        desc.textContent = event.description;
+        card.appendChild(desc);
+
+        if (event.url) {
+            try {
+                const parsed = new URL(event.url);
+                if (['http:', 'https:'].includes(parsed.protocol)) {
+                    const urlEl = document.createElement('a');
+                    urlEl.className = 'event-url';
+                    urlEl.href = parsed.href;
+                    urlEl.target = '_blank';
+                    urlEl.rel = 'noopener noreferrer';
+                    urlEl.textContent = '🔗 ' + parsed.hostname.replace(/^www\./, '');
+                    card.appendChild(urlEl);
+                }
+            } catch {
+                // Invalid URL — skip rendering the link
+            }
+        }
+
+        const footer = document.createElement('div');
+        footer.className = 'card-footer';
+
+        const tags = document.createElement('div');
+        tags.className = 'event-tags';
+        if (event.isFree) {
+            const tag = document.createElement('span');
+            tag.className = 'tag free';
+            tag.textContent = 'Free';
+            tags.appendChild(tag);
+        }
+        if (event.isForKids) {
+            const tag = document.createElement('span');
+            tag.className = 'tag kids';
+            tag.textContent = 'For kids';
+            tags.appendChild(tag);
+        }
+        footer.appendChild(tags);
+
+        const shareBtn = document.createElement('button');
+        shareBtn.className = 'share-btn';
+        shareBtn.textContent = 'Share ↗';
+        shareBtn.setAttribute('aria-label', `Share ${event.title}`);
+        shareBtn.addEventListener('click', () => shareEvent(event));
+        footer.appendChild(shareBtn);
+
+        card.appendChild(footer);
+
+        return card;
+    }
+
+    function renderEvents() {
+        hideLoading();
+        const grid = document.getElementById('eventsGrid');
+        const emptyState = document.getElementById('emptyState');
+        const errorState = document.getElementById('errorState');
+        const dateStr = localDateStr(currentDate);
+
+        if (isError) {
+            grid.style.display = 'none';
+            emptyState.classList.remove('visible');
+            errorState.classList.add('visible');
+            updateJsonLd([]);
+            return;
+        }
+        errorState.classList.remove('visible');
+
+        let filteredEvents = events.filter(event => {
+            if (event.endDate) {
+                return event.date <= dateStr && event.endDate >= dateStr;
+            }
+            return event.date === dateStr;
+        });
+
+        // Update filter button count badges
+        const freeCount = filteredEvents.filter(e => e.isFree).length;
+        document.querySelector('#filterFree span').textContent =
+            freeCount > 0 ? `Free (${freeCount})` : 'Free';
+
+        const kidsCount = filteredEvents.filter(e => e.isForKids).length;
+        document.querySelector('#filterKids span').textContent =
+            kidsCount > 0 ? `For kids (${kidsCount})` : 'For kids';
+
+        if (filterFreeActive) filteredEvents = filteredEvents.filter(e => e.isFree);
+        if (filterKidsActive) filteredEvents = filteredEvents.filter(e => e.isForKids);
+
+        if (filteredEvents.length === 0) {
+            grid.style.display = 'none';
+            emptyState.classList.add('visible');
+            updateJsonLd([]);
+            return;
+        }
+
+        grid.style.display = 'grid';
+        emptyState.classList.remove('visible');
+        filteredEvents.sort((a, b) => a.time.localeCompare(b.time));
+        grid.innerHTML = '';
+        filteredEvents.forEach(event => grid.appendChild(createEventCard(event)));
+        updateJsonLd(filteredEvents);
+    }
+
+    // ── JSON-LD Structured Data ─────────────────────────────────────────
+    function updateJsonLd(evts) {
+        const existing = document.getElementById('jsonld-events');
+        if (existing) existing.remove();
+        if (!evts.length) return;
+        const schema = {
+            '@context': 'https://schema.org',
+            '@graph': evts.map(e => ({
+                '@type': 'Event',
+                name: e.title,
+                startDate: e.date + (e.isAllDay || !e.time ? '' : 'T' + e.time),
+                ...(e.endDate ? { endDate: e.endDate } : {}),
+                location: {
+                    '@type': 'Place',
+                    name: e.location,
+                    address: { '@type': 'PostalAddress', addressLocality: 'Naas', addressCountry: 'IE' }
+                },
+                description: e.description,
+                isAccessibleForFree: e.isFree,
+                organizer: { '@type': 'Organization', name: 'Naas Today' }
+            }))
+        };
+        const s = document.createElement('script');
+        s.type = 'application/ld+json';
+        s.id = 'jsonld-events';
+        s.textContent = JSON.stringify(schema);
+        document.head.appendChild(s);
+    }
+
+    // ── Date Navigation ─────────────────────────────────────────────────
+    function updateDateDisplay() {
+        document.getElementById('currentDateDisplay').textContent = formatDateDisplay(currentDate);
+        const isToday = localDateStr(currentDate) === localDateStr(new Date());
+        document.getElementById('todayBtn').style.display = isToday ? 'none' : '';
+        document.getElementById('prevDay').style.display = isToday ? 'none' : '';
+    }
+
+    function changeDate(days) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        currentDate.setDate(currentDate.getDate() + days);
+        if (currentDate < today) currentDate = today;
+        updateDateDisplay();
+        renderEvents();
+    }
+
+    // ── Focus Trap (for accessible modals) ─────────────────────────────
+    let previouslyFocused = null;
+
+    function trapFocus(modal) {
+        const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        modal._trapHandler = function(e) {
+            if (e.key !== 'Tab') return;
+            if (e.shiftKey) {
+                if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+            } else {
+                if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+            }
+        };
+        modal.addEventListener('keydown', modal._trapHandler);
+    }
+
+    // ── Modal Helpers ───────────────────────────────────────────────────
+    function openModal(id) {
+        previouslyFocused = document.activeElement;
+        const modal = document.getElementById(id);
+        modal.classList.add('active');
+        const firstFocusable = modal.querySelector('button, [href], input, select, textarea');
+        if (firstFocusable) firstFocusable.focus();
+        trapFocus(modal);
+    }
+
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        modal.classList.remove('active');
+        if (modal._trapHandler) {
+            modal.removeEventListener('keydown', modal._trapHandler);
+            delete modal._trapHandler;
+        }
+        if (previouslyFocused) previouslyFocused.focus();
+    }
+
+    // ── Event Listeners ─────────────────────────────────────────────────
+    document.getElementById('prevDay').addEventListener('click', () => changeDate(-1));
+    document.getElementById('nextDay').addEventListener('click', () => changeDate(1));
+
+    document.getElementById('todayBtn').addEventListener('click', () => {
+        currentDate = new Date();
+        updateDateDisplay();
+        renderEvents();
+    });
+
+    document.getElementById('changeDateBtn').addEventListener('click', () => {
+        const dateInput = document.getElementById('dateInput');
+        dateInput.min = localDateStr(new Date());
+        dateInput.value = localDateStr(currentDate);
+        openModal('dateModal');
+    });
+
+    document.getElementById('closeDateModal').addEventListener('click', () => closeModal('dateModal'));
+
+    document.getElementById('dateInput').addEventListener('change', (e) => {
+        currentDate = new Date(e.target.value + 'T00:00:00');
+        updateDateDisplay();
+        renderEvents();
+        closeModal('dateModal');
+    });
+
+    document.getElementById('filterFree').addEventListener('click', function() {
+        filterFreeActive = !filterFreeActive;
+        this.classList.toggle('active');
+        this.setAttribute('aria-pressed', filterFreeActive);
+        renderEvents();
+    });
+
+    document.getElementById('filterKids').addEventListener('click', function() {
+        filterKidsActive = !filterKidsActive;
+        this.classList.toggle('active');
+        this.setAttribute('aria-pressed', filterKidsActive);
+        renderEvents();
+    });
+
+    // Time mode toggle in submit form
+    document.querySelectorAll('input[name="timeMode"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const isAllDay = this.value === 'allday';
+            const isRange = this.value === 'range';
+            const timeInputsEl = document.getElementById('timeInputs');
+            const timeEndEl = document.getElementById('eventTimeEnd');
+            const timeSepEl = document.getElementById('timeRangeSep');
+            const timeStartEl = document.getElementById('eventTimeStart');
+            timeInputsEl.style.display = isAllDay ? 'none' : 'flex';
+            timeEndEl.style.display = isRange ? '' : 'none';
+            timeSepEl.style.display = isRange ? '' : 'none';
+            timeStartEl.required = !isAllDay;
+        });
+    });
+
+    // Reset time mode UI when form resets
+    document.getElementById('eventForm').addEventListener('reset', () => {
+        setTimeout(() => {
+            document.getElementById('timeInputs').style.display = 'flex';
+            document.getElementById('eventTimeEnd').style.display = 'none';
+            document.getElementById('timeRangeSep').style.display = 'none';
+            document.getElementById('eventTimeStart').required = true;
+        }, 0);
+    });
+
+    document.getElementById('submitEventBtn').addEventListener('click', () => {
+        document.getElementById('eventDate').value = localDateStr(currentDate);
+        openModal('submitModal');
+    });
+
+    document.getElementById('submitEventFooterBtn').addEventListener('click', () => {
+        document.getElementById('eventDate').value = localDateStr(currentDate);
+        openModal('submitModal');
+    });
+
+    document.getElementById('closeSubmitModal').addEventListener('click', () => closeModal('submitModal'));
+    document.getElementById('cancelSubmit').addEventListener('click', () => {
+        closeModal('submitModal');
+        document.getElementById('eventForm').reset();
+    });
+
+    // ── Recurring toggle ─────────────────────────────────────────────────
+    function updateRecurrenceHint() {
+        const startDate = document.getElementById('eventDate').value;
+        const endDate   = document.getElementById('recurrenceEndDate').value;
+        const freq      = document.getElementById('recurrenceFrequency').value;
+        const hint      = document.getElementById('recurrenceHint');
+        if (!startDate || !endDate || endDate <= startDate) { hint.textContent = ''; return; }
+        let count = 0, cur = new Date(startDate + 'T00:00:00');
+        const end = endDate;
+        while (count < 104) {
+            const s = cur.toISOString().slice(0, 10);
+            if (s > end) break;
+            count++;
+            if (freq === 'weekly')       cur.setDate(cur.getDate() + 7);
+            else if (freq === 'fortnightly') cur.setDate(cur.getDate() + 14);
+            else cur.setMonth(cur.getMonth() + 1);
+        }
+        hint.textContent = count > 0 ? `~${count} occurrence${count !== 1 ? 's' : ''}` : '';
+    }
+
+    document.getElementById('isRecurring').addEventListener('change', function() {
+        const section = document.getElementById('recurringSection');
+        section.style.display = this.checked ? '' : 'none';
+        document.getElementById('recurrenceEndDate').required = this.checked;
+    });
+
+    document.getElementById('recurrenceFrequency').addEventListener('change', updateRecurrenceHint);
+    document.getElementById('recurrenceEndDate').addEventListener('change', updateRecurrenceHint);
+    document.getElementById('eventDate').addEventListener('change', updateRecurrenceHint);
+
+    // Also hide recurring section on form reset
+    document.getElementById('eventForm').addEventListener('reset', () => {
+        setTimeout(() => {
+            document.getElementById('recurringSection').style.display = 'none';
+            document.getElementById('recurrenceEndDate').required = false;
+            document.getElementById('recurrenceHint').textContent = '';
+        }, 0);
+    });
+
+    document.getElementById('eventForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Submitting...';
+        submitBtn.disabled = true;
+
+        const timeMode = document.querySelector('input[name="timeMode"]:checked').value;
+        const baseEvent = {
+            title: document.getElementById('eventTitle').value.trim(),
+            date: document.getElementById('eventDate').value,
+            endDate: document.getElementById('eventEndDate').value || null,
+            isAllDay: timeMode === 'allday',
+            time: timeMode !== 'allday' ? document.getElementById('eventTimeStart').value : null,
+            timeEnd: timeMode === 'range' ? document.getElementById('eventTimeEnd').value : null,
+            location: document.getElementById('eventLocation').value.trim(),
+            description: document.getElementById('eventDescription').value.trim(),
+            isFree: document.getElementById('isFree').checked,
+            isForKids: document.getElementById('isForKids').checked,
+            url: document.getElementById('eventUrl').value.trim() || null
+        };
+
+        if (baseEvent.endDate && baseEvent.endDate < baseEvent.date) {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            alert('The end date must be on or after the start date.');
+            return;
+        }
+
+        const isRecurring = document.getElementById('isRecurring').checked;
+
+        if (isRecurring) {
+            const recEndDate  = document.getElementById('recurrenceEndDate').value;
+            const frequency   = document.getElementById('recurrenceFrequency').value;
+
+            if (!recEndDate || recEndDate <= baseEvent.date) {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                alert('Please set a "Repeat until" date that is after the event start date.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/.netlify/functions/submit-recurring', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        baseEvent,
+                        recurrence: { frequency, endDate: recEndDate }
+                    })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || `Submit failed: ${response.status}`);
+                closeModal('submitModal');
+                document.getElementById('eventForm').reset();
+                alert(`Events Submitted!\n\nThanks for your help! Your ${result.count} events have been submitted. They'll appear once approved.\n\nQuestions? Email me at naastoday.tile693@passinbox.com`);
+            } catch (error) {
+                console.error('Error submitting recurring events:', error);
+                alert('Sorry, something went wrong. Please try again or email naastoday.tile693@passinbox.com.');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        } else {
+            try {
+                const response = await fetch('/.netlify/functions/submit-event', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(baseEvent)
+                });
+                if (!response.ok) throw new Error(`Submit failed: ${response.status}`);
+                closeModal('submitModal');
+                document.getElementById('eventForm').reset();
+                alert('Event Submitted! 🎉\n\nThanks for your help! I\'ll review your submission and it should appear on the site within a day or two.\n\nQuestions? Email me at naastoday.tile693@passinbox.com');
+            } catch (error) {
+                console.error('Error submitting event:', error);
+                alert('Sorry, something went wrong. Please try again or email naastoday.tile693@passinbox.com.');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+    });
+
+    // ── Feedback ────────────────────────────────────────────────────────
+    let selectedResponse = null;
+    const sendFeedbackBtn = document.getElementById('sendFeedback');
+    sendFeedbackBtn.disabled = true;
+    sendFeedbackBtn.style.opacity = '0.5';
+
+    document.getElementById('feedbackHeaderBtn').addEventListener('click', () => openModal('feedbackModal'));
+    document.getElementById('closeFeedbackModal').addEventListener('click', () => {
+        closeModal('feedbackModal');
+        resetFeedbackForm();
+    });
+    document.getElementById('cancelFeedback').addEventListener('click', () => {
+        closeModal('feedbackModal');
+        resetFeedbackForm();
+    });
+
+    document.querySelectorAll('.feedback-btn[data-response]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.feedback-btn[data-response]').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedResponse = btn.dataset.response;
+            sendFeedbackBtn.disabled = false;
+            sendFeedbackBtn.style.opacity = '';
+        });
+    });
+
+    sendFeedbackBtn.addEventListener('click', async () => {
+        sendFeedbackBtn.disabled = true;
+        sendFeedbackBtn.textContent = 'Sending\u2026';
+        const comment = document.getElementById('feedbackComment').value.trim();
+        const feedbackData = {
+            response: selectedResponse,
+            comment,
+            timestamp: new Date().toISOString(),
+            url: window.location.href
+        };
+        try {
+            const response = await fetch('/.netlify/functions/submit-feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(feedbackData)
+            });
+            showThanks();
+        } catch (error) {
+            showThanks();
+        }
+    });
+
+    function showThanks() {
+        document.getElementById('feedbackForm').style.display = 'none';
+        document.getElementById('feedbackThanks').style.display = 'block';
+        setTimeout(() => {
+            closeModal('feedbackModal');
+            resetFeedbackForm();
+        }, 3000);
+    }
+
+    function resetFeedbackForm() {
+        document.getElementById('feedbackForm').style.display = 'block';
+        document.getElementById('feedbackThanks').style.display = 'none';
+        document.querySelectorAll('.feedback-btn[data-response]').forEach(b => b.classList.remove('selected'));
+        document.getElementById('feedbackComment').value = '';
+        selectedResponse = null;
+        sendFeedbackBtn.disabled = true;
+        sendFeedbackBtn.style.opacity = '0.5';
+        sendFeedbackBtn.textContent = 'Send Feedback';
+    }
+
+    // ── Footer Modals ────────────────────────────────────────────────────
+    document.getElementById('aboutBtn').addEventListener('click', () => openModal('aboutModal'));
+    document.getElementById('closeAboutModal').addEventListener('click', () => closeModal('aboutModal'));
+    document.getElementById('contactBtn').addEventListener('click', () => openModal('contactModal'));
+    document.getElementById('closeContactModal').addEventListener('click', () => closeModal('contactModal'));
+
+    // Close modals on background click or Escape key
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal(modal.id);
+                if (modal.id === 'feedbackModal') resetFeedbackForm();
+                if (modal.id === 'submitModal') document.getElementById('eventForm').reset();
+            }
+        });
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const activeModal = document.querySelector('.modal.active');
+        if (activeModal) {
+            closeModal(activeModal.id);
+            if (activeModal.id === 'feedbackModal') resetFeedbackForm();
+            if (activeModal.id === 'submitModal') document.getElementById('eventForm').reset();
+        }
+    });
+
+    // ── Init ─────────────────────────────────────────────────────────────
+    updateDateDisplay();
+    fetchEvents();
+  </script>
+</BaseLayout>

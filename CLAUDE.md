@@ -4,19 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-Naas Today is a community events web app for Naas, County Kildare, Ireland. It is a no-build frontend deployed on Netlify with serverless Node.js functions as the backend. Data is stored in Supabase (PostgreSQL).
+Naas Today is a community events web app for Naas, County Kildare, Ireland. It uses Astro for build-time pre-rendering (SSG) deployed on Netlify, with serverless Node.js functions as the backend. Data is stored in Supabase (PostgreSQL).
 
 ## Development
 
-There is no build step. To preview locally, use the Netlify CLI:
+The project uses Astro as the build tool. To preview locally with Netlify Functions support:
 
 ```bash
 netlify dev
 ```
 
-This starts a local server that emulates the Netlify Functions environment, reads `.env` (or `netlify.toml` env) for `SUPABASE_URL` and `SUPABASE_ANON_KEY`, and serves `index.html` at `localhost:8888`.
+This runs the Astro build/dev server and proxies Netlify Functions, reads `.env` for environment variables, and serves the site at `localhost:8888`.
 
-Required environment variables (set in Netlify dashboard, or a local `.env` file for `netlify dev`):
+To run just the Astro dev server (no functions):
+
+```bash
+npm run dev
+```
+
+This serves the site at `localhost:4321`.
+
+Required environment variables (set in Netlify dashboard, or a local `.env` file):
 
 ```
 SUPABASE_URL=https://<project>.supabase.co
@@ -32,15 +40,45 @@ After completing any bug fix or feature addition, run `netlify dev` so the user 
 
 ## Architecture
 
-### Frontend — `index.html` and `admin.html`
-Both pages are standalone HTML files with all HTML, CSS, and JavaScript inline. There is no framework, bundler, or npm dependencies.
+### Frontend — `src/` (Astro) and `public/admin.html`
 
-`index.html` — public-facing events listing. Key JS sections (marked with `// ──` comments):
-- **`localDateStr(date)`** — converts a JS Date to `YYYY-MM-DD` in local time (not UTC). Always use this instead of `toISOString()` for date comparisons.
-- **`fetchEvents()`** — calls `/.netlify/functions/get-events`, maps the snake_case Supabase response to camelCase event objects, falls back to `SAMPLE_EVENTS` on any error or empty result.
-- **`renderEvents()`** — filters `events` array by `currentDate`, active filters, then calls `createEventCard()` per event.
-- **`createEventCard(event)`** — builds event cards using DOM methods (`textContent` only — never `innerHTML` with user data).
-- **Modal system** — `openModal(id)` / `closeModal(id)` manage focus, ARIA, and a per-modal Tab key trap stored on `modal._trapHandler`.
+The public-facing site is built with Astro (static output). The build fetches approved events from Supabase at build time and pre-renders event cards into HTML for SEO. Client-side JS then re-renders dynamically on load.
+
+**Source structure:**
+```
+src/
+  layouts/BaseLayout.astro   — <html> shell, all CSS (global), meta/OG tags, Umami analytics
+  components/
+    Header.astro             — logo, site title, feedback button
+    DateNav.astro            — date display + prev/today/change/next buttons
+    FilterControls.astro     — free/kids filter buttons + submit event button
+    EventCard.astro          — single event card (accepts raw Supabase row as prop)
+    EventsGrid.astro         — grid of EventCards + empty/loading/error state divs
+    Footer.astro             — copyright + about/contact/submit links
+    modals/
+      DatePickerModal.astro
+      SubmitEventModal.astro
+      FeedbackModal.astro
+      AboutModal.astro
+      ContactModal.astro
+  pages/
+    index.astro              — fetches events at build time, assembles all components, embeds client JS
+public/
+  admin.html                 — password-protected admin interface (static, no build step)
+  robots.txt
+```
+
+**`src/pages/index.astro`** — Key sections:
+- Frontmatter fetches approved events from Supabase at build time; pre-renders `EventsGrid` with today's events; emits JSON-LD structured data.
+- `<script define:vars={{ initialEvents }}>` exposes build-time events as `window.__INITIAL_EVENTS__`.
+- Client-side `<script>` block contains all interactive JS (identical logic to the old `index.html`):
+  - **`localDateStr(date)`** — converts a JS Date to `YYYY-MM-DD` in local time (not UTC). Always use this instead of `toISOString()` for date comparisons.
+  - **`fetchEvents()`** — calls `/.netlify/functions/get-events`; skips loading spinner if pre-rendered events are already visible.
+  - **`renderEvents()`** — filters `events` array by `currentDate`, active filters, then calls `createEventCard()` per event.
+  - **`createEventCard(event)`** — builds event cards using DOM methods (`textContent` only — never `innerHTML` with user data).
+  - **Modal system** — `openModal(id)` / `closeModal(id)` manage focus, ARIA, and a per-modal Tab key trap stored on `modal._trapHandler`.
+
+`public/admin.html` — password-protected admin interface. On load it calls `admin-auth` with `check_setup` to determine whether to show the first-time setup form or the login form. Once authenticated, it calls `admin-events` to list, approve/reject, edit, or delete events. The password is stored only in `sessionStorage` (cleared on tab close) and sent via the `x-admin-password` header on every admin API request.
 
 `admin.html` — password-protected admin interface. On load it calls `admin-auth` with `check_setup` to determine whether to show the first-time setup form or the login form. Once authenticated, it calls `admin-events` to list, approve/reject, edit, or delete events. The password is stored only in `sessionStorage` (cleared on tab close) and sent via the `x-admin-password` header on every admin API request.
 
@@ -106,6 +144,6 @@ Node.js utility scripts run locally (not deployed). All require Node.js 18+ and 
 
 ## Deployment
 
-Pushing to the connected branch auto-deploys via Netlify. The `netlify.toml` sets the functions directory, `esbuild` as the bundler, and security response headers (CSP, HSTS, X-Frame-Options, etc.) — no other build config is needed.
+Pushing to the connected branch auto-deploys via Netlify. The `netlify.toml` sets the build command (`npm run build`), publish directory (`dist`), functions directory, `esbuild` as the bundler, and security response headers (CSP, HSTS, X-Frame-Options, etc.).
 
 Analytics are provided by Umami Cloud (`https://cloud.umami.is`), which is allowed in the CSP.

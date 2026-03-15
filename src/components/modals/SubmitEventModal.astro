@@ -1,0 +1,111 @@
+---
+---
+<div class="modal" id="submitModal" role="dialog" aria-modal="true" aria-labelledby="submitModalTitle">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="submitModalTitle">Add an Event</h2>
+            <button class="modal-close" id="closeSubmitModal" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <p>Spotted something happening in Naas? Let everyone know!</p>
+            <p>All submissions are reviewed to keep the calendar accurate and spam-free.</p>
+            <form id="eventForm">
+                <div class="form-group">
+                    <label for="eventTitle">Event Title *</label>
+                    <input type="text" id="eventTitle" required maxlength="150">
+                </div>
+
+                <div class="form-group">
+                    <label for="eventDate">Start date *</label>
+                    <input type="date" id="eventDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="eventEndDate">End date <span class="form-hint">(leave blank for single-day events)</span></label>
+                    <input type="date" id="eventEndDate">
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" id="isRecurring">
+                            Recurring event
+                        </label>
+                    </div>
+                </div>
+
+                <div id="recurringSection" style="display:none">
+                    <div class="form-group">
+                        <label for="recurrenceFrequency">Repeats</label>
+                        <select id="recurrenceFrequency">
+                            <option value="weekly">Weekly</option>
+                            <option value="fortnightly">Fortnightly</option>
+                            <option value="monthly">Monthly (same day each month)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="recurrenceEndDate">Repeat until <span aria-hidden="true">*</span></label>
+                        <input type="date" id="recurrenceEndDate">
+                        <p class="field-hint" id="recurrenceHint" style="margin-top:4px;color:#666;font-size:0.875em"></p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Time *</label>
+                    <div class="time-mode-group">
+                        <label class="radio-label">
+                            <input type="radio" name="timeMode" value="specific" checked>
+                            Specific time
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="timeMode" value="range">
+                            Time range
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="timeMode" value="allday">
+                            All day
+                        </label>
+                    </div>
+                    <div class="time-inputs" id="timeInputs">
+                        <input type="time" id="eventTimeStart" required>
+                        <span class="time-sep" id="timeRangeSep" style="display:none">to</span>
+                        <input type="time" id="eventTimeEnd" style="display:none">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="eventLocation">Location *</label>
+                    <input type="text" id="eventLocation" required maxlength="150">
+                </div>
+
+                <div class="form-group">
+                    <label for="eventDescription">Description *</label>
+                    <textarea id="eventDescription" required maxlength="2000"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="eventUrl">Web page <span class="form-hint">(optional)</span></label>
+                    <input type="url" id="eventUrl" placeholder="https://..." maxlength="500">
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" id="isFree">
+                            Free
+                        </label>
+                        <label>
+                            <input type="checkbox" id="isForKids">
+                            For kids
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="cancelSubmit">Cancel</button>
+                    <button type="submit" class="btn-primary">Submit Event</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

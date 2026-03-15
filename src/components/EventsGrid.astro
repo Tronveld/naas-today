@@ -1,0 +1,54 @@
+---
+import EventCard from './EventCard.astro';
+
+interface Event {
+  id: string;
+  title: string;
+  date: string;
+  end_date?: string;
+  time?: string;
+  time_end?: string;
+  is_all_day?: boolean;
+  location: string;
+  description: string;
+  is_free?: boolean;
+  is_for_kids?: boolean;
+  url?: string;
+}
+
+interface Props {
+  events: Event[];
+  todayStr: string;
+}
+
+const { events, todayStr } = Astro.props;
+
+// Filter to today's events for initial server render
+const todayEvents = events.filter(e => {
+  if (e.end_date) return e.date <= todayStr && e.end_date >= todayStr;
+  return e.date === todayStr;
+}).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+---
+<div class="events-container">
+    <div class="events-grid" id="eventsGrid" style={todayEvents.length === 0 ? 'display:none' : 'display:grid'}>
+        {todayEvents.map(event => <EventCard event={event} />)}
+    </div>
+
+    <div class="empty-state" id="emptyState" class:list={[{ visible: todayEvents.length === 0 }]}>
+        <h3>No events today</h3>
+        <p>Looks like we don't have anything listed for this date yet.</p>
+        <p style="margin-top: 0.75rem; margin-bottom: 1.25rem;">Know of an event? Submit it and help spread the word!</p>
+        <button class="submit-btn" style="margin-left: 0;" onclick="document.getElementById('eventDate').value = localDateStr(currentDate); openModal('submitModal');">Submit Event</button>
+    </div>
+
+    <div class="loading-state" id="loadingState">
+        <div class="loading-spinner"></div>
+        <p>Loading events…</p>
+    </div>
+
+    <div class="error-state" id="errorState">
+        <h3>Couldn't load events</h3>
+        <p>We had trouble connecting to the server. Please check your connection and try again.</p>
+        <button class="submit-btn" style="margin-left: 0; margin-top: 1rem;" onclick="fetchEvents()">Try again</button>
+    </div>
+</div>

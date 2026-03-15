@@ -1,0 +1,38 @@
+---
+---
+<div class="modal" id="feedbackModal" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="feedbackTitle">Give Feedback</h2>
+            <button class="modal-close" id="closeFeedbackModal" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <div id="feedbackForm">
+                <p>What do you think about Naas Today?</p>
+
+                <div class="feedback-buttons">
+                    <button class="feedback-btn" data-response="great">⭐ It's great</button>
+                    <button class="feedback-btn" data-response="ideas">💡 I have a suggestion</button>
+                    <button class="feedback-btn" data-response="broken">🐛 Something's not working</button>
+                </div>
+
+                <textarea
+                    class="feedback-comment"
+                    id="feedbackComment"
+                    placeholder="Share more about what you think: (optional)"
+                ></textarea>
+
+                <div class="form-actions">
+                    <button class="btn-secondary" id="cancelFeedback">Cancel</button>
+                    <button class="btn-primary" id="sendFeedback">Send Feedback</button>
+                </div>
+            </div>
+
+            <div id="feedbackThanks" class="feedback-thanks" style="display: none;">
+                <h3>Thank you! 🎉</h3>
+                <p>Your feedback helps improve Naas Today for everyone.</p>
+                <button class="feedback-btn" onclick="document.getElementById('feedbackModal').classList.remove('active'); resetFeedbackForm();">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
