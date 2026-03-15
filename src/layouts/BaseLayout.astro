@@ -973,6 +973,15 @@ const {
         .error-state p {
             color: var(--medium-gray);
         }
+
+        @keyframes deep-link-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+            50%       { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0.35); }
+        }
+
+        .deep-link-highlight {
+            animation: deep-link-pulse 0.8s ease-in-out 2;
+        }
     </style>
     <script defer src="https://cloud.umami.is/script.js" data-website-id="8066e0da-4cdf-41c7-9981-f59854563ab5"></script>
 </head>
