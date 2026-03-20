@@ -17,7 +17,7 @@ let initialEvents: any[] = [];
 try {
   if (SUPABASE_URL && SUPABASE_ANON_KEY) {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/events?status=eq.approved&order=date.asc,time.asc&select=id,title,date,end_date,time,time_end,is_all_day,location,description,is_free,is_for_kids,url`,
+      `${SUPABASE_URL}/rest/v1/events?status=eq.approved&order=date.asc,time.asc&select=id,title,date,end_date,time,time_end,is_all_day,location,description,is_free,is_for_kids,is_music,is_sport,is_market,is_theatre,url`,
       { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
     );
     if (res.ok) initialEvents = await res.json();
@@ -128,11 +128,19 @@ const jsonLd = todayEvents.length > 0 ? {
         description: decodeHTML(row.description || ''),
         isFree: Boolean(row.is_free),
         isForKids: Boolean(row.is_for_kids),
+        isMusic:   Boolean(row.is_music),
+        isSport:   Boolean(row.is_sport),
+        isMarket:  Boolean(row.is_market),
+        isTheatre: Boolean(row.is_theatre),
         url: row.url || ''
     }));
     let currentDate = new Date();
-    let filterFreeActive = false;
-    let filterKidsActive = false;
+    let filterFreeActive    = false;
+    let filterKidsActive    = false;
+    let filterMusicActive   = false;
+    let filterSportActive   = false;
+    let filterMarketActive  = false;
+    let filterTheatreActive = false;
     let isError = false;
 
     // ── Loading State ───────────────────────────────────────────────────
@@ -168,6 +176,10 @@ const jsonLd = todayEvents.length > 0 ? {
                     description: decodeHTML(row.description || ''),
                     isFree: Boolean(row.is_free),
                     isForKids: Boolean(row.is_for_kids),
+                    isMusic:   Boolean(row.is_music),
+                    isSport:   Boolean(row.is_sport),
+                    isMarket:  Boolean(row.is_market),
+                    isTheatre: Boolean(row.is_theatre),
                     url: row.url || ''
                 }));
             }
@@ -337,6 +349,30 @@ const jsonLd = todayEvents.length > 0 ? {
             tag.textContent = 'For kids';
             tags.appendChild(tag);
         }
+        if (event.isMusic) {
+            const tag = document.createElement('span');
+            tag.className = 'tag music';
+            tag.textContent = 'Music';
+            tags.appendChild(tag);
+        }
+        if (event.isSport) {
+            const tag = document.createElement('span');
+            tag.className = 'tag sport';
+            tag.textContent = 'Sport';
+            tags.appendChild(tag);
+        }
+        if (event.isMarket) {
+            const tag = document.createElement('span');
+            tag.className = 'tag market';
+            tag.textContent = 'Markets';
+            tags.appendChild(tag);
+        }
+        if (event.isTheatre) {
+            const tag = document.createElement('span');
+            tag.className = 'tag theatre';
+            tag.textContent = 'Theatre';
+            tags.appendChild(tag);
+        }
         footer.appendChild(tags);
 
         const shareBtn = document.createElement('button');
@@ -386,8 +422,28 @@ const jsonLd = todayEvents.length > 0 ? {
         document.querySelector('#filterKids span').textContent =
             kidsCount > 0 ? `For kids (${kidsCount})` : 'For kids';
 
-        if (filterFreeActive) filteredEvents = filteredEvents.filter(e => e.isFree);
-        if (filterKidsActive) filteredEvents = filteredEvents.filter(e => e.isForKids);
+        const musicCount = filteredEvents.filter(e => e.isMusic).length;
+        document.querySelector('#filterMusic span').textContent =
+            musicCount > 0 ? `Music (${musicCount})` : 'Music';
+
+        const sportCount = filteredEvents.filter(e => e.isSport).length;
+        document.querySelector('#filterSport span').textContent =
+            sportCount > 0 ? `Sport (${sportCount})` : 'Sport';
+
+        const marketCount = filteredEvents.filter(e => e.isMarket).length;
+        document.querySelector('#filterMarket span').textContent =
+            marketCount > 0 ? `Markets (${marketCount})` : 'Markets';
+
+        const theatreCount = filteredEvents.filter(e => e.isTheatre).length;
+        document.querySelector('#filterTheatre span').textContent =
+            theatreCount > 0 ? `Theatre (${theatreCount})` : 'Theatre';
+
+        if (filterFreeActive)    filteredEvents = filteredEvents.filter(e => e.isFree);
+        if (filterKidsActive)    filteredEvents = filteredEvents.filter(e => e.isForKids);
+        if (filterMusicActive)   filteredEvents = filteredEvents.filter(e => e.isMusic);
+        if (filterSportActive)   filteredEvents = filteredEvents.filter(e => e.isSport);
+        if (filterMarketActive)  filteredEvents = filteredEvents.filter(e => e.isMarket);
+        if (filterTheatreActive) filteredEvents = filteredEvents.filter(e => e.isTheatre);
 
         if (filteredEvents.length === 0) {
             grid.style.display = 'none';
@@ -585,6 +641,34 @@ const jsonLd = todayEvents.length > 0 ? {
         renderEvents();
     });
 
+    document.getElementById('filterMusic').addEventListener('click', function() {
+        filterMusicActive = !filterMusicActive;
+        this.classList.toggle('active');
+        this.setAttribute('aria-pressed', filterMusicActive);
+        renderEvents();
+    });
+
+    document.getElementById('filterSport').addEventListener('click', function() {
+        filterSportActive = !filterSportActive;
+        this.classList.toggle('active');
+        this.setAttribute('aria-pressed', filterSportActive);
+        renderEvents();
+    });
+
+    document.getElementById('filterMarket').addEventListener('click', function() {
+        filterMarketActive = !filterMarketActive;
+        this.classList.toggle('active');
+        this.setAttribute('aria-pressed', filterMarketActive);
+        renderEvents();
+    });
+
+    document.getElementById('filterTheatre').addEventListener('click', function() {
+        filterTheatreActive = !filterTheatreActive;
+        this.classList.toggle('active');
+        this.setAttribute('aria-pressed', filterTheatreActive);
+        renderEvents();
+    });
+
     // Time mode toggle in submit form
     document.querySelectorAll('input[name="timeMode"]').forEach(radio => {
         radio.addEventListener('change', function() {
@@ -685,6 +769,10 @@ const jsonLd = todayEvents.length > 0 ? {
             description: document.getElementById('eventDescription').value.trim(),
             isFree: document.getElementById('isFree').checked,
             isForKids: document.getElementById('isForKids').checked,
+            isMusic:   document.getElementById('isMusic').checked,
+            isSport:   document.getElementById('isSport').checked,
+            isMarket:  document.getElementById('isMarket').checked,
+            isTheatre: document.getElementById('isTheatre').checked,
             url: document.getElementById('eventUrl').value.trim() || null
         };
 

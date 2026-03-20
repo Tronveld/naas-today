@@ -14,7 +14,7 @@ exports.handler = async function(event, context) {
 
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/events?status=eq.approved&order=date.asc,time.asc&select=id,title,date,end_date,time,time_end,is_all_day,location,description,is_free,is_for_kids,url`,
+      `${SUPABASE_URL}/rest/v1/events?status=eq.approved&order=date.asc,time.asc&select=id,title,date,end_date,time,time_end,is_all_day,location,description,is_free,is_for_kids,is_music,is_sport,is_market,is_theatre,url`,
       {
         headers: {
           'apikey': SUPABASE_ANON_KEY,

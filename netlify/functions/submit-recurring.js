@@ -118,7 +118,7 @@ exports.handler = async function(event) {
 
   const {
     title, date, endDate, time, timeEnd, isAllDay,
-    location, description, isFree, isForKids, url,
+    location, description, isFree, isForKids, isMusic, isSport, isMarket, isTheatre, url,
   } = baseEvent;
 
   // Required presence
@@ -129,7 +129,8 @@ exports.handler = async function(event) {
   if (typeof title !== 'string' || typeof date !== 'string' || typeof location !== 'string') {
     return err400('Invalid field types');
   }
-  if (typeof isAllDay !== 'boolean' || typeof isFree !== 'boolean' || typeof isForKids !== 'boolean') {
+  if (typeof isAllDay !== 'boolean' || typeof isFree !== 'boolean' || typeof isForKids !== 'boolean' ||
+      typeof isMusic !== 'boolean' || typeof isSport !== 'boolean' || typeof isMarket !== 'boolean' || typeof isTheatre !== 'boolean') {
     return err400('Invalid boolean fields');
   }
   if (description !== undefined && typeof description !== 'string') return err400('Invalid field types');
@@ -178,6 +179,10 @@ exports.handler = async function(event) {
     description: description || '',
     is_free: isFree,
     is_for_kids: isForKids,
+    is_music:   isMusic,
+    is_sport:   isSport,
+    is_market:  isMarket,
+    is_theatre: isTheatre,
     url: url || null,
     status: 'pending',
     recurring_group_id: groupId,
