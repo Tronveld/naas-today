@@ -11,27 +11,9 @@
  * Usage: node scripts/pull-library-events.js
  */
 
-const fs   = require('fs');
-const path = require('path');
+const { loadEnv, HTML_ENT, stripHtml, KIDS_RE, createClient } = require('./lib');
 
-// ── Load .env ─────────────────────────────────────────────────────────────────
-(function loadEnv() {
-  const envFile = path.resolve(__dirname, '..', '.env');
-  if (!fs.existsSync(envFile)) return;
-  for (const line of fs.readFileSync(envFile, 'utf8').split('\n')) {
-    const t = line.trim();
-    if (!t || t.startsWith('#')) continue;
-    const eq = t.indexOf('=');
-    if (eq === -1) continue;
-    const k = t.slice(0, eq).trim();
-    let   v = t.slice(eq + 1).trim();
-    // Strip surrounding quotes
-    if (v.length >= 2 && ((v[0] === '"' && v.endsWith('"')) || (v[0] === "'" && v.endsWith("'")))) {
-      v = v.slice(1, -1);
-    }
-    if (!process.env[k]) process.env[k] = v;
-  }
-}());
+loadEnv();
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SECRET_KEY   = process.env.SUPABASE_SECRET_KEY;
@@ -48,9 +30,6 @@ const MONTH = {
   jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
 };
 
-// Matches common "for kids" signals
-const KIDS_RE = /\b(bab(y|ies)|toddler|children|child\b|kids?|\d+\s*-?\s*year\s*-?\s*olds?|junior|youth|playgroup|storytime for)\b/i;
-
 // ── XML entity decode (outer envelope: &lt; → <, &amp; → &, etc.) ───────────
 function xmlDecode(s) {
   return s
@@ -59,46 +38,6 @@ function xmlDecode(s) {
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
     .replace(/&amp;/g,  '&'); // must be last
-}
-
-// Named HTML entities that appear after XML-decoding (e.g. &rsquo; stays as-is)
-const HTML_ENT = {
-  nbsp: ' ',  rsquo: '\u2019', lsquo: '\u2018', rdquo: '\u201D', ldquo: '\u201C',
-  mdash: '\u2014', ndash: '\u2013', hellip: '\u2026', bull: '\u2022',
-  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'",
-  copy: '\u00A9', reg: '\u00AE', trade: '\u2122', euro: '\u20AC', pound: '\u00A3',
-  // Latin-1 supplement — accented characters common in European text
-  aacute: 'á', Aacute: 'Á', agrave: 'à', Agrave: 'À', acirc: 'â', Acirc: 'Â',
-  auml: 'ä', Auml: 'Ä', atilde: 'ã', Atilde: 'Ã', aring: 'å', Aring: 'Å',
-  aelig: 'æ', AElig: 'Æ',
-  eacute: 'é', Eacute: 'É', egrave: 'è', Egrave: 'È', ecirc: 'ê', Ecirc: 'Ê',
-  euml: 'ë', Euml: 'Ë',
-  iacute: 'í', Iacute: 'Í', igrave: 'ì', Igrave: 'Ì', icirc: 'î', Icirc: 'Î',
-  iuml: 'ï', Iuml: 'Ï',
-  oacute: 'ó', Oacute: 'Ó', ograve: 'ò', Ograve: 'Ò', ocirc: 'ô', Ocirc: 'Ô',
-  ouml: 'ö', Ouml: 'Ö', otilde: 'õ', Otilde: 'Õ', oslash: 'ø', Oslash: 'Ø',
-  uacute: 'ú', Uacute: 'Ú', ugrave: 'ù', Ugrave: 'Ù', ucirc: 'û', Ucirc: 'Û',
-  uuml: 'ü', Uuml: 'Ü',
-  ntilde: 'ñ', Ntilde: 'Ñ', ccedil: 'ç', Ccedil: 'Ç', szlig: 'ß',
-  yacute: 'ý', Yacute: 'Ý', yuml: 'ÿ',
-  // Math / misc
-  times: '×', divide: '÷', frac12: '½', frac14: '¼', frac34: '¾',
-  iexcl: '¡', iquest: '¿', ordf: 'ª', ordm: 'º', deg: '°',
-};
-
-// ── HTML → plain text ─────────────────────────────────────────────────────────
-function stripHtml(html) {
-  return html
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<\/?(p|div|li|tr|td|th|h[1-6])[^>]*>/gi, ' ')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&([a-zA-Z]+);/g, (m, n) => HTML_ENT[n] ?? m)
-    .replace(/&#(\d+);/g,      (_, n)  => String.fromCharCode(+n))
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 // ── "DD Mon YYYY" → "YYYY-MM-DD" ─────────────────────────────────────────────
@@ -175,13 +114,10 @@ function itemToEvent(item) {
   desc = desc.replace(/\s+/g, ' ').trim();
   if (desc.length > 2000) desc = desc.slice(0, 1997) + '…';
 
-  // Title: use RSS title if meaningful, otherwise generate from first sentence
-  // item.title comes through tagContent() which only XML-decodes, so named HTML
-  // entities (e.g. &eacute;) survive — decode them here.
-  let title = (item.title || '')
-    .replace(/&([a-zA-Z]+);/g, (m, n) => HTML_ENT[n] ?? m)
-    .replace(/&#(\d+);/g,      (_, n) => String.fromCharCode(+n))
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+  // Title: use RSS title if meaningful, otherwise generate from first sentence.
+  // tagContent() only XML-decodes, so named HTML entities (e.g. &eacute;) survive
+  // — stripHtml decodes them here.
+  let title = stripHtml(item.title || '');
   if (!title && desc) {
     const first = desc.match(/^[\s\S]{10,}?[.!?](?=\s|$)/);
     title = first ? first[0].trim() : desc.slice(0, 80).trim();
@@ -205,59 +141,9 @@ function itemToEvent(item) {
   };
 }
 
-// ── Supabase helpers ──────────────────────────────────────────────────────────
-async function sbGet(path) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1${path}`, {
-    headers: { apikey: SECRET_KEY },
-  });
-  if (!res.ok) throw new Error(`Supabase GET ${res.status}: ${await res.text()}`);
-  return res.json();
-}
-
-async function sbPost(path, body) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1${path}`, {
-    method:  'POST',
-    headers: {
-      apikey:          SECRET_KEY,
-      'Content-Type':  'application/json',
-      Prefer:          'return=minimal',
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`Supabase POST ${res.status}: ${await res.text()}`);
-}
-
-// Normalise a title for fuzzy duplicate comparison:
-//   • lowercase
-//   • strip spaces around punctuation ( : - – — / )
-//   • collapse whitespace
-function normaliseTitle(t) {
-  return t
-    .toLowerCase()
-    .replace(/\s*([:\-–—\/|,;])\s*/g, '$1')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-// Fetch all events on this date and compare normalised titles.
-// Treats one title as a match if it is a prefix of the other (handles
-// cases where the same event was entered with a truncated or extended title).
-async function isDuplicate(title, date) {
-  const rows = await sbGet(
-    `/events?date=eq.${encodeURIComponent(date)}&select=title`
-  );
-  const normNew = normaliseTitle(title);
-  return rows.some(r => {
-    const normEx = normaliseTitle(r.title);
-    return normNew === normEx ||
-           normNew.startsWith(normEx) ||
-           normEx.startsWith(normNew);
-  });
-}
-
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
-  const autoApprove = process.argv.includes('--auto-approve');
+  const autoApprove  = process.argv.includes('--auto-approve');
   const insertStatus = autoApprove ? 'approved' : 'pending';
 
   if (!SUPABASE_URL || !SECRET_KEY) {
@@ -283,12 +169,13 @@ async function main() {
   const events  = rawItems.map(itemToEvent).filter(e => e.title && e.date);
   const skipped = rawItems.length - events.length;
 
+  const sb = createClient(SUPABASE_URL, SECRET_KEY);
   let inserted = 0, dupes = 0, errors = 0;
   const log = [];
 
   for (const evt of events) {
     let dupe = false;
-    try { dupe = await isDuplicate(evt.title, evt.date); }
+    try { dupe = await sb.isDuplicate(evt.title, evt.date); }
     catch (err) {
       errors++;
       log.push({ status: 'ERROR', date: evt.date, title: evt.title, note: err.message });
@@ -302,7 +189,8 @@ async function main() {
     }
 
     try {
-      await sbPost('/events', { ...evt, status: insertStatus });
+      await sb.post('/events', { ...evt, status: insertStatus });
+      sb.cacheInserted(evt.title, evt.date);
       inserted++;
       log.push({ status: 'NEW  ', date: evt.date, title: evt.title, kids: evt.is_for_kids });
     } catch (err) {

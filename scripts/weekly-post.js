@@ -12,26 +12,9 @@
  * Requires Node.js 18+. Reads SUPABASE_URL and SUPABASE_SECRET_KEY from .env.
  */
 
-const fs   = require('fs');
-const path = require('path');
+const { loadEnv } = require('./lib');
 
-// ── Load .env ──────────────────────────────────────────────────────────────────
-(function loadEnv() {
-  const envFile = path.resolve(__dirname, '..', '.env');
-  if (!fs.existsSync(envFile)) return;
-  for (const line of fs.readFileSync(envFile, 'utf8').split('\n')) {
-    const t = line.trim();
-    if (!t || t.startsWith('#')) continue;
-    const eq = t.indexOf('=');
-    if (eq === -1) continue;
-    const k = t.slice(0, eq).trim();
-    let   v = t.slice(eq + 1).trim();
-    if (v.length >= 2 && ((v[0] === '"' && v.endsWith('"')) || (v[0] === "'" && v.endsWith("'")))) {
-      v = v.slice(1, -1);
-    }
-    if (!process.env[k]) process.env[k] = v;
-  }
-}());
+loadEnv();
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SECRET_KEY   = process.env.SUPABASE_SECRET_KEY;
