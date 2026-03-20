@@ -803,6 +803,10 @@
                     <div class="checkbox-group">
                         <label><input type="checkbox" id="editIsFree"> Free event</label>
                         <label><input type="checkbox" id="editIsForKids"> For kids</label>
+                        <label><input type="checkbox" id="editIsMusic"> Music</label>
+                        <label><input type="checkbox" id="editIsSport"> Sport</label>
+                        <label><input type="checkbox" id="editIsMarket"> Market</label>
+                        <label><input type="checkbox" id="editIsTheatre"> Theatre</label>
                     </div>
                 </div>
 
@@ -1183,6 +1187,10 @@
         document.getElementById('editUrl').value            = ev.url || '';
         document.getElementById('editIsFree').checked       = !!ev.is_free;
         document.getElementById('editIsForKids').checked    = !!ev.is_for_kids;
+        document.getElementById('editIsMusic').checked      = !!ev.is_music;
+        document.getElementById('editIsSport').checked      = !!ev.is_sport;
+        document.getElementById('editIsMarket').checked     = !!ev.is_market;
+        document.getElementById('editIsTheatre').checked    = !!ev.is_theatre;
 
         // Time mode
         const hasTime    = !!ev.time;
@@ -1383,6 +1391,10 @@
             url:         document.getElementById('editUrl').value.trim() || null,
             is_free:     document.getElementById('editIsFree').checked,
             is_for_kids: document.getElementById('editIsForKids').checked,
+            is_music:    document.getElementById('editIsMusic').checked,
+            is_sport:    document.getElementById('editIsSport').checked,
+            is_market:   document.getElementById('editIsMarket').checked,
+            is_theatre:  document.getElementById('editIsTheatre').checked,
         };
 
         if (!fields.title || !fields.date || !fields.location) {

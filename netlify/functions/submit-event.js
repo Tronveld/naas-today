@@ -78,7 +78,7 @@ exports.handler = async function(event, context) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
   }
 
-  const { title, date, endDate, time, timeEnd, isAllDay, location, description, isFree, isForKids, url } = data;
+  const { title, date, endDate, time, timeEnd, isAllDay, location, description, isFree, isForKids, isMusic, isSport, isMarket, isTheatre, url } = data;
 
   // Required field presence
   if (!title || !date || !location) {
@@ -101,7 +101,8 @@ exports.handler = async function(event, context) {
   if (typeof title !== 'string' || typeof date !== 'string' || typeof location !== 'string') {
     return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid field types' }) };
   }
-  if (typeof isAllDay !== 'boolean' || typeof isFree !== 'boolean' || typeof isForKids !== 'boolean') {
+  if (typeof isAllDay !== 'boolean' || typeof isFree !== 'boolean' || typeof isForKids !== 'boolean' ||
+      typeof isMusic !== 'boolean' || typeof isSport !== 'boolean' || typeof isMarket !== 'boolean' || typeof isTheatre !== 'boolean') {
     return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid boolean fields' }) };
   }
   if (description !== undefined && typeof description !== 'string') {
@@ -159,6 +160,10 @@ exports.handler = async function(event, context) {
         description: description || '',
         is_free: isFree,
         is_for_kids: isForKids,
+        is_music:   isMusic,
+        is_sport:   isSport,
+        is_market:  isMarket,
+        is_theatre: isTheatre,
         url: url || null,
         status: 'pending'
       })

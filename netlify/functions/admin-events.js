@@ -15,14 +15,15 @@ const DIGEST     = 'sha256';
 // Columns that an admin is allowed to update (whitelist)
 const ALLOWED_PATCH_FIELDS = new Set([
   'status', 'title', 'date', 'end_date', 'time', 'time_end',
-  'is_all_day', 'location', 'description', 'is_free', 'is_for_kids', 'url',
+  'is_all_day', 'location', 'description', 'is_free', 'is_for_kids',
+  'is_music', 'is_sport', 'is_market', 'is_theatre', 'url',
   'recurring_group_id',
 ]);
 
 const UUID_RE   = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_RE   = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE   = /^\d{2}:\d{2}(:\d{2})?$/;
-const BOOL_FIELDS    = new Set(['is_all_day', 'is_free', 'is_for_kids']);
+const BOOL_FIELDS    = new Set(['is_all_day', 'is_free', 'is_for_kids', 'is_music', 'is_sport', 'is_market', 'is_theatre']);
 const DATE_FIELDS    = new Set(['date', 'end_date']);
 const TIME_FIELDS    = new Set(['time', 'time_end']);
 const STR_FIELDS     = new Set(['title', 'location', 'description', 'url', 'status']);
@@ -81,7 +82,7 @@ async function handleGet(event, supabaseUrl, secretKey) {
   const params  = event.queryStringParameters || {};
   const status  = params.status; // 'pending' | 'approved' | undefined
 
-  let url = `${supabaseUrl}/rest/v1/events?order=date.asc,time.asc&select=id,title,date,end_date,time,time_end,is_all_day,location,description,is_free,is_for_kids,url,status,created_at,recurring_group_id`;
+  let url = `${supabaseUrl}/rest/v1/events?order=date.asc,time.asc&select=id,title,date,end_date,time,time_end,is_all_day,location,description,is_free,is_for_kids,is_music,is_sport,is_market,is_theatre,url,status,created_at,recurring_group_id`;
   if (status === 'pending' || status === 'approved') {
     url += `&status=eq.${status}`;
   }

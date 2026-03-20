@@ -52,6 +52,7 @@ const {
             --orange-hover: #a80000;
             --orange-light: #fff0f0;
             --sky:          #3f88c5;
+            --sky-hover:    #2f6fa0;
             --sky-light:    #deeef8;
             --amber:        #ffba08;
             --border:       #E4E4E7;
@@ -241,21 +242,106 @@ const {
             font-family: 'Instrument Sans', sans-serif;
         }
 
-        .filter-btn:hover {
-            border-color: var(--orange);
-            color: var(--orange);
-            background: var(--orange-light);
+        #filterFree:hover {
+            border-color: var(--forest);
+            color: var(--forest);
+            background: var(--forest-light);
         }
 
-        .filter-btn.active {
-            background: var(--orange);
+        #filterFree.active {
+            background: var(--forest);
             color: white;
-            border-color: var(--orange);
+            border-color: var(--forest);
         }
 
-        .filter-btn.active:hover {
-            background: var(--orange-hover);
-            border-color: var(--orange-hover);
+        #filterFree.active:hover {
+            background: var(--forest-hover);
+            border-color: var(--forest-hover);
+        }
+
+        #filterKids:hover {
+            border-color: var(--sky);
+            color: var(--sky);
+            background: var(--sky-light);
+        }
+
+        #filterKids.active {
+            background: var(--sky);
+            color: white;
+            border-color: var(--sky);
+        }
+
+        #filterKids.active:hover {
+            background: var(--sky-hover);
+            border-color: var(--sky-hover);
+        }
+
+        #filterMusic:hover {
+            border-color: #7c3aed;
+            color: #7c3aed;
+            background: #ede9fe;
+        }
+
+        #filterMusic.active {
+            background: #7c3aed;
+            color: white;
+            border-color: #7c3aed;
+        }
+
+        #filterMusic.active:hover {
+            background: #6d28d9;
+            border-color: #6d28d9;
+        }
+
+        #filterSport:hover {
+            border-color: #059669;
+            color: #059669;
+            background: #d1fae5;
+        }
+
+        #filterSport.active {
+            background: #059669;
+            color: white;
+            border-color: #059669;
+        }
+
+        #filterSport.active:hover {
+            background: #047857;
+            border-color: #047857;
+        }
+
+        #filterMarket:hover {
+            border-color: #b45309;
+            color: #b45309;
+            background: #fef3c7;
+        }
+
+        #filterMarket.active {
+            background: #b45309;
+            color: white;
+            border-color: #b45309;
+        }
+
+        #filterMarket.active:hover {
+            background: #92400e;
+            border-color: #92400e;
+        }
+
+        #filterTheatre:hover {
+            border-color: #be185d;
+            color: #be185d;
+            background: #fce7f3;
+        }
+
+        #filterTheatre.active {
+            background: #be185d;
+            color: white;
+            border-color: #be185d;
+        }
+
+        #filterTheatre.active:hover {
+            background: #9d174d;
+            border-color: #9d174d;
         }
 
         .submit-btn {
@@ -267,7 +353,6 @@ const {
             border-radius: 999px;
             padding: 0.4375rem 1rem;
             cursor: pointer;
-            margin-left: auto;
             font-family: 'Instrument Sans', sans-serif;
             transition: all 0.15s;
         }
@@ -455,6 +540,26 @@ const {
         .tag.kids {
             background: var(--sky-light);
             color: var(--sky);
+        }
+
+        .tag.music {
+            background: #ede9fe;
+            color: #7c3aed;
+        }
+
+        .tag.sport {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .tag.market {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        .tag.theatre {
+            background: #fce7f3;
+            color: #be185d;
         }
 
         .share-btn {
