@@ -193,10 +193,10 @@ const {
         }
 
         .filter-scroll {
+            flex: 1;
+            min-width: 0;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
-            mask-image: linear-gradient(to right, black calc(100% - 2rem), transparent);
-            -webkit-mask-image: linear-gradient(to right, black calc(100% - 2rem), transparent);
         }
 
         .filter-group {
@@ -242,6 +242,8 @@ const {
         }
 
         .submit-btn {
+            margin-left: auto;
+            flex-shrink: 0;
             background: var(--accent);
             border: 1.5px solid var(--accent);
             color: white;
