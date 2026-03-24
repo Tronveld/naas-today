@@ -60,7 +60,7 @@ const jsonLd = todayEvents.length > 0 ? {
     <FilterControls />
     <EventsGrid events={initialEvents} todayStr={todayStr} />
     <section id="upcomingSection" class="upcoming-section" aria-label="Coming up">
-      <h2 class="upcoming-heading">What's next</h2>
+      <h2 class="upcoming-heading">Coming Up</h2>
       <ul id="upcomingList" class="upcoming-list"></ul>
     </section>
   </main>
@@ -259,6 +259,19 @@ const jsonLd = todayEvents.length > 0 ? {
         }
     }
 
+    function formatTimeShort(time) {
+        const [hours, minutes] = time.split(':');
+        const hour = parseInt(hours);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour % 12 || 12;
+        return { time: `${displayHour}:${minutes}`, ampm };
+    }
+
+    function formatDateShort(dateStr) {
+        const d = new Date(dateStr + 'T00:00:00');
+        return d.toLocaleDateString('en-IE', { day: 'numeric', month: 'short' });
+    }
+
     // Builds an event card using DOM methods (avoids XSS from raw data)
     function createEventCard(event) {
         const card = document.createElement('div');
@@ -268,20 +281,43 @@ const jsonLd = todayEvents.length > 0 ? {
         const inner = document.createElement('div');
         inner.className = 'event-card-inner';
 
-        const accent = document.createElement('div');
-        accent.className = 'event-card-accent';
-        inner.appendChild(accent);
+        // Sidebar
+        const sidebar = document.createElement('div');
+        sidebar.className = 'event-card-sidebar';
+
+        const isMultiDay = event.endDate && event.endDate !== event.date;
+        const hasTime = event.time && !event.isAllDay;
+
+        if (event.isAllDay) {
+            const allday = document.createElement('span');
+            allday.className = 'sidebar-allday';
+            allday.textContent = 'ALL DAY';
+            sidebar.appendChild(allday);
+        } else if (isMultiDay) {
+            const multi = document.createElement('span');
+            multi.className = 'sidebar-multi';
+            multi.innerHTML = formatDateShort(event.date) + '<br/>–<br/>' + formatDateShort(event.endDate);
+            sidebar.appendChild(multi);
+        } else if (hasTime) {
+            const st = formatTimeShort(event.time);
+            const timeEl = document.createElement('span');
+            timeEl.className = 'sidebar-time';
+            timeEl.textContent = st.time;
+            sidebar.appendChild(timeEl);
+            const ampmEl = document.createElement('span');
+            ampmEl.className = 'sidebar-ampm';
+            ampmEl.textContent = st.ampm;
+            sidebar.appendChild(ampmEl);
+        } else {
+            const tbc = document.createElement('span');
+            tbc.className = 'sidebar-allday';
+            tbc.textContent = 'TBC';
+            sidebar.appendChild(tbc);
+        }
+        inner.appendChild(sidebar);
 
         const body = document.createElement('div');
         body.className = 'event-card-body';
-
-        const timeStr = formatEventTime(event);
-        if (timeStr) {
-            const timeEl = document.createElement('div');
-            timeEl.className = 'event-time';
-            timeEl.textContent = timeStr;
-            body.appendChild(timeEl);
-        }
 
         const title = document.createElement('h3');
         title.className = 'event-title';
@@ -471,7 +507,7 @@ const jsonLd = todayEvents.length > 0 ? {
         const upcoming = events
             .filter(e => e.date > dateStr)
             .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
-            .slice(0, 7);
+            .slice(0, 5);
 
         if (upcoming.length === 0) { section.style.display = 'none'; return; }
         section.style.display = '';
@@ -668,6 +704,15 @@ const jsonLd = todayEvents.length > 0 ? {
         this.setAttribute('aria-pressed', filterTheatreActive);
         renderEvents();
     });
+
+    // Character counter for description
+    const descTextarea = document.getElementById('eventDescription');
+    const charCounter = document.getElementById('descCharCounter');
+    if (descTextarea && charCounter) {
+        descTextarea.addEventListener('input', () => {
+            charCounter.textContent = `${descTextarea.value.length} / 2000`;
+        });
+    }
 
     // Time mode toggle in submit form
     document.querySelectorAll('input[name="timeMode"]').forEach(radio => {
