@@ -268,8 +268,10 @@ const {
 
         .events-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-            gap: 16px;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            max-width: 640px;
+            margin: 0 auto;
         }
 
         /* ── Event Card ── */
@@ -279,7 +281,7 @@ const {
             border-radius: 12px;
             box-shadow: var(--shadow-sm);
             transition: box-shadow 0.15s ease, transform 0.15s ease;
-            overflow: hidden;
+            padding: 16px 20px;
         }
 
         .event-card:hover {
@@ -287,77 +289,37 @@ const {
             transform: translateY(-1px);
         }
 
-        .event-card-inner {
+        /* ── Card layout ── */
+        .ev-top {
             display: flex;
-            height: 100%;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 4px;
         }
 
-        .event-card-sidebar {
-            width: 56px;
-            flex-shrink: 0;
-            background: var(--accent);
-            border-radius: 12px 0 0 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 0.75rem 0.25rem;
-            color: white;
+        .ev-time {
             font-family: 'DM Mono', monospace;
-            text-align: center;
-            line-height: 1.2;
+            color: var(--accent);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
-        .sidebar-time {
-            font-size: 1rem;
-            font-weight: 500;
-        }
-
-        .sidebar-ampm {
-            font-size: 0.625rem;
-            font-weight: 400;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            opacity: 0.85;
-        }
-
-        .sidebar-allday {
-            font-size: 0.5625rem;
-            font-weight: 500;
+        .ev-allday {
+            font-family: 'DM Mono', monospace;
+            color: var(--accent);
+            font-size: 0.6875rem;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            writing-mode: vertical-lr;
-            text-orientation: mixed;
-        }
-
-        .sidebar-multi {
-            font-size: 0.5625rem;
-            font-weight: 500;
-            letter-spacing: 0.02em;
-        }
-
-        .event-card-body {
-            padding: 1rem 1.25rem;
-            flex: 1;
-            min-width: 0;
-        }
-
-        .event-time-inline {
-            display: inline-flex;
-            align-items: center;
-            background: var(--bg-muted);
-            color: var(--warm);
-            font-family: 'DM Mono', monospace;
-            font-size: 0.6875rem;
-            font-weight: 500;
-            padding: 0.1875rem 0.5rem;
-            border-radius: 999px;
-            letter-spacing: 0.03em;
-            margin-bottom: 0.5rem;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .event-title {
-            font-size: 0.9375rem;
+            font-size: 1.0625rem;
             font-weight: 600;
             color: var(--ink);
             margin-bottom: 0.25rem;
@@ -1031,9 +993,6 @@ const {
         /* ── Responsive ── */
         @media (max-width: 480px) {
             .container { padding: 0 1rem; }
-            .events-grid { grid-template-columns: 1fr; }
-            .event-card-sidebar { width: 48px; }
-            .sidebar-time { font-size: 0.875rem; }
             .current-date { font-size: 1.125rem; }
             .date-header {
                 flex-direction: column;
