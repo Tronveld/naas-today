@@ -46,11 +46,11 @@ In `FilterControls.astro`:
 
 In `BaseLayout.astro`:
 
-- Remove or simplify the mobile CSS override for `.controls-inner` that sets `flex-direction: column; align-items: stretch`. With only the filter scroll row remaining, no column stacking is needed.
-- Remove the `.controls-label` CSS rule (unused).
-- Remove the `.submit-btn` rule from the controls context (the submit button moves elsewhere — see below).
-- Remove the skeleton grid's `max-width: 640px; margin: 0 auto` — the container handles this now.
-- The `481px–768px` breakpoint rule for `.events-grid` (`grid-template-columns: 1fr`) is redundant with a 660px container and can be removed.
+- In `@media (max-width: 480px)`: remove the `.controls-inner { flex-direction: column; align-items: stretch }` and `.submit-btn { margin-left: 0 }` rules. Keep all other rules in that block (`.container`, `.current-date`, `.date-header`, `.date-nav`, `.modal`).
+- In `@media (min-width: 481px) and (max-width: 768px)`: remove the entire block. All three rules inside it (`.events-grid`, `.controls-inner`, `.submit-btn`) target elements that are being removed or made obsolete by this change — the block is dead code.
+- Remove the global `.controls-label` CSS rule (unused after FilterControls change).
+- Remove the global `.submit-btn` CSS rule. Also remove the `.submit-btn { margin-left: 0 }` rule inside `@media (max-width: 480px)` (noted above). The submit button is now `.submit-area-btn` with its own CSS. **Note:** the inline button inside `#emptyState` currently uses `class="submit-btn"` — change its class to `submit-area-btn` in `EventsGrid.astro` so it retains its styling from the new `.submit-area-btn` rule (it will look identical, just not full-width since the inline style remains).
+- Remove `max-width: 640px; margin: 0 auto` from `.skeleton-grid`. The loading state is rendered inside `.events-container` in `EventsGrid.astro`, which is itself inside `.container` in `index.astro`, so the container's 660px constraint already applies.
 
 ### 3. Submit event button — move below the events grid
 
@@ -62,9 +62,10 @@ In `EventsGrid.astro`, add a `.submit-area` block after the `#eventsGrid` div (a
 </div>
 ```
 
-- Visible at all times (not conditional on event count).
+- Visible at all times (not conditional on event count). Intentional: when the empty state is showing, two submit CTAs will be visible simultaneously — the contextual "Submit Event" button inside `#emptyState` and this persistent one. This is deliberate; the empty-state button is inline with the "no events" message, while this one is the persistent page-level CTA.
 - Opens the submit modal on click (same behaviour as the old `#submitEventBtn`).
-- The ID `submitEventBtn` stays the same so the existing JS wire-up in `index.astro` requires no change.
+- The ID `submitEventBtn` stays the same so the existing `document.getElementById('submitEventBtn')` in `index.astro` requires no change. There is no ID conflict: the inline button inside `#emptyState` has **no ID** (it uses only an `onclick` attribute), so `getElementById` will find only this new button.
+- No new focus style needed: `.submit-area-btn` inherits the browser default `:focus-visible` ring, consistent with all other buttons on the page.
 
 In `BaseLayout.astro`, add CSS for `.submit-area` and `.submit-area-btn`:
 
@@ -95,7 +96,7 @@ In `BaseLayout.astro`, add CSS for `.submit-area` and `.submit-area-btn`:
 
 ### 4. JS — no changes needed
 
-The existing `#submitEventBtn` click handler in `index.astro` wires up `openModal('submitModal')` and pre-fills the date. The ID is preserved on the new button, so the JS requires no changes.
+The existing `#submitEventBtn` click handler in `index.astro` wires up `openModal('submitModal')` and pre-fills the date. The new button in `EventsGrid.astro` is server-rendered and present in the DOM before any client JS runs, so `getElementById('submitEventBtn')` will find it correctly on page load. No re-wiring required.
 
 ---
 
@@ -105,7 +106,7 @@ The existing `#submitEventBtn` click handler in `index.astro` wires up `openModa
 |---|---|
 | `src/layouts/BaseLayout.astro` | Container `max-width: 660px`; remove controls mobile override, label CSS, redundant skeleton/grid breakpoints; add `.submit-area` CSS |
 | `src/components/FilterControls.astro` | Remove label and submit button |
-| `src/components/EventsGrid.astro` | Add `.submit-area` block with `#submitEventBtn` |
+| `src/components/EventsGrid.astro` | Add `.submit-area` block with `#submitEventBtn`; change empty-state button class to `submit-area-btn` |
 
 ---
 
