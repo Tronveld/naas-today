@@ -592,28 +592,17 @@ const {
 
         .skeleton-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+            grid-template-columns: 1fr;
+            max-width: 640px;
+            margin: 0 auto;
             gap: 16px;
         }
 
         .skeleton-card {
-            display: flex;
             border: 1px solid var(--border);
             border-radius: 12px;
-            overflow: hidden;
             background: var(--bg-card);
-        }
-
-        .skeleton-sidebar {
-            width: 56px;
-            flex-shrink: 0;
-            background: var(--accent-light);
-            animation: skeletonPulse 1.5s ease-in-out infinite;
-        }
-
-        .skeleton-body {
-            flex: 1;
-            padding: 1rem 1.25rem;
+            padding: 16px 20px;
         }
 
         .skeleton-line {
@@ -1037,14 +1026,6 @@ const {
                 align-items: stretch;
             }
             .submit-btn { margin-left: 0; }
-        }
-
-        @media (min-width: 769px) and (max-width: 1024px) {
-            .events-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-
-        @media (min-width: 1025px) {
-            .events-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
         /* Reduced motion */
