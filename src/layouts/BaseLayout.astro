@@ -122,10 +122,9 @@ const {
 
         .date-header {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.625rem;
         }
 
         .current-date {
@@ -294,22 +293,30 @@ const {
 
         .ev-time {
             font-family: 'DM Mono', monospace;
-            color: var(--accent);
+            color: #8B7355;
             font-size: 0.8125rem;
             font-weight: 600;
             white-space: nowrap;
             flex-shrink: 0;
+            background: #F5F0E8;
+            border: 1px solid #d8cfc0;
+            border-radius: 999px;
+            padding: 0.125rem 0.5rem;
         }
 
         .ev-allday {
             font-family: 'DM Mono', monospace;
-            color: var(--accent);
+            color: #8B7355;
             font-size: 0.6875rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.08em;
             white-space: nowrap;
             flex-shrink: 0;
+            background: #F5F0E8;
+            border: 1px solid #d8cfc0;
+            border-radius: 999px;
+            padding: 0.125rem 0.5rem;
         }
 
         .event-title {
@@ -975,10 +982,6 @@ const {
         @media (max-width: 480px) {
             .container { padding: 0 1rem; }
             .current-date { font-size: 1.125rem; }
-            .date-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
             .date-nav {
                 width: 100%;
                 justify-content: space-between;
