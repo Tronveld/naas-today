@@ -24,14 +24,6 @@ interface Props {
 
 const { event } = Astro.props;
 
-function formatTime(time: string): string {
-  const [hours, minutes] = time.substring(0, 5).split(':');
-  const hour = parseInt(hours);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour % 12 || 12;
-  return `${displayHour}:${minutes} ${ampm}`;
-}
-
 function formatTimeShort(time: string): { time: string; ampm: string } {
   const [hours, minutes] = time.substring(0, 5).split(':');
   const hour = parseInt(hours);
@@ -40,21 +32,11 @@ function formatTimeShort(time: string): { time: string; ampm: string } {
   return { time: `${displayHour}:${minutes}`, ampm };
 }
 
-function formatEventTime(e: Event): string {
-  if (e.is_all_day) return 'All day';
-  const t = e.time ? e.time.substring(0, 5) : '';
-  if (!t) return '';
-  const start = formatTime(t);
-  if (e.time_end) return start + ' – ' + formatTime(e.time_end);
-  return start;
-}
-
 function formatDateShort(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('en-IE', { day: 'numeric', month: 'short' });
 }
 
-const timeStr = formatEventTime(event);
 const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(event.location + ', Naas, Ireland')}`;
 
 let parsedUrl: URL | null = null;
@@ -69,6 +51,8 @@ if (event.url) {
 
 // Sidebar content
 const isAllDay = event.is_all_day;
+const desc = event.description ?? '';
+const isLong = desc.length > 220;
 const isMultiDay = event.end_date && event.end_date !== event.date;
 const hasTime = event.time && !isAllDay;
 const sidebarTime = hasTime ? formatTimeShort(event.time!) : null;
@@ -86,26 +70,18 @@ const sidebarTime = hasTime ? formatTimeShort(event.time!) : null;
     {!isAllDay && !isMultiDay && !hasTime && <span class="ev-allday">TBC</span>}
   </div>
   <a class="event-location" href={mapsUrl} target="_blank" rel="noopener noreferrer">📍 {event.location}</a>
-  {(() => {
-    const desc = event.description ?? '';
-    const isLong = desc.length > 220;
-    return (
-      <>
-        <p
-          class="event-description"
-          data-truncatable={isLong ? 'true' : undefined}
-          style={isLong ? 'margin-bottom: 0;' : undefined}
-        >
-          {desc}
-        </p>
-        {isLong && (
-          <button class="desc-toggle-btn" aria-expanded="false" type="button">
-            Read more ↓
-          </button>
-        )}
-      </>
-    );
-  })()}
+  <p
+    class="event-description"
+    data-truncatable={isLong ? 'true' : undefined}
+    style={isLong ? 'margin-bottom: 0;' : undefined}
+  >
+    {desc}
+  </p>
+  {isLong && (
+    <button class="desc-toggle-btn" aria-expanded="false" type="button">
+      Read more ↓
+    </button>
+  )}
   {parsedUrl && (
     <a class="event-url" href={parsedUrl.href} target="_blank" rel="noopener noreferrer">
       {parsedUrl.hostname.replace(/^www\./, '')} ↗
