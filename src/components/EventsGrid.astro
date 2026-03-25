@@ -51,7 +51,7 @@ const todayEvents = events.filter(e => {
         </div>
         <h3>No events today</h3>
         <p>Check another day or submit an event!</p>
-        <button class="submit-btn" style="margin-top: 1rem;" onclick="document.getElementById('eventDate').value = localDateStr(currentDate); openModal('submitModal');">Submit Event</button>
+        <button class="submit-area-btn" style="margin-top: 1rem;" onclick="document.getElementById('eventDate').value = localDateStr(currentDate); openModal('submitModal');">Submit Event</button>
     </div>
 
     <div class="loading-state" id="loadingState">
@@ -64,6 +64,10 @@ const todayEvents = events.filter(e => {
     <div class="error-state" id="errorState">
         <h3>Something went wrong</h3>
         <p>We had trouble loading events. Please try again.</p>
-        <button class="submit-btn" style="margin-top: 1rem;" onclick="fetchEvents()">Try again</button>
+        <button class="submit-area-btn" style="margin-top: 1rem;" onclick="fetchEvents()">Try again</button>
+    </div>
+
+    <div class="submit-area">
+        <button class="submit-area-btn" id="submitEventBtn">+ Submit an event</button>
     </div>
 </div>
