@@ -45,8 +45,8 @@ const {
             --bg-card:      #FFFFFF;
             --bg-muted:     #F5F0E8;
             --ink:          #1a3a1a;
-            --ink-mid:      #6B7A6B;
-            --ink-light:    #706F60;
+            --ink-mid:      #4d5b4d;
+            --ink-light:    #5c5848;
             --accent:       #2d5a2d;
             --accent-light: #E8F0E4;
             --warm:         #8B7355;
@@ -89,20 +89,25 @@ const {
         header {
             background: var(--bg-card);
             border-bottom: 1px solid var(--border-light);
-            padding: 1rem 0;
+            padding: 0.625rem 0;
             position: sticky;
             top: 0;
             z-index: 100;
+            transition: box-shadow 0.2s ease;
+        }
+
+        header.scrolled {
+            box-shadow: 0 2px 8px rgba(26,42,26,0.08);
         }
 
         .masthead {
-            text-align: center;
-            padding: 0.375rem 0 0.25rem;
+            text-align: left;
+            padding: 0.125rem 0;
         }
 
         h1 {
             font-family: Georgia, serif;
-            font-size: clamp(2rem, 4vw, 3rem);
+            font-size: clamp(1.625rem, 3vw, 2.25rem);
             font-weight: 700;
             color: var(--ink);
             line-height: 1.1;
@@ -119,7 +124,7 @@ const {
         .date-section {
             background: var(--bg);
             border-bottom: 1px solid var(--border);
-            padding: 1rem 0;
+            padding: 0.75rem 0;
         }
 
         .date-header {
@@ -175,7 +180,7 @@ const {
 
         /* ── Controls ── */
         .controls {
-            padding: 1.5rem 0 1.25rem;
+            padding: 0.875rem 0 0.75rem;
         }
 
         .controls-inner {
@@ -249,7 +254,7 @@ const {
             background: var(--accent);
             color: white;
             border: none;
-            border-radius: 999px;
+            border-radius: 8px;
             padding: 0.75rem 2rem;
             font-size: 0.9375rem;
             font-weight: 600;
@@ -281,7 +286,7 @@ const {
 
         .event-card:hover {
             box-shadow: var(--shadow-md);
-            transform: translateY(-1px);
+            transform: translateY(-2px);
         }
 
         .event-card:focus-visible {
@@ -440,18 +445,20 @@ const {
 
         .share-btn {
             background: none;
-            border: none;
-            color: var(--ink-light);
-            font-size: 0.6875rem;
+            border: 1.5px solid var(--border);
+            color: var(--ink-mid);
+            font-size: 0.75rem;
             font-weight: 500;
             cursor: pointer;
-            padding: 0.5rem 0.25rem;
-            min-height: 44px;
-            transition: color 0.15s;
+            padding: 0.25rem 0.625rem;
+            min-height: 32px;
+            border-radius: 6px;
+            transition: all 0.15s;
             white-space: nowrap;
         }
 
         .share-btn:hover {
+            border-color: var(--accent);
             color: var(--accent);
         }
 
@@ -888,7 +895,7 @@ const {
         .form-actions button {
             flex: 1;
             padding: 0.75rem;
-            border-radius: 999px;
+            border-radius: 8px;
             font-size: 0.9375rem;
             font-weight: 500;
             cursor: pointer;
@@ -899,7 +906,7 @@ const {
             background: var(--accent);
             color: white;
             border: none;
-            border-radius: 999px;
+            border-radius: 8px;
         }
 
         .btn-primary:hover {
@@ -910,7 +917,7 @@ const {
             background: transparent;
             border: 1px solid var(--border);
             color: var(--ink-mid);
-            border-radius: 999px;
+            border-radius: 8px;
         }
 
         .btn-secondary:hover {
@@ -1045,6 +1052,15 @@ const {
         }
     </style>
     <script defer src="https://cloud.umami.is/script.js" data-website-id="8066e0da-4cdf-41c7-9981-f59854563ab5"></script>
+    <script>
+        (function() {
+            var hdr = document.querySelector('header');
+            if (!hdr) return;
+            function onScroll() { hdr.classList.toggle('scrolled', window.scrollY > 4); }
+            window.addEventListener('scroll', onScroll, { passive: true });
+            onScroll();
+        })();
+    </script>
 </head>
 <body>
     <slot />

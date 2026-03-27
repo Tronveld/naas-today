@@ -49,9 +49,9 @@ const todayEvents = events.filter(e => {
                 <line x1="15" y1="30" x2="27" y2="30" stroke="var(--border)" stroke-width="2" stroke-linecap="round"/>
             </svg>
         </div>
-        <h3>No events today</h3>
-        <p>Check another day or submit an event!</p>
-        <button class="submit-area-btn" style="margin-top: 1rem;" onclick="document.getElementById('eventDate').value = localDateStr(currentDate); openModal('submitModal');">Submit Event</button>
+        <h3>Quiet day in Naas</h3>
+        <p>Nothing listed yet — know of something happening? Add it to the noticeboard.</p>
+        <button class="submit-area-btn" style="margin-top: 1rem;" onclick="document.getElementById('eventDate').value = localDateStr(currentDate); openModal('submitModal');">Submit an event</button>
     </div>
 
     <div class="loading-state" id="loadingState">
@@ -62,8 +62,8 @@ const todayEvents = events.filter(e => {
     </div>
 
     <div class="error-state" id="errorState">
-        <h3>Something went wrong</h3>
-        <p>We had trouble loading events. Please try again.</p>
+        <h3>Couldn't load events</h3>
+        <p>Something went sideways on our end. Give it another go.</p>
         <button class="submit-area-btn" style="margin-top: 1rem;" onclick="fetchEvents()">Try again</button>
     </div>
 
