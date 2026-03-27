@@ -49,7 +49,7 @@ The public-facing site is built with Astro (static output). The build fetches ap
 src/
   layouts/BaseLayout.astro   — <html> shell, all CSS (global), meta/OG tags, Umami analytics
   components/
-    Header.astro             — logo, site title, feedback button
+    Header.astro             — logo, site title
     DateNav.astro            — date display + prev/today/change/next buttons
     FilterControls.astro     — free/kids filter buttons + submit event button
     EventCard.astro          — single event card (accepts raw Supabase row as prop)
@@ -58,7 +58,6 @@ src/
     modals/
       DatePickerModal.astro
       SubmitEventModal.astro
-      FeedbackModal.astro
       AboutModal.astro
       ContactModal.astro
   pages/
@@ -87,7 +86,6 @@ public/
 | `get-events.js` | GET | Queries Supabase for `status = 'approved'` events, returns JSON |
 | `submit-event.js` | POST | Inserts a new event with `status = 'pending'`; rate-limited (5/IP/hour) |
 | `submit-recurring.js` | POST | Submits a recurring event series (weekly/fortnightly/monthly); each occurrence stored as a separate row sharing a `recurring_group_id`; rate-limited (5/IP/hour) |
-| `submit-feedback.js` | POST | Forwards feedback to an optional `FEEDBACK_WEBHOOK_URL` |
 | `admin-auth.js` | POST | First-time setup + login. Actions: `check_setup`, `setup`, `login`. Rate-limited (10/IP/15 min) |
 | `admin-events.js` | GET / PATCH / DELETE | Protected event management. Requires `x-admin-password` header on every call. Supports bulk update/delete of recurring event groups from a given date forward |
 
@@ -166,3 +164,25 @@ All scripts `require('./lib')`. Exports:
 Pushing to the connected branch auto-deploys via Netlify. The `netlify.toml` sets the build command (`npm run build`), publish directory (`dist`), functions directory, `esbuild` as the bundler, and security response headers (CSP, HSTS, X-Frame-Options, etc.).
 
 Analytics are provided by Umami Cloud (`https://cloud.umami.is`), which is allowed in the CSP.
+
+## Design Context
+
+### Users
+Local residents of Naas, County Kildare, Ireland — all ages, checking what's happening today or this week. Primary use case: quick daily scan on mobile to find something to do. Secondary: parents filtering for kids/free events. Not tourists, not event organisers — just neighbours.
+
+### Brand Personality
+**Local, warm, practical.** Feels like a community noticeboard that got a tasteful upgrade. Approachable and no-nonsense. Should feel like it belongs to Naas specifically — not a white-label event aggregator.
+
+### Aesthetic Direction
+- **Visual tone**: Editorial warmth — newspaper meets community bulletin board. Not slick, not minimal-SaaS, not touristic.
+- **Palette**: Forest green (#2d5a2d) as brand anchor, warm beige/linen backgrounds, DM Mono for timestamps — all intentional and Irish-feeling.
+- **Typography**: Georgia serif for headings (editorial authority), system-ui for body (body), DM Mono for time/tags (functional contrast).
+- **Anti-references**: No purple gradients or SaaS hero metrics. No Facebook Events clutter. No Airbnb-style aspirational photography. No generic Eventbrite grid.
+- **Theme**: Light mode only. Warm naturals, not clinical whites.
+
+### Design Principles
+1. **Utility first** — every element must make events easier to scan; no decorative elements that add noise.
+2. **Rooted in place** — the design should feel unmistakably local, not generic; warmth over polish.
+3. **Warm legibility** — typography and contrast prioritise readability for all ages (WCAG AA minimum).
+4. **Quiet character** — personality through thoughtful details (font choices, colour warmth, small touches), not loud UI tricks.
+5. **Mobile-first scanning** — cards must work at a glance on small screens; info hierarchy is paramount.

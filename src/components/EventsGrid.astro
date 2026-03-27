@@ -33,7 +33,7 @@ const todayEvents = events.filter(e => {
   return e.date === todayStr;
 }).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 ---
-<div class="events-container">
+<div class="events-container" aria-live="polite" aria-atomic="false">
     <div class="events-grid" id="eventsGrid" style={todayEvents.length === 0 ? 'display:none' : 'display:grid'}>
         {todayEvents.map(event => <EventCard event={event} />)}
     </div>

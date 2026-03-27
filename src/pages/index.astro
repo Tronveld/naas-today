@@ -58,6 +58,7 @@ const jsonLd = todayEvents.length > 0 ? {
   <DateNav />
   <main id="main-content" role="main" class="container">
     <FilterControls />
+    <h2 class="visually-hidden" id="events-list-heading">Today's events</h2>
     <EventsGrid events={initialEvents} todayStr={todayStr} />
     <section id="upcomingSection" class="upcoming-section" aria-label="Coming up">
       <h2 class="upcoming-heading">Coming Up</h2>
@@ -142,6 +143,61 @@ const jsonLd = todayEvents.length > 0 ? {
     let filterMarketActive  = false;
     let filterTheatreActive = false;
     let isError = false;
+
+    function pushUrlState() {
+        const params = new URLSearchParams();
+        const todayStr = localDateStr(new Date());
+        const dateStr = localDateStr(currentDate);
+        if (dateStr !== todayStr) params.set('date', dateStr);
+        const activeFilters = [
+            filterFreeActive    && 'free',
+            filterKidsActive    && 'kids',
+            filterMusicActive   && 'music',
+            filterSportActive   && 'sport',
+            filterMarketActive  && 'markets',
+            filterTheatreActive && 'theatre',
+        ].filter(Boolean);
+        if (activeFilters.length) params.set('filters', activeFilters.join(','));
+        // Preserve ?event= deep link param if present
+        const eventParam = new URLSearchParams(location.search).get('event');
+        if (eventParam) params.set('event', eventParam);
+        const qs = params.toString();
+        history.pushState(null, '', qs ? '?' + qs : location.pathname);
+    }
+
+    function readUrlState() {
+        const params = new URLSearchParams(location.search);
+        const dateParam = params.get('date');
+        if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+            const d = new Date(dateParam + 'T00:00:00');
+            if (!isNaN(d.getTime())) currentDate = d;
+        }
+        const filtersParam = params.get('filters');
+        if (filtersParam) {
+            const active = new Set(filtersParam.split(','));
+            filterFreeActive    = active.has('free');
+            filterKidsActive    = active.has('kids');
+            filterMusicActive   = active.has('music');
+            filterSportActive   = active.has('sport');
+            filterMarketActive  = active.has('markets');
+            filterTheatreActive = active.has('theatre');
+            // Sync button aria-pressed and active class
+            const map = [
+                ['filterFree',    filterFreeActive],
+                ['filterKids',    filterKidsActive],
+                ['filterMusic',   filterMusicActive],
+                ['filterSport',   filterSportActive],
+                ['filterMarket',  filterMarketActive],
+                ['filterTheatre', filterTheatreActive],
+            ];
+            map.forEach(([id, isActive]) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.classList.toggle('active', isActive);
+                btn.setAttribute('aria-pressed', String(isActive));
+            });
+        }
+    }
 
     // ── Loading State ───────────────────────────────────────────────────
     function showLoading() {
@@ -274,9 +330,10 @@ const jsonLd = todayEvents.length > 0 ? {
 
     // Builds an event card using DOM methods (avoids XSS from raw data)
     function createEventCard(event) {
-        const card = document.createElement('div');
+        const card = document.createElement('article');
         card.className = 'event-card';
         card.dataset.eventId = event.id;
+        card.setAttribute('aria-labelledby', 'event-title-' + event.id);
 
         // Top row: title + inline time/allday badge
         const top = document.createElement('div');
@@ -284,6 +341,7 @@ const jsonLd = todayEvents.length > 0 ? {
 
         const title = document.createElement('h3');
         title.className = 'event-title';
+        title.id = 'event-title-' + event.id;
         title.textContent = event.title;
         top.appendChild(title);
 
@@ -319,7 +377,11 @@ const jsonLd = todayEvents.length > 0 ? {
         loc.href = `https://maps.google.com/?q=${encodeURIComponent(event.location + ', Naas, Ireland')}`;
         loc.target = '_blank';
         loc.rel = 'noopener noreferrer';
-        loc.textContent = '📍 ' + event.location;
+        const pin = document.createElement('span');
+        pin.setAttribute('aria-hidden', 'true');
+        pin.textContent = '📍';
+        loc.appendChild(pin);
+        loc.appendChild(document.createTextNode(' ' + event.location));
         card.appendChild(loc);
 
         const descText = event.description || '';
@@ -336,7 +398,11 @@ const jsonLd = todayEvents.length > 0 ? {
             const toggleBtn = document.createElement('button');
             toggleBtn.className = 'desc-toggle-btn';
             toggleBtn.type = 'button';
-            toggleBtn.textContent = 'Read more ↓';
+            toggleBtn.textContent = 'Read more ';
+            const downArrow = document.createElement('span');
+            downArrow.setAttribute('aria-hidden', 'true');
+            downArrow.textContent = '↓';
+            toggleBtn.appendChild(downArrow);
             toggleBtn.setAttribute('aria-expanded', 'false');
             card.appendChild(toggleBtn);
         }
@@ -350,7 +416,11 @@ const jsonLd = todayEvents.length > 0 ? {
                     urlEl.href = parsed.href;
                     urlEl.target = '_blank';
                     urlEl.rel = 'noopener noreferrer';
-                    urlEl.textContent = parsed.hostname.replace(/^www\./, '') + ' ↗';
+                    urlEl.textContent = parsed.hostname.replace(/^www\./, '') + ' ';
+                    const extArrow = document.createElement('span');
+                    extArrow.setAttribute('aria-hidden', 'true');
+                    extArrow.textContent = '↗';
+                    urlEl.appendChild(extArrow);
                     card.appendChild(urlEl);
                 }
             } catch {
@@ -383,7 +453,11 @@ const jsonLd = todayEvents.length > 0 ? {
 
         const shareBtn = document.createElement('button');
         shareBtn.className = 'share-btn';
-        shareBtn.textContent = 'Share ↗';
+        shareBtn.textContent = 'Share ';
+        const shareArrow = document.createElement('span');
+        shareArrow.setAttribute('aria-hidden', 'true');
+        shareArrow.textContent = '↗';
+        shareBtn.appendChild(shareArrow);
         shareBtn.setAttribute('aria-label', `Share ${event.title}`);
         // Mirror the data-share-* attributes from the Astro component for DOM parity
         shareBtn.dataset.shareTitle = event.title;
@@ -518,6 +592,7 @@ const jsonLd = todayEvents.length > 0 ? {
                 currentDate = new Date(event.date + 'T00:00:00');
                 updateDateDisplay();
                 renderEvents();
+                pushUrlState();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             };
             li.addEventListener('click', navigate);
@@ -571,6 +646,7 @@ const jsonLd = todayEvents.length > 0 ? {
         if (currentDate < today) currentDate = today;
         updateDateDisplay();
         renderEvents();
+        pushUrlState();
     }
 
     // ── Focus Trap (for accessible modals) ─────────────────────────────
@@ -612,6 +688,12 @@ const jsonLd = todayEvents.length > 0 ? {
     }
 
     // ── Event Listeners ─────────────────────────────────────────────────
+    window.addEventListener('popstate', () => {
+        readUrlState();
+        updateDateDisplay();
+        renderEvents();
+    });
+
     document.getElementById('prevDay').addEventListener('click', () => changeDate(-1));
     document.getElementById('nextDay').addEventListener('click', () => changeDate(1));
 
@@ -619,6 +701,7 @@ const jsonLd = todayEvents.length > 0 ? {
         currentDate = new Date();
         updateDateDisplay();
         renderEvents();
+        pushUrlState();
     });
 
     document.getElementById('changeDateBtn').addEventListener('click', () => {
@@ -634,6 +717,7 @@ const jsonLd = todayEvents.length > 0 ? {
         currentDate = new Date(e.target.value + 'T00:00:00');
         updateDateDisplay();
         renderEvents();
+        pushUrlState();
         closeModal('dateModal');
     });
 
@@ -642,6 +726,7 @@ const jsonLd = todayEvents.length > 0 ? {
         this.classList.toggle('active');
         this.setAttribute('aria-pressed', filterFreeActive);
         renderEvents();
+        pushUrlState();
     });
 
     document.getElementById('filterKids').addEventListener('click', function() {
@@ -649,6 +734,7 @@ const jsonLd = todayEvents.length > 0 ? {
         this.classList.toggle('active');
         this.setAttribute('aria-pressed', filterKidsActive);
         renderEvents();
+        pushUrlState();
     });
 
     document.getElementById('filterMusic').addEventListener('click', function() {
@@ -656,6 +742,7 @@ const jsonLd = todayEvents.length > 0 ? {
         this.classList.toggle('active');
         this.setAttribute('aria-pressed', filterMusicActive);
         renderEvents();
+        pushUrlState();
     });
 
     document.getElementById('filterSport').addEventListener('click', function() {
@@ -663,6 +750,7 @@ const jsonLd = todayEvents.length > 0 ? {
         this.classList.toggle('active');
         this.setAttribute('aria-pressed', filterSportActive);
         renderEvents();
+        pushUrlState();
     });
 
     document.getElementById('filterMarket').addEventListener('click', function() {
@@ -670,6 +758,7 @@ const jsonLd = todayEvents.length > 0 ? {
         this.classList.toggle('active');
         this.setAttribute('aria-pressed', filterMarketActive);
         renderEvents();
+        pushUrlState();
     });
 
     document.getElementById('filterTheatre').addEventListener('click', function() {
@@ -677,6 +766,7 @@ const jsonLd = todayEvents.length > 0 ? {
         this.classList.toggle('active');
         this.setAttribute('aria-pressed', filterTheatreActive);
         renderEvents();
+        pushUrlState();
     });
 
     // Character counter for description
@@ -903,6 +993,7 @@ const jsonLd = todayEvents.length > 0 ? {
     }
 
     // ── Init ─────────────────────────────────────────────────────────────
+    readUrlState();
     updateDateDisplay();
     initDescriptionToggles(document.getElementById('eventsGrid'));
     fetchEvents().then(handleDeepLink);
