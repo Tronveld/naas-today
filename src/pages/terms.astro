@@ -1,0 +1,76 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+<BaseLayout
+  title="Terms — Naas Today"
+  description="How Naas Today sources events, accuracy expectations, and how to request corrections or removals."
+>
+  <main class="terms-page">
+    <div class="terms-content">
+      <h1>Terms &amp; Disclaimer</h1>
+
+      <section>
+        <h2>What this site is</h2>
+        <p>Naas Today is a community-run events resource for people living in and around Naas, County Kildare. It is not affiliated with Naas Town Council, any venue, or any event organiser. It is run independently as a free public service.</p>
+      </section>
+
+      <section>
+        <h2>Where events come from</h2>
+        <p>Events are sourced from publicly available information — venue websites, RSS feeds, and community listings — as well as user submissions via the Submit Event form. All submissions are reviewed before appearing on the site.</p>
+      </section>
+
+      <section>
+        <h2>Accuracy</h2>
+        <p>Event details (time, location, price, cancellations) may change after publication. Always verify details directly with the organiser before attending. Naas Today is not responsible for errors, omissions, or last-minute changes to any listed event.</p>
+      </section>
+
+      <section>
+        <h2>Corrections &amp; removal</h2>
+        <p>To correct or remove an event listing, email <a href="mailto:hello@naastoday.com">hello@naastoday.com</a> with the event name and date. Requests are handled promptly.</p>
+      </section>
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  .terms-page {
+    background: var(--bg);
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .terms-content {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.75rem;
+    color: var(--ink);
+    margin-bottom: 2rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  section {
+    margin-bottom: 1.75rem;
+  }
+
+  h2 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.0625rem;
+    color: var(--ink);
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--ink-mid);
+  }
+
+  a {
+    color: var(--accent);
+  }
+</style>
