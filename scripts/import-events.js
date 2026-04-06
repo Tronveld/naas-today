@@ -19,25 +19,9 @@
 
 const fs   = require('fs');
 const path = require('path');
+const { loadEnv, createClient } = require('./lib');
 
-// ── Load .env ─────────────────────────────────────────────────────────────────
-(function loadEnv() {
-  const envFile = path.resolve(__dirname, '..', '.env');
-  if (!fs.existsSync(envFile)) return;
-  for (const line of fs.readFileSync(envFile, 'utf8').split('\n')) {
-    const t = line.trim();
-    if (!t || t.startsWith('#')) continue;
-    const eq = t.indexOf('=');
-    if (eq === -1) continue;
-    const k = t.slice(0, eq).trim();
-    let   v = t.slice(eq + 1).trim();
-    // Strip surrounding quotes
-    if (v.length >= 2 && ((v[0] === '"' && v.endsWith('"')) || (v[0] === "'" && v.endsWith("'")))) {
-      v = v.slice(1, -1);
-    }
-    if (!process.env[k]) process.env[k] = v;
-  }
-}());
+loadEnv();
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SECRET_KEY   = process.env.SUPABASE_SECRET_KEY;
@@ -46,28 +30,6 @@ const SECRET_KEY   = process.env.SUPABASE_SECRET_KEY;
 const args    = process.argv.slice(2);
 const dryRun  = args.includes('--dry-run');
 const csvPath = args.find(a => !a.startsWith('--'));
-
-// ── Supabase helpers ──────────────────────────────────────────────────────────
-async function sbGet(p) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1${p}`, {
-    headers: { apikey: SECRET_KEY },
-  });
-  if (!res.ok) throw new Error(`Supabase GET ${res.status}: ${await res.text()}`);
-  return res.json();
-}
-
-async function sbPost(p, body) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1${p}`, {
-    method:  'POST',
-    headers: {
-      apikey:         SECRET_KEY,
-      'Content-Type': 'application/json',
-      Prefer:         'return=minimal',
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`Supabase POST ${res.status}: ${await res.text()}`);
-}
 
 // ── Normalise a string for duplicate detection ────────────────────────────────
 function normalise(s) {
@@ -175,11 +137,13 @@ async function main() {
   const rows = parseCsv(text);
   console.log(`Read ${rows.length} data row(s) from ${path.basename(resolvedPath)}.\n`);
 
+  const sb = createClient(SUPABASE_URL, SECRET_KEY);
+
   // ── Fetch existing events for duplicate detection ───────────────────────────
   console.log('Fetching existing events from Supabase…');
   let existing;
   try {
-    existing = await sbGet('/events?select=title,date');
+    existing = await sb.get('/events?select=title,date');
   } catch (err) {
     console.error('Failed to fetch existing events:', err.message);
     process.exit(1);
@@ -227,7 +191,7 @@ async function main() {
       log.push({ status: 'DRY RUN', date: evt.date, title: evt.title });
     } else {
       try {
-        await sbPost('/events', evt);
+        await sb.post('/events', evt);
         inserted++;
         // Add key to set so later rows in same CSV don't duplicate each other
         existingKeys.add(key);

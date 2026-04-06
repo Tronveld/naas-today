@@ -58,9 +58,10 @@ const jsonLd = todayEvents.length > 0 ? {
   <DateNav />
   <main id="main-content" role="main" class="container">
     <FilterControls />
+    <h2 class="visually-hidden" id="events-list-heading">Today's events</h2>
     <EventsGrid events={initialEvents} todayStr={todayStr} />
     <section id="upcomingSection" class="upcoming-section" aria-label="Coming up">
-      <h2 class="upcoming-heading">What's next</h2>
+      <h2 class="upcoming-heading">Coming Up</h2>
       <ul id="upcomingList" class="upcoming-list"></ul>
     </section>
   </main>
@@ -142,6 +143,61 @@ const jsonLd = todayEvents.length > 0 ? {
     let filterMarketActive  = false;
     let filterTheatreActive = false;
     let isError = false;
+
+    function pushUrlState() {
+        const params = new URLSearchParams();
+        const todayStr = localDateStr(new Date());
+        const dateStr = localDateStr(currentDate);
+        if (dateStr !== todayStr) params.set('date', dateStr);
+        const activeFilters = [
+            filterFreeActive    && 'free',
+            filterKidsActive    && 'kids',
+            filterMusicActive   && 'music',
+            filterSportActive   && 'sport',
+            filterMarketActive  && 'markets',
+            filterTheatreActive && 'theatre',
+        ].filter(Boolean);
+        if (activeFilters.length) params.set('filters', activeFilters.join(','));
+        // Preserve ?event= deep link param if present
+        const eventParam = new URLSearchParams(location.search).get('event');
+        if (eventParam) params.set('event', eventParam);
+        const qs = params.toString();
+        history.pushState(null, '', qs ? '?' + qs : location.pathname);
+    }
+
+    function readUrlState() {
+        const params = new URLSearchParams(location.search);
+        const dateParam = params.get('date');
+        if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+            const d = new Date(dateParam + 'T00:00:00');
+            if (!isNaN(d.getTime())) currentDate = d;
+        }
+        const filtersParam = params.get('filters');
+        if (filtersParam) {
+            const active = new Set(filtersParam.split(','));
+            filterFreeActive    = active.has('free');
+            filterKidsActive    = active.has('kids');
+            filterMusicActive   = active.has('music');
+            filterSportActive   = active.has('sport');
+            filterMarketActive  = active.has('markets');
+            filterTheatreActive = active.has('theatre');
+            // Sync button aria-pressed and active class
+            const map = [
+                ['filterFree',    filterFreeActive],
+                ['filterKids',    filterKidsActive],
+                ['filterMusic',   filterMusicActive],
+                ['filterSport',   filterSportActive],
+                ['filterMarket',  filterMarketActive],
+                ['filterTheatre', filterTheatreActive],
+            ];
+            map.forEach(([id, isActive]) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.classList.toggle('active', isActive);
+                btn.setAttribute('aria-pressed', String(isActive));
+            });
+        }
+    }
 
     // ── Loading State ───────────────────────────────────────────────────
     function showLoading() {
@@ -259,42 +315,74 @@ const jsonLd = todayEvents.length > 0 ? {
         }
     }
 
+    function formatTimeShort(time) {
+        const [hours, minutes] = time.split(':');
+        const hour = parseInt(hours);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour % 12 || 12;
+        return { time: `${displayHour}:${minutes}`, ampm };
+    }
+
+    function formatDateShort(dateStr) {
+        const d = new Date(dateStr + 'T00:00:00');
+        return d.toLocaleDateString('en-IE', { day: 'numeric', month: 'short' });
+    }
+
     // Builds an event card using DOM methods (avoids XSS from raw data)
     function createEventCard(event) {
-        const card = document.createElement('div');
+        const card = document.createElement('article');
         card.className = 'event-card';
         card.dataset.eventId = event.id;
+        card.setAttribute('aria-labelledby', 'event-title-' + event.id);
 
-        const inner = document.createElement('div');
-        inner.className = 'event-card-inner';
-
-        const accent = document.createElement('div');
-        accent.className = 'event-card-accent';
-        inner.appendChild(accent);
-
-        const body = document.createElement('div');
-        body.className = 'event-card-body';
-
-        const timeStr = formatEventTime(event);
-        if (timeStr) {
-            const timeEl = document.createElement('div');
-            timeEl.className = 'event-time';
-            timeEl.textContent = timeStr;
-            body.appendChild(timeEl);
-        }
+        // Top row: title + inline time/allday badge
+        const top = document.createElement('div');
+        top.className = 'ev-top';
 
         const title = document.createElement('h3');
         title.className = 'event-title';
+        title.id = 'event-title-' + event.id;
         title.textContent = event.title;
-        body.appendChild(title);
+        top.appendChild(title);
+
+        const isMultiDay = event.endDate && event.endDate !== event.date;
+        const hasTime = event.time && !event.isAllDay;
+
+        if (event.isAllDay) {
+            const t = document.createElement('span');
+            t.className = 'ev-allday';
+            t.textContent = 'ALL DAY';
+            top.appendChild(t);
+        } else if (isMultiDay && !event.isAllDay) {
+            const t = document.createElement('span');
+            t.className = 'ev-allday';
+            t.textContent = formatDateShort(event.date) + ' – ' + formatDateShort(event.endDate);
+            top.appendChild(t);
+        } else if (hasTime) {
+            const st = formatTimeShort(event.time);
+            const t = document.createElement('span');
+            t.className = 'ev-time';
+            t.textContent = st.time + ' ' + st.ampm;
+            top.appendChild(t);
+        } else {
+            const t = document.createElement('span');
+            t.className = 'ev-allday';
+            t.textContent = 'TBC';
+            top.appendChild(t);
+        }
+        card.appendChild(top);
 
         const loc = document.createElement('a');
         loc.className = 'event-location';
         loc.href = `https://maps.google.com/?q=${encodeURIComponent(event.location + ', Naas, Ireland')}`;
         loc.target = '_blank';
         loc.rel = 'noopener noreferrer';
-        loc.textContent = '📍 ' + event.location;
-        body.appendChild(loc);
+        const pin = document.createElement('span');
+        pin.setAttribute('aria-hidden', 'true');
+        pin.textContent = '📍';
+        loc.appendChild(pin);
+        loc.appendChild(document.createTextNode(' ' + event.location));
+        card.appendChild(loc);
 
         const descText = event.description || '';
         const isLong = descText.length > DESC_THRESHOLD;
@@ -305,14 +393,18 @@ const jsonLd = todayEvents.length > 0 ? {
             desc.dataset.truncatable = 'true';
             desc.style.marginBottom = '0';
         }
-        body.appendChild(desc);
+        card.appendChild(desc);
         if (isLong) {
             const toggleBtn = document.createElement('button');
             toggleBtn.className = 'desc-toggle-btn';
             toggleBtn.type = 'button';
-            toggleBtn.textContent = 'Read more ↓';
+            toggleBtn.textContent = 'Read more ';
+            const downArrow = document.createElement('span');
+            downArrow.setAttribute('aria-hidden', 'true');
+            downArrow.textContent = '↓';
+            toggleBtn.appendChild(downArrow);
             toggleBtn.setAttribute('aria-expanded', 'false');
-            body.appendChild(toggleBtn);
+            card.appendChild(toggleBtn);
         }
 
         if (event.url) {
@@ -324,11 +416,15 @@ const jsonLd = todayEvents.length > 0 ? {
                     urlEl.href = parsed.href;
                     urlEl.target = '_blank';
                     urlEl.rel = 'noopener noreferrer';
-                    urlEl.textContent = parsed.hostname.replace(/^www\./, '') + ' ↗';
-                    body.appendChild(urlEl);
+                    urlEl.textContent = parsed.hostname.replace(/^www\./, '') + ' ';
+                    const extArrow = document.createElement('span');
+                    extArrow.setAttribute('aria-hidden', 'true');
+                    extArrow.textContent = '↗';
+                    urlEl.appendChild(extArrow);
+                    card.appendChild(urlEl);
                 }
             } catch {
-                // Invalid URL — skip rendering the link
+                // Invalid URL — skip
             }
         }
 
@@ -337,55 +433,43 @@ const jsonLd = todayEvents.length > 0 ? {
 
         const tags = document.createElement('div');
         tags.className = 'event-tags';
-        if (event.isFree) {
-            const tag = document.createElement('span');
-            tag.className = 'tag free';
-            tag.textContent = 'Free';
-            tags.appendChild(tag);
-        }
-        if (event.isForKids) {
-            const tag = document.createElement('span');
-            tag.className = 'tag kids';
-            tag.textContent = 'For kids';
-            tags.appendChild(tag);
-        }
-        if (event.isMusic) {
-            const tag = document.createElement('span');
-            tag.className = 'tag music';
-            tag.textContent = 'Music';
-            tags.appendChild(tag);
-        }
-        if (event.isSport) {
-            const tag = document.createElement('span');
-            tag.className = 'tag sport';
-            tag.textContent = 'Sport';
-            tags.appendChild(tag);
-        }
-        if (event.isMarket) {
-            const tag = document.createElement('span');
-            tag.className = 'tag market';
-            tag.textContent = 'Markets';
-            tags.appendChild(tag);
-        }
-        if (event.isTheatre) {
-            const tag = document.createElement('span');
-            tag.className = 'tag theatre';
-            tag.textContent = 'Theatre';
-            tags.appendChild(tag);
-        }
+        const tagDefs = [
+            [event.isFree,     'free',    'Free'],
+            [event.isForKids,  'kids',    'For kids'],
+            [event.isMusic,    'music',   'Music'],
+            [event.isSport,    'sport',   'Sport'],
+            [event.isMarket,   'market',  'Markets'],
+            [event.isTheatre,  'theatre', 'Theatre'],
+        ];
+        tagDefs.forEach(([flag, cls, label]) => {
+            if (flag) {
+                const tag = document.createElement('span');
+                tag.className = 'tag ' + cls;
+                tag.textContent = label;
+                tags.appendChild(tag);
+            }
+        });
         footer.appendChild(tags);
 
         const shareBtn = document.createElement('button');
         shareBtn.className = 'share-btn';
-        shareBtn.textContent = 'Share ↗';
+        shareBtn.textContent = 'Share ';
+        const shareArrow = document.createElement('span');
+        shareArrow.setAttribute('aria-hidden', 'true');
+        shareArrow.textContent = '↗';
+        shareBtn.appendChild(shareArrow);
         shareBtn.setAttribute('aria-label', `Share ${event.title}`);
+        // Mirror the data-share-* attributes from the Astro component for DOM parity
+        shareBtn.dataset.shareTitle = event.title;
+        shareBtn.dataset.shareDate = event.date;
+        shareBtn.dataset.shareTime = event.time || '';
+        shareBtn.dataset.shareTimeEnd = event.timeEnd || '';
+        shareBtn.dataset.shareLocation = event.location;
+        shareBtn.dataset.shareAllday = event.isAllDay ? 'true' : 'false';
         shareBtn.addEventListener('click', () => shareEvent(event));
         footer.appendChild(shareBtn);
 
-        body.appendChild(footer);
-        inner.appendChild(body);
-        card.appendChild(inner);
-
+        card.appendChild(footer);
         return card;
     }
 
@@ -471,7 +555,7 @@ const jsonLd = todayEvents.length > 0 ? {
         const upcoming = events
             .filter(e => e.date > dateStr)
             .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
-            .slice(0, 7);
+            .slice(0, 5);
 
         if (upcoming.length === 0) { section.style.display = 'none'; return; }
         section.style.display = '';
@@ -508,6 +592,7 @@ const jsonLd = todayEvents.length > 0 ? {
                 currentDate = new Date(event.date + 'T00:00:00');
                 updateDateDisplay();
                 renderEvents();
+                pushUrlState();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             };
             li.addEventListener('click', navigate);
@@ -561,6 +646,7 @@ const jsonLd = todayEvents.length > 0 ? {
         if (currentDate < today) currentDate = today;
         updateDateDisplay();
         renderEvents();
+        pushUrlState();
     }
 
     // ── Focus Trap (for accessible modals) ─────────────────────────────
@@ -602,6 +688,12 @@ const jsonLd = todayEvents.length > 0 ? {
     }
 
     // ── Event Listeners ─────────────────────────────────────────────────
+    window.addEventListener('popstate', () => {
+        readUrlState();
+        updateDateDisplay();
+        renderEvents();
+    });
+
     document.getElementById('prevDay').addEventListener('click', () => changeDate(-1));
     document.getElementById('nextDay').addEventListener('click', () => changeDate(1));
 
@@ -609,6 +701,7 @@ const jsonLd = todayEvents.length > 0 ? {
         currentDate = new Date();
         updateDateDisplay();
         renderEvents();
+        pushUrlState();
     });
 
     document.getElementById('changeDateBtn').addEventListener('click', () => {
@@ -624,6 +717,7 @@ const jsonLd = todayEvents.length > 0 ? {
         currentDate = new Date(e.target.value + 'T00:00:00');
         updateDateDisplay();
         renderEvents();
+        pushUrlState();
         closeModal('dateModal');
     });
 
@@ -632,6 +726,7 @@ const jsonLd = todayEvents.length > 0 ? {
         this.classList.toggle('active');
         this.setAttribute('aria-pressed', filterFreeActive);
         renderEvents();
+        pushUrlState();
     });
 
     document.getElementById('filterKids').addEventListener('click', function() {
@@ -639,6 +734,7 @@ const jsonLd = todayEvents.length > 0 ? {
         this.classList.toggle('active');
         this.setAttribute('aria-pressed', filterKidsActive);
         renderEvents();
+        pushUrlState();
     });
 
     document.getElementById('filterMusic').addEventListener('click', function() {
@@ -646,6 +742,7 @@ const jsonLd = todayEvents.length > 0 ? {
         this.classList.toggle('active');
         this.setAttribute('aria-pressed', filterMusicActive);
         renderEvents();
+        pushUrlState();
     });
 
     document.getElementById('filterSport').addEventListener('click', function() {
@@ -653,6 +750,7 @@ const jsonLd = todayEvents.length > 0 ? {
         this.classList.toggle('active');
         this.setAttribute('aria-pressed', filterSportActive);
         renderEvents();
+        pushUrlState();
     });
 
     document.getElementById('filterMarket').addEventListener('click', function() {
@@ -660,6 +758,7 @@ const jsonLd = todayEvents.length > 0 ? {
         this.classList.toggle('active');
         this.setAttribute('aria-pressed', filterMarketActive);
         renderEvents();
+        pushUrlState();
     });
 
     document.getElementById('filterTheatre').addEventListener('click', function() {
@@ -667,7 +766,17 @@ const jsonLd = todayEvents.length > 0 ? {
         this.classList.toggle('active');
         this.setAttribute('aria-pressed', filterTheatreActive);
         renderEvents();
+        pushUrlState();
     });
+
+    // Character counter for description
+    const descTextarea = document.getElementById('eventDescription');
+    const charCounter = document.getElementById('descCharCounter');
+    if (descTextarea && charCounter) {
+        descTextarea.addEventListener('input', () => {
+            charCounter.textContent = `${descTextarea.value.length} / 2000`;
+        });
+    }
 
     // Time mode toggle in submit form
     document.querySelectorAll('input[name="timeMode"]').forEach(radio => {
@@ -884,6 +993,7 @@ const jsonLd = todayEvents.length > 0 ? {
     }
 
     // ── Init ─────────────────────────────────────────────────────────────
+    readUrlState();
     updateDateDisplay();
     initDescriptionToggles(document.getElementById('eventsGrid'));
     fetchEvents().then(handleDeepLink);

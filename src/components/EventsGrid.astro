@@ -13,6 +13,10 @@ interface Event {
   description: string;
   is_free?: boolean;
   is_for_kids?: boolean;
+  is_music?: boolean;
+  is_sport?: boolean;
+  is_market?: boolean;
+  is_theatre?: boolean;
   url?: string;
 }
 
@@ -29,26 +33,41 @@ const todayEvents = events.filter(e => {
   return e.date === todayStr;
 }).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 ---
-<div class="events-container">
+<div class="events-container" aria-live="polite" aria-atomic="false">
     <div class="events-grid" id="eventsGrid" style={todayEvents.length === 0 ? 'display:none' : 'display:grid'}>
         {todayEvents.map(event => <EventCard event={event} />)}
     </div>
 
     <div class="empty-state" id="emptyState" class:list={[{ visible: todayEvents.length === 0 }]}>
-        <h3>No events today</h3>
-        <p>Looks like we don't have anything listed for this date yet.</p>
-        <p style="margin-top: 0.75rem; margin-bottom: 1.25rem;">Know of an event? Submit it and help spread the word!</p>
-        <button class="submit-btn" style="margin-left: 0;" onclick="document.getElementById('eventDate').value = localDateStr(currentDate); openModal('submitModal');">Submit Event</button>
+        <div class="empty-icon" aria-hidden="true">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                <rect x="8" y="6" width="32" height="36" rx="4" stroke="var(--ink-light)" stroke-width="2" fill="none"/>
+                <line x1="8" y1="16" x2="40" y2="16" stroke="var(--ink-light)" stroke-width="2"/>
+                <circle cx="17" cy="11" r="1.5" fill="var(--ink-light)"/>
+                <circle cx="31" cy="11" r="1.5" fill="var(--ink-light)"/>
+                <line x1="15" y1="24" x2="33" y2="24" stroke="var(--border)" stroke-width="2" stroke-linecap="round"/>
+                <line x1="15" y1="30" x2="27" y2="30" stroke="var(--border)" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <h3>Quiet day in Naas</h3>
+        <p>Nothing listed yet — know of something happening? Add it to the noticeboard.</p>
+        <button class="submit-area-btn" style="margin-top: 1rem;" onclick="document.getElementById('eventDate').value = localDateStr(currentDate); openModal('submitModal');">Submit an event</button>
     </div>
 
     <div class="loading-state" id="loadingState">
-        <div class="loading-spinner"></div>
-        <p>Loading events…</p>
+        <div class="skeleton-grid" aria-label="Loading events" role="status">
+            <div class="skeleton-card"><div class="skeleton-line skeleton-title"></div><div class="skeleton-line skeleton-loc"></div><div class="skeleton-line skeleton-desc"></div><div class="skeleton-line skeleton-desc-short"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line skeleton-title"></div><div class="skeleton-line skeleton-loc"></div><div class="skeleton-line skeleton-desc"></div><div class="skeleton-line skeleton-desc-short"></div></div>
+        </div>
     </div>
 
     <div class="error-state" id="errorState">
         <h3>Couldn't load events</h3>
-        <p>We had trouble connecting to the server. Please check your connection and try again.</p>
-        <button class="submit-btn" style="margin-left: 0; margin-top: 1rem;" onclick="fetchEvents()">Try again</button>
+        <p>Something went sideways on our end. Give it another go.</p>
+        <button class="submit-area-btn" style="margin-top: 1rem;" onclick="fetchEvents()">Try again</button>
+    </div>
+
+    <div class="submit-area">
+        <button class="submit-area-btn" id="submitEventBtn">+ Submit an event</button>
     </div>
 </div>

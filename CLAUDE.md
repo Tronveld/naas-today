@@ -49,7 +49,7 @@ The public-facing site is built with Astro (static output). The build fetches ap
 src/
   layouts/BaseLayout.astro   — <html> shell, all CSS (global), meta/OG tags, Umami analytics
   components/
-    Header.astro             — logo, site title, feedback button
+    Header.astro             — logo, site title
     DateNav.astro            — date display + prev/today/change/next buttons
     FilterControls.astro     — free/kids filter buttons + submit event button
     EventCard.astro          — single event card (accepts raw Supabase row as prop)
@@ -58,7 +58,6 @@ src/
     modals/
       DatePickerModal.astro
       SubmitEventModal.astro
-      FeedbackModal.astro
       AboutModal.astro
       ContactModal.astro
   pages/
@@ -80,8 +79,6 @@ public/
 
 `public/admin.html` — password-protected admin interface. On load it calls `admin-auth` with `check_setup` to determine whether to show the first-time setup form or the login form. Once authenticated, it calls `admin-events` to list, approve/reject, edit, or delete events. The password is stored only in `sessionStorage` (cleared on tab close) and sent via the `x-admin-password` header on every admin API request.
 
-`admin.html` — password-protected admin interface. On load it calls `admin-auth` with `check_setup` to determine whether to show the first-time setup form or the login form. Once authenticated, it calls `admin-events` to list, approve/reject, edit, or delete events. The password is stored only in `sessionStorage` (cleared on tab close) and sent via the `x-admin-password` header on every admin API request.
-
 ### Backend — `netlify/functions/`
 
 | File | Method | Purpose |
@@ -89,7 +86,6 @@ public/
 | `get-events.js` | GET | Queries Supabase for `status = 'approved'` events, returns JSON |
 | `submit-event.js` | POST | Inserts a new event with `status = 'pending'`; rate-limited (5/IP/hour) |
 | `submit-recurring.js` | POST | Submits a recurring event series (weekly/fortnightly/monthly); each occurrence stored as a separate row sharing a `recurring_group_id`; rate-limited (5/IP/hour) |
-| `submit-feedback.js` | POST | Forwards feedback to an optional `FEEDBACK_WEBHOOK_URL` |
 | `admin-auth.js` | POST | First-time setup + login. Actions: `check_setup`, `setup`, `login`. Rate-limited (10/IP/15 min) |
 | `admin-events.js` | GET / PATCH / DELETE | Protected event management. Requires `x-admin-password` header on every call. Supports bulk update/delete of recurring event groups from a given date forward |
 
@@ -114,6 +110,10 @@ Table: `events`
 | `is_all_day` | boolean | When true, no time is required or shown |
 | `is_free` | boolean | |
 | `is_for_kids` | boolean | |
+| `is_music` | boolean | Category filter flag; default `false` |
+| `is_market` | boolean | Category filter flag; default `false` |
+| `is_sport` | boolean | Category filter flag; default `false` |
+| `is_theatre` | boolean | Category filter flag; default `false` |
 | `url` | text | Optional event website URL |
 | `status` | text | `'pending'` (submitted) or `'approved'` (visible on site) |
 | `recurring_group_id` | uuid | Optional; shared by all occurrences in a recurring series |
@@ -125,9 +125,10 @@ To approve a submitted event, change its `status` to `'approved'` — either in 
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | uuid | Primary key |
+| `id` | integer | Primary key (auto-increment) |
 | `password_hash` | text | PBKDF2-SHA256 hex digest |
 | `salt` | text | 32-byte random hex salt |
+| `created_at` | timestamptz | |
 
 This table must exist before `admin.html` can be used. Create it in Supabase with the columns above. Only one row should ever exist.
 
@@ -135,9 +136,25 @@ This table must exist before `admin.html` can be used. Create it in Supabase wit
 
 Node.js utility scripts run locally (not deployed). All require Node.js 18+ and read `SUPABASE_URL` and `SUPABASE_SECRET_KEY` from `.env`.
 
+#### `lib.js` — shared utilities
+
+All scripts `require('./lib')`. Exports:
+
+| Export | Description |
+|---|---|
+| `loadEnv()` | Loads `.env` from the repo root into `process.env` |
+| `HTML_ENT` | Named HTML entity map used by `stripHtml` |
+| `stripHtml(html)` | Strips tags and decodes HTML/numeric entities → plain text |
+| `KIDS_RE` | Regex that matches common "for kids" signals in event text |
+| `normaliseTitle(t)` | Lowercases and collapses punctuation spacing for fuzzy title comparison |
+| `createClient(url, key)` | Returns `{ get, post, isDuplicate, cacheInserted }` bound to the given Supabase URL/key. `isDuplicate` caches per-date DB queries for the lifetime of the instance; call `cacheInserted(title, date)` after each successful insert to keep the cache consistent within a run. |
+
+#### Script files
+
 | File | Purpose |
 |---|---|
 | `pull-library-events.js` | Fetches upcoming events from the Naas Library RSS feed and imports them into Supabase as `pending` (use `--auto-approve` to insert as `approved` directly). Skips duplicates via fuzzy title matching. |
+| `scrape-sources.js` | Fetches and extracts events from the URLs listed in `event-sources.md` (Eventbrite, AllEvents.in, WhatsonTonight.ie, IntoKildare.ie, Moat Theatre). Uses JSON-LD extraction for individual event pages and a shared `parseListingPage` helper for listing pages (configured per-site via options). Skips past events and duplicates. Flags: `--auto-approve`, `--dry-run`. |
 | `weekly-post.js` | Generates a social media post for the upcoming week's approved events and copies it to the clipboard. Flags: `--list` (output raw JSON), `--select=id1,id2` (pin specific events). |
 | `import-events.js` | Bulk-imports events from a CSV file into Supabase as `pending`. Usage: `node scripts/import-events.js <file.csv> [--dry-run]`. CSV must have a header row; required columns: `title`, `date` (`YYYY-MM-DD`), `location`. |
 | `fix-library-entities.js` | One-time migration: decodes HTML entities in existing Naas Library event records stored in Supabase. |
@@ -147,3 +164,25 @@ Node.js utility scripts run locally (not deployed). All require Node.js 18+ and 
 Pushing to the connected branch auto-deploys via Netlify. The `netlify.toml` sets the build command (`npm run build`), publish directory (`dist`), functions directory, `esbuild` as the bundler, and security response headers (CSP, HSTS, X-Frame-Options, etc.).
 
 Analytics are provided by Umami Cloud (`https://cloud.umami.is`), which is allowed in the CSP.
+
+## Design Context
+
+### Users
+Local residents of Naas, County Kildare, Ireland — all ages, checking what's happening today or this week. Primary use case: quick daily scan on mobile to find something to do. Secondary: parents filtering for kids/free events. Not tourists, not event organisers — just neighbours.
+
+### Brand Personality
+**Local, warm, practical.** Feels like a community noticeboard that got a tasteful upgrade. Approachable and no-nonsense. Should feel like it belongs to Naas specifically — not a white-label event aggregator.
+
+### Aesthetic Direction
+- **Visual tone**: Editorial warmth — newspaper meets community bulletin board. Not slick, not minimal-SaaS, not touristic.
+- **Palette**: Forest green (#2d5a2d) as brand anchor, warm beige/linen backgrounds, DM Mono for timestamps — all intentional and Irish-feeling.
+- **Typography**: Georgia serif for headings (editorial authority), system-ui for body (body), DM Mono for time/tags (functional contrast).
+- **Anti-references**: No purple gradients or SaaS hero metrics. No Facebook Events clutter. No Airbnb-style aspirational photography. No generic Eventbrite grid.
+- **Theme**: Light mode only. Warm naturals, not clinical whites.
+
+### Design Principles
+1. **Utility first** — every element must make events easier to scan; no decorative elements that add noise.
+2. **Rooted in place** — the design should feel unmistakably local, not generic; warmth over polish.
+3. **Warm legibility** — typography and contrast prioritise readability for all ages (WCAG AA minimum).
+4. **Quiet character** — personality through thoughtful details (font choices, colour warmth, small touches), not loud UI tricks.
+5. **Mobile-first scanning** — cards must work at a glance on small screens; info hierarchy is paramount.
