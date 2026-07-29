@@ -34,9 +34,24 @@ SUPABASE_SECRET_KEY=<service_role or secret key>   # used by admin functions onl
 
 `SUPABASE_SECRET_KEY` is the Supabase service-role (or secret) key — it bypasses Row Level Security and is only used server-side by the protected admin functions. Never expose it to the browser.
 
+## Testing
+
+```bash
+npm test
+```
+
+Runs the Node built-in test runner (`node --test`) over `tests/`. No test framework is installed and none should be added — `node:test` and `node:assert/strict` ship with Node and keep the dependency list at three.
+
+Rules:
+
+- After changing anything in `netlify/functions/`, run `npm test` and **show the output** in the reply. Do not report a change as done or working without it.
+- When fixing a bug in a validator or other pure function, write the failing test first, show it failing, then fix it. A test written after the fix proves much less.
+- Pure helpers that need testing must be exported from their function file (see the test-only exports in `submit-event.js`). Netlify only uses the `handler` export, so adding others is safe.
+- New edge cases belong in `tests/`, not in throwaway `curl` commands.
+
 ## Workflow
 
-After completing any bug fix or feature addition, run `netlify dev` so the user can verify the result at `localhost:8888`.
+After completing any bug fix or feature addition, run `npm test`, then run `netlify dev` so the user can verify the result at `localhost:8888`. Tests first — they are faster and they catch the class of bug that looking at the page does not.
 
 ## Architecture
 
