@@ -20,11 +20,20 @@ function isRateLimited(ip) {
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
 
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+// Gregorian rule: every 4th year, except centuries, except every 400th.
+function isLeapYear(y) {
+  return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+}
+
 function validDate(s) {
   if (!DATE_RE.test(s)) return false;
   const parts = s.split('-').map(Number);
-  const m = parts[1], d = parts[2];
-  return m >= 1 && m <= 12 && d >= 1 && d <= 31;
+  const y = parts[0], m = parts[1], d = parts[2];
+  if (m < 1 || m > 12) return false;
+  const maxDay = m === 2 && isLeapYear(y) ? 29 : DAYS_IN_MONTH[m - 1];
+  return d >= 1 && d <= maxDay;
 }
 
 function validTime(s) {
@@ -41,6 +50,11 @@ function validUrl(value) {
     return false;
   }
 }
+
+// Exported for tests only — the Netlify runtime uses `handler` below.
+exports.validDate = validDate;
+exports.validTime = validTime;
+exports.validUrl = validUrl;
 
 exports.handler = async function(event, context) {
   const SUPABASE_URL = process.env.SUPABASE_URL;

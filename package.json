@@ -5,7 +5,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "netlify-dev": "netlify dev"
+    "netlify-dev": "netlify dev",
+    "test": "node --test"
   },
   "dependencies": {
     "astro": "^5.0.0",
