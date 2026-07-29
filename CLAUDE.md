@@ -191,7 +191,7 @@ Local residents of Naas, County Kildare, Ireland — all ages, checking what's h
 ### Aesthetic Direction
 - **Visual tone**: Editorial warmth — newspaper meets community bulletin board. Not slick, not minimal-SaaS, not touristic.
 - **Palette**: Forest green (#2d5a2d) as brand anchor, warm beige/linen backgrounds, DM Mono for timestamps — all intentional and Irish-feeling.
-- **Typography**: Georgia serif for headings (editorial authority), system-ui for body (body), DM Mono for time/tags (functional contrast).
+- **Typography**: Georgia serif for headings (editorial authority), system-ui for body (readable), DM Mono for time/tags (functional contrast).
 - **Anti-references**: No purple gradients or SaaS hero metrics. No Facebook Events clutter. No Airbnb-style aspirational photography. No generic Eventbrite grid.
 - **Theme**: Light mode only. Warm naturals, not clinical whites.
 
