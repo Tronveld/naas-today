@@ -516,6 +516,7 @@
         "section": "shapes"
       }
     ],
+    "scope": "This system describes the public site (src/). It does not describe public/admin.html, which is an internal operator tool running its own visual language deliberately (Inter and Libre Baskerville, an orange accent, its own radius steps). The owner has confirmed this divergence is intentional and does not want it reconciled. The design-system-* rules and overused-font are switched off for that file alone; contrast, clipping and broken-image checks still apply there.",
     "dos": [
       "Do define every surface with the 1px hairline (--border). It is the system's structural element, and removing it in favour of shadow or spacing breaks the noticeboard.",
       "Do keep the events list one column wide at every breakpoint.",

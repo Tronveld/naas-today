@@ -175,12 +175,31 @@ All scripts `require('./lib')`. Exports:
 
 | File | Purpose |
 |---|---|
-| `pull-library-events.js` | Fetches upcoming events from the Naas Library RSS feed and imports them into Supabase as `pending` (use `--auto-approve` to insert as `approved` directly). Skips duplicates via fuzzy title matching. |
+| `pull-library-events.js` | Fetches upcoming events from the Naas Library RSS feed and imports them into Supabase as `pending`. Skips duplicates via fuzzy title matching. Flags: `--auto-approve`, `--dry-run`. |
 | `scrape-sources.js` | Fetches and extracts events from the URLs listed in `event-sources.md` (Eventbrite, AllEvents.in, WhatsonTonight.ie, IntoKildare.ie, Moat Theatre). Uses JSON-LD extraction for individual event pages and a shared `parseListingPage` helper for listing pages (configured per-site via options). Skips past events and duplicates. Flags: `--auto-approve`, `--dry-run`. |
 | `weekly-post.js` | Generates a social media post for the upcoming week's approved events and copies it to the clipboard. Flags: `--list` (output raw JSON), `--select=id1,id2` (pin specific events). |
 | `import-events.js` | Bulk-imports events from a CSV file into Supabase as `pending`. Usage: `node scripts/import-events.js <file.csv> [--dry-run]`. CSV must have a header row; required columns: `title`, `date` (`YYYY-MM-DD`), `location`. |
 | `audit-event-dates.js` | **Read-only.** Checks every row already in `events` against the *current* validators, importing them from the live function rather than reimplementing them. Answers what tests cannot: whether rows inserted while a validator was wrong are still bad. Never writes to Supabase. |
 | `fix-library-entities.js` | One-time migration: decodes HTML entities in existing Naas Library event records stored in Supabase. |
+
+## Scheduled fetching
+
+`.github/workflows/scrape-events.yml` runs `scrape-sources.js` and `pull-library-events.js` daily at 05:10 UTC, inserting as `pending`. It exists because both scripts were manual and the library went five and a half weeks without a pull — the site quietly showed nothing on most weekdays, with no error to notice.
+
+**Requires two repository secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `SUPABASE_URL` | Same as the local `.env` |
+| `SUPABASE_SECRET_KEY` | The service-role key |
+
+Until those are set the workflow fails on its first step with a clear message rather than running half-configured.
+
+Notes:
+- Both fetch steps retry three times with a backoff. The library RSS feed has been observed returning `503` transiently, and a blip should not read as a breakage.
+- A step failure still turns the whole job red — silence is what caused the original problem, so a persistent break must be visible.
+- Run it by hand from the Actions tab; the `dry_run` input previews without writing.
+- Events land as `pending` by design (nothing publishes itself). To change that, add `--auto-approve` to the script steps — and then enable the `Trigger Netlify rebuild` step, since approved events only reach the pre-rendered HTML on the next build.
 
 ## Deployment
 

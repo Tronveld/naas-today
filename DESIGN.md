@@ -379,6 +379,14 @@ Uppercase DM Mono stamps at 0.6875rem with 0.06em tracking, fully rounded, each 
 ### Motion
 Cards fade in with a 10px rise over 0.3s ease-out, staggered 40ms per card and **capped at 440ms** — the twelfth card and the fortieth start together, so a long day never feels slow. State transitions are 0.15s; modals scale from 0.95 over 0.2s and become bottom sheets below 480px. A deep-linked card pulses an 8px accent ring twice, then stops. `prefers-reduced-motion: reduce` disables every animation and transition in the system explicitly, control by control — not just the card entrance.
 
+## Scope
+
+This system describes the **public site** (`src/`). It does not describe `public/admin.html`.
+
+The admin panel is an internal operator tool — one person, moderating a queue, not admiring the page. It runs its own visual language deliberately: Inter and Libre Baskerville rather than the system stack and Georgia, an orange accent (`#E67E22`) rather than hedgerow green, and its own radius steps. **The owner has confirmed this divergence is intentional and does not want it reconciled.** Do not restyle the admin onto this system, and do not treat its values as drift.
+
+The design detector reflects that: the `design-system-*` rules and `overused-font` are switched off for `public/admin.html` in `.impeccable/config.json`, scoped to that file alone. Everything else still applies there — contrast, clipped or overflowing content, broken images. A tool used every day should still be legible and unbroken; it just doesn't have to match the noticeboard.
+
 ## Do's and Don'ts
 
 ### Do:

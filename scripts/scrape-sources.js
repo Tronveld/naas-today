@@ -333,7 +333,9 @@ async function main() {
   const dryRun       = process.argv.includes('--dry-run');
   const insertStatus = autoApprove ? 'approved' : 'pending';
 
-  if (!dryRun && (!SUPABASE_URL || !SECRET_KEY)) {
+  // Required even for a dry run: the preview checks for duplicates, so that
+  // "would insert" means what it says rather than counting rows already stored.
+  if (!SUPABASE_URL || !SECRET_KEY) {
     console.error('ERROR: SUPABASE_URL and SUPABASE_SECRET_KEY must be set (check .env).');
     process.exit(1);
   }
@@ -372,12 +374,6 @@ async function main() {
     totalFound += result.events.length;
 
     for (const evt of result.events) {
-      if (dryRun) {
-        log.push({ status: 'DRY  ', date: evt.date, title: evt.title, kids: evt.is_for_kids, loc: evt.location });
-        totalInserted++;
-        continue;
-      }
-
       let dupe = false;
       try { dupe = await sb.isDuplicate(evt.title, evt.date); }
       catch (err) {
@@ -389,6 +385,13 @@ async function main() {
       if (dupe) {
         totalSkipped++;
         log.push({ status: 'SKIP ', date: evt.date, title: evt.title, note: 'already exists' });
+        continue;
+      }
+
+      if (dryRun) {
+        sb.cacheInserted(evt.title, evt.date);   // so repeats within one run dedupe too
+        totalInserted++;
+        log.push({ status: 'DRY  ', date: evt.date, title: evt.title, kids: evt.is_for_kids, loc: evt.location });
         continue;
       }
 
@@ -415,8 +418,8 @@ async function main() {
     console.log(`  Would insert         : ${totalInserted}`);
   } else {
     console.log(`  Inserted (${insertStatus.padEnd(8)}) : ${totalInserted}`);
-    console.log(`  Skipped (dupes)      : ${totalSkipped}`);
   }
+  console.log(`  Skipped (dupes)      : ${totalSkipped}`);
   console.log(`  Dropped (not Naas)   : ${totalOffTown}`);
   console.log(`  Errors               : ${totalErrors}`);
 
