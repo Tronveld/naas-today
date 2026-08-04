@@ -329,6 +329,54 @@
             margin-left: 0.25rem;
         }
 
+        /* Bulk selection bar — appears only when at least one row is ticked */
+        .bulk-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+            padding: 0.625rem 0.875rem;
+            background: var(--accent-light);
+            border: 1px solid #fad7aa;
+            border-radius: 8px;
+        }
+
+        .bulk-bar[hidden] { display: none; }
+
+        .bulk-count {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--accent-hover);
+            margin-right: 0.25rem;
+        }
+
+        .bulk-clear {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: var(--medium-gray);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8125rem;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .bulk-clear:hover { color: var(--near-black); }
+
+        .th-check, .td-check {
+            width: 2.25rem;
+            text-align: center;
+            padding-right: 0;
+        }
+
+        .th-check input, .td-check input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+
         .btn-refresh {
             margin-left: auto;
             background: none;
@@ -705,12 +753,20 @@
             <button class="btn-refresh" id="refreshBtn">Refresh</button>
         </div>
 
+        <div class="bulk-bar" id="bulkBar" hidden>
+            <span class="bulk-count" id="bulkCount">0 selected</span>
+            <button class="btn-action btn-approve" id="bulkApproveBtn">Approve selected</button>
+            <button class="btn-action btn-unpublish" id="bulkUnpublishBtn">Move to pending</button>
+            <button class="bulk-clear" id="bulkClearBtn">Clear</button>
+        </div>
+
         <div class="table-wrap">
             <div class="table-loading" id="tableLoading">Loading events…</div>
             <div class="table-empty" id="tableEmpty" style="display:none">No events found.</div>
             <table id="eventsTable" style="display:none">
                 <thead>
                     <tr>
+                        <th class="th-check"><input type="checkbox" id="selectAll" aria-label="Select all events"></th>
                         <th>Title</th>
                         <th>Date</th>
                         <th>Location</th>
@@ -979,6 +1035,21 @@
         }
     }
 
+    async function apiPatchBulk(ids, fields) {
+        const res = await fetch('/.netlify/functions/admin-events', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-password': getPassword(),
+            },
+            body: JSON.stringify({ ids, fields }),
+        });
+        if (res.status === 401) { handleUnauthorized(); return null; }
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Bulk update failed');
+        return data;
+    }
+
     async function apiPatchGroup(group_id, from_date, fields) {
         const res = await fetch('/.netlify/functions/admin-events', {
             method: 'PATCH',
@@ -1018,6 +1089,55 @@
     }
 
     // ── Dashboard ────────────────────────────────────────────────────────────
+    // ── Bulk selection ────────────────────────────────────────────────────────
+    function selectedIds() {
+        return Array.from(document.querySelectorAll('.row-check:checked')).map(c => c.value);
+    }
+
+    function updateBulkBar() {
+        const boxes = Array.from(document.querySelectorAll('.row-check'));
+        const picked = boxes.filter(c => c.checked);
+        const bar = document.getElementById('bulkBar');
+        bar.hidden = picked.length === 0;
+        document.getElementById('bulkCount').textContent =
+            picked.length === 1 ? '1 selected' : picked.length + ' selected';
+
+        // Header box reflects the rows: all, none, or indeterminate
+        const all = document.getElementById('selectAll');
+        all.checked = boxes.length > 0 && picked.length === boxes.length;
+        all.indeterminate = picked.length > 0 && picked.length < boxes.length;
+
+        // A mixed selection can't be approved and unpublished meaningfully at
+        // once, so each action offers itself only when it would change something.
+        const statuses = picked.map(c => c.closest('tr').dataset.status);
+        document.getElementById('bulkApproveBtn').hidden   = !statuses.includes('pending');
+        document.getElementById('bulkUnpublishBtn').hidden = !statuses.includes('approved');
+    }
+
+    function clearSelection() {
+        document.querySelectorAll('.row-check').forEach(c => { c.checked = false; });
+        updateBulkBar();
+    }
+
+    async function runBulk(btn, status) {
+        const ids = selectedIds();
+        if (ids.length === 0) return;
+        const label = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Working…';
+        try {
+            await apiPatchBulk(ids, { status });
+            // The reloaded table is the confirmation — matching how the
+            // single-row actions behave. Only failures interrupt.
+            await loadEvents();
+        } catch (err) {
+            alert(err.message || 'Bulk update failed. Please try again.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = label;
+        }
+    }
+
     async function loadEvents() {
         const refreshBtn = document.getElementById('refreshBtn');
         refreshBtn.disabled = true;
@@ -1049,8 +1169,14 @@
 
         loadingEl.style.display = 'none';
 
-        // Clear existing rows safely
+        // Clear existing rows safely. Rows are rebuilt from scratch, so any
+        // previous selection is gone — reset the bar rather than leave it
+        // showing a count for checkboxes that no longer exist.
         while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+        const selectAllBox = document.getElementById('selectAll');
+        selectAllBox.checked = false;
+        selectAllBox.indeterminate = false;
+        document.getElementById('bulkBar').hidden = true;
 
         countEl.textContent = events.length === 1 ? '1 event' : events.length + ' events';
 
@@ -1066,6 +1192,19 @@
         events.forEach(ev => {
             const tr = document.createElement('tr');
             tr.dataset.id = ev.id;
+            tr.dataset.status = ev.status;
+
+            // Selection checkbox
+            const tdCheck = document.createElement('td');
+            tdCheck.className = 'td-check';
+            const rowCheck = document.createElement('input');
+            rowCheck.type = 'checkbox';
+            rowCheck.className = 'row-check';
+            rowCheck.value = ev.id;
+            rowCheck.setAttribute('aria-label', 'Select ' + ev.title);
+            rowCheck.addEventListener('change', updateBulkBar);
+            tdCheck.appendChild(rowCheck);
+            tr.appendChild(tdCheck);
 
             // Title
             const tdTitle = document.createElement('td');
@@ -1351,6 +1490,16 @@
 
     // Refresh
     document.getElementById('refreshBtn').addEventListener('click', loadEvents);
+
+    document.getElementById('selectAll').addEventListener('change', (e) => {
+        document.querySelectorAll('.row-check').forEach(c => { c.checked = e.target.checked; });
+        updateBulkBar();
+    });
+    document.getElementById('bulkClearBtn').addEventListener('click', clearSelection);
+    document.getElementById('bulkApproveBtn').addEventListener('click', (e) =>
+        runBulk(e.currentTarget, 'approved'));
+    document.getElementById('bulkUnpublishBtn').addEventListener('click', (e) =>
+        runBulk(e.currentTarget, 'pending'));
 
     // Edit modal — close button
     document.getElementById('closeEditModal').addEventListener('click', closeEditModal);

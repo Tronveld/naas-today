@@ -534,6 +534,7 @@ const jsonLd = todayEvents.length > 0 ? {
         if (filteredEvents.length === 0) {
             grid.style.display = 'none';
             emptyState.classList.add('visible');
+            renderEmptyNext(dateStr);
             updateJsonLd([]);
             renderUpcoming();
             return;
@@ -547,6 +548,46 @@ const jsonLd = todayEvents.length > 0 ? {
         initDescriptionToggles(grid);
         updateJsonLd(filteredEvents);
         renderUpcoming();
+    }
+
+    // Does an event survive the category filters the visitor currently has on?
+    function matchesActiveFilters(e) {
+        if (filterFreeActive    && !e.isFree)    return false;
+        if (filterKidsActive    && !e.isForKids) return false;
+        if (filterMusicActive   && !e.isMusic)   return false;
+        if (filterSportActive   && !e.isSport)   return false;
+        if (filterMarketActive  && !e.isMarket)  return false;
+        if (filterTheatreActive && !e.isTheatre) return false;
+        return true;
+    }
+
+    // An empty day is a real answer, but it shouldn't read as the end of the
+    // road. Point at the next day that actually has something — honouring the
+    // active filters, since sending someone to another empty day is worse than
+    // saying nothing.
+    function renderEmptyNext(dateStr) {
+        const wrap = document.getElementById('emptyNext');
+        const btn  = document.getElementById('emptyNextBtn');
+        if (!wrap || !btn) return;
+
+        const next = events
+            .filter(e => e.date > dateStr && matchesActiveFilters(e))
+            .sort((a, b) => a.date.localeCompare(b.date))[0];
+
+        if (!next) { wrap.hidden = true; return; }
+
+        const d = new Date(next.date + 'T00:00:00');
+        const opts = { weekday: 'long', day: 'numeric', month: 'long' };
+        if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+        btn.textContent = d.toLocaleDateString('en-IE', opts);
+        wrap.hidden = false;
+
+        btn.onclick = () => {
+            currentDate = new Date(next.date + 'T00:00:00');
+            updateDateDisplay();
+            renderEvents();
+            pushUrlState();
+        };
     }
 
     function renderUpcoming() {

@@ -97,6 +97,27 @@ async function handleGet(event, supabaseUrl, secretKey) {
   return json(200, await res.json());
 }
 
+// Cap on a single bulk operation. Every id is interpolated into a PostgREST
+// `id=in.(...)` filter, so this bounds the URL length as well as the blast
+// radius of one mistaken click in the admin panel.
+const MAX_BULK_IDS = 200;
+
+// Returns [ids, null] with duplicates removed, or [null, errorString].
+// Every entry must be proven to be a UUID before it reaches the query string.
+function validateBulkIds(ids) {
+  if (!Array.isArray(ids)) return [null, 'ids must be an array'];
+  if (ids.length === 0) return [null, 'ids must not be empty'];
+  if (ids.length > MAX_BULK_IDS) {
+    return [null, `ids may contain at most ${MAX_BULK_IDS} entries`];
+  }
+  for (const id of ids) {
+    if (typeof id !== 'string' || !UUID_RE.test(id)) {
+      return [null, 'ids must all be valid UUIDs'];
+    }
+  }
+  return [[...new Set(ids)], null];
+}
+
 function validatePatchFields(fields) {
   // Returns an error string, or null if valid
   const safeFields = {};
@@ -146,7 +167,38 @@ async function handlePatch(event, supabaseUrl, secretKey) {
   let body;
   try { body = JSON.parse(event.body); } catch { return json(400, { error: 'Invalid JSON' }); }
 
-  const { id, fields, group_id, from_date } = body || {};
+  const { id, ids, fields, group_id, from_date } = body || {};
+
+  // ── Bulk mode: update a named set of events (the admin panel's "approve
+  // selected"). Distinct from group_id mode, which follows a recurring series. ──
+  if (ids !== undefined) {
+    const [safeIds, idErr] = validateBulkIds(ids);
+    if (idErr) return json(400, { error: idErr });
+    if (!fields || typeof fields !== 'object' || Object.keys(fields).length === 0) {
+      return json(400, { error: 'Missing or empty fields' });
+    }
+
+    const [safeFields, fieldErr] = validatePatchFields(fields);
+    if (fieldErr) return json(400, { error: fieldErr });
+
+    const list = safeIds.map(encodeURIComponent).join(',');
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/events?id=in.(${list})`,
+      {
+        method:  'PATCH',
+        headers: {
+          'apikey':       secretKey,
+          'Content-Type': 'application/json',
+          'Prefer':       'return=representation',
+        },
+        body: JSON.stringify(safeFields),
+      }
+    );
+    if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
+
+    const updated = await res.json();
+    return json(200, { success: true, count: updated.length });
+  }
 
   // ── Bulk mode: update all future events in a recurring series ──
   if (group_id !== undefined) {
@@ -285,3 +337,7 @@ exports.handler = async function(event) {
     return json(500, { error: 'Operation failed' });
   }
 };
+
+// Exported for tests only — Netlify uses the handler above.
+exports.validateBulkIds = validateBulkIds;
+exports.MAX_BULK_IDS    = MAX_BULK_IDS;

@@ -51,6 +51,9 @@ const todayEvents = events.filter(e => {
         </div>
         <h3>Quiet day in Naas</h3>
         <p>Nothing listed yet — know of something happening? Add it to the noticeboard.</p>
+        <p class="empty-next" id="emptyNext" hidden>
+            Next up: <button type="button" class="empty-next-btn" id="emptyNextBtn"></button>
+        </p>
         <button class="submit-area-btn" style="margin-top: 1rem;" onclick="document.getElementById('eventDate').value = localDateStr(currentDate); openModal('submitModal');">Submit an event</button>
     </div>
 
