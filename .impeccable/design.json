@@ -1,0 +1,544 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-04T21:54:38Z",
+  "title": "Design System: Naas Today",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Green-Cast Paper",
+        "canonical": "oklch(98.6% 0.007 115.7)",
+        "tonalRamp": [
+          "#0B0C08",
+          "#252522",
+          "#42423E",
+          "#61625D",
+          "#82837E",
+          "#A5A6A1",
+          "#C9CAC5",
+          "#EEEFEA"
+        ]
+      },
+      "bg-card": {
+        "role": "neutral",
+        "displayName": "Notice White",
+        "canonical": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#A5A5A5",
+          "#C9C9C9",
+          "#EEEEEE"
+        ]
+      },
+      "bg-muted": {
+        "role": "neutral",
+        "displayName": "Linen",
+        "canonical": "oklch(95.7% 0.012 79.8)",
+        "tonalRamp": [
+          "#0E0B06",
+          "#28241F",
+          "#45413B",
+          "#65615A",
+          "#86827A",
+          "#A9A49D",
+          "#CDC8C1",
+          "#F3EEE6"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Deep Forest Ink",
+        "canonical": "oklch(31.5% 0.067 143.8)",
+        "tonalRamp": [
+          "#001100",
+          "#0D2D0D",
+          "#2B4B2A",
+          "#4A6B49",
+          "#6A8D69",
+          "#8CB08B",
+          "#B0D5AE",
+          "#D4FBD3"
+        ]
+      },
+      "ink-mid": {
+        "role": "neutral",
+        "displayName": "Sage Ink",
+        "canonical": "oklch(45.5% 0.028 145.1)",
+        "tonalRamp": [
+          "#040E05",
+          "#1C291D",
+          "#394639",
+          "#576657",
+          "#788778",
+          "#9AAA9A",
+          "#BECEBE",
+          "#E3F4E3"
+        ]
+      },
+      "ink-light": {
+        "role": "neutral",
+        "displayName": "Bark Ink",
+        "canonical": "oklch(45.9% 0.025 95.6)",
+        "tonalRamp": [
+          "#0E0B01",
+          "#292517",
+          "#464233",
+          "#656151",
+          "#878371",
+          "#AAA594",
+          "#CEC9B7",
+          "#F3EFDC"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Hedgerow Green",
+        "canonical": "oklch(42.3% 0.088 143.8)",
+        "tonalRamp": [
+          "#001300",
+          "#002F03",
+          "#214E21",
+          "#416E40",
+          "#619060",
+          "#83B482",
+          "#A7D9A5",
+          "#CCFFC9"
+        ]
+      },
+      "accent-light": {
+        "role": "primary",
+        "displayName": "Meadow Tint",
+        "canonical": "oklch(94.6% 0.018 134.9)",
+        "tonalRamp": [
+          "#080D06",
+          "#21271E",
+          "#3E443B",
+          "#5D6459",
+          "#7E857A",
+          "#A0A89D",
+          "#C4CCC0",
+          "#E9F1E5"
+        ]
+      },
+      "warm": {
+        "role": "secondary",
+        "displayName": "Weathered Leather",
+        "canonical": "oklch(50.2% 0.052 70.5)",
+        "tonalRamp": [
+          "#180600",
+          "#352004",
+          "#543D22",
+          "#745C40",
+          "#977D60",
+          "#BAA082",
+          "#DFC4A5",
+          "#FFE9CA"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(90.4% 0.011 106.6)",
+        "tonalRamp": [
+          "#0C0B07",
+          "#262520",
+          "#42423C",
+          "#62625B",
+          "#83837C",
+          "#A6A69E",
+          "#CACAC2",
+          "#EFEFE7"
+        ]
+      },
+      "border-light": {
+        "role": "neutral",
+        "displayName": "Whisper Rule",
+        "canonical": "oklch(94.4% 0.012 84.6)",
+        "tonalRamp": [
+          "#0D0B06",
+          "#28251F",
+          "#45423B",
+          "#64615A",
+          "#85827B",
+          "#A8A59D",
+          "#CDC9C1",
+          "#F2EEE6"
+        ]
+      },
+      "cat-kids": {
+        "role": "tertiary",
+        "displayName": "Canal Slate",
+        "canonical": "oklch(45.6% 0.079 228.9)",
+        "tonalRamp": [
+          "#000E25",
+          "#002B43",
+          "#004963",
+          "#276A85",
+          "#4B8CA8",
+          "#6EAFCD",
+          "#92D4F2",
+          "#B7FAFF"
+        ]
+      },
+      "cat-music": {
+        "role": "tertiary",
+        "displayName": "Fiddle Wood",
+        "canonical": "oklch(38.9% 0.063 64.1)",
+        "tonalRamp": [
+          "#1C0300",
+          "#391D00",
+          "#593A1B",
+          "#7A5A3A",
+          "#9D7B5A",
+          "#C19D7C",
+          "#E7C19F",
+          "#FFE6C3"
+        ]
+      },
+      "cat-sport": {
+        "role": "tertiary",
+        "displayName": "Pitch Green",
+        "canonical": "oklch(37.4% 0.075 154.1)",
+        "tonalRamp": [
+          "#001300",
+          "#002F13",
+          "#1B4D2F",
+          "#3D6E4E",
+          "#5E906E",
+          "#80B390",
+          "#A4D8B3",
+          "#C8FED8"
+        ]
+      },
+      "cat-markets": {
+        "role": "tertiary",
+        "displayName": "Sacking Ochre",
+        "canonical": "oklch(46.6% 0.085 65.6)",
+        "tonalRamp": [
+          "#200000",
+          "#3F1900",
+          "#603700",
+          "#825627",
+          "#A57849",
+          "#CA9A6B",
+          "#F0BE8E",
+          "#FFE4B2"
+        ]
+      },
+      "cat-theatre": {
+        "role": "tertiary",
+        "displayName": "Curtain Brick",
+        "canonical": "oklch(41.1% 0.109 23.2)",
+        "tonalRamp": [
+          "#2B0000",
+          "#4D0008",
+          "#712425",
+          "#954543",
+          "#BB6663",
+          "#E18984",
+          "#FFADA8",
+          "#FFD2CC"
+        ]
+      },
+      "cat-free": {
+        "role": "tertiary",
+        "displayName": "Hedgerow Green (Free)",
+        "canonical": "oklch(42.3% 0.088 143.8)",
+        "tonalRamp": [
+          "#001300",
+          "#002F03",
+          "#214E21",
+          "#416E40",
+          "#619060",
+          "#83B482",
+          "#A7D9A5",
+          "#CCFFC9"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Masthead",
+        "purpose": "The site masthead only. One per page."
+      },
+      "headline": {
+        "displayName": "Section Serif",
+        "purpose": "Georgia section headings, modal titles, empty- and error-state headings. Never inside a card."
+      },
+      "date": {
+        "displayName": "Current Date",
+        "purpose": "The date display. Sans rather than serif because it reads as state, not heading."
+      },
+      "title": {
+        "displayName": "Notice Title",
+        "purpose": "Event titles. Never more than ~1.3x body size."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Event descriptions and interface prose, ~70ch inside the 660px column."
+      },
+      "document-title": {
+        "displayName": "Document Title",
+        "purpose": "The h1 on a standalone document page such as Terms. The only h1 that isn't the masthead."
+      },
+      "subhead": {
+        "displayName": "Modal Title",
+        "purpose": "Georgia at 1.375rem. Marks an overlay as a distinct place."
+      },
+      "section": {
+        "displayName": "Section Heading",
+        "purpose": "Smallest serif step. The 'What's next' heading."
+      },
+      "control": {
+        "displayName": "Control",
+        "purpose": "Form fields and button labels. The largest interactive text in the system, deliberately."
+      },
+      "control-compact": {
+        "displayName": "Control Compact",
+        "purpose": "Chrome that surrounds content: filter chips, date-nav buttons, footer links, upcoming dates."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Card apparatus rather than content: location, source link, Share, toggles, counters."
+      },
+      "label": {
+        "displayName": "Stamp",
+        "purpose": "Category tags. Uppercase tracked mono, reads as stamped onto the notice."
+      },
+      "time": {
+        "displayName": "Time",
+        "purpose": "The time pill at 0.9375rem. Reads as a peer of the title, not an annotation."
+      }
+    },
+    "shadows": [
+      {
+        "name": "resting",
+        "value": "0 1px 3px rgba(26,42,26,0.05)",
+        "purpose": "Cards at rest. Barely present by design; lifts paper off the table and nothing more."
+      },
+      {
+        "name": "hover",
+        "value": "0 4px 16px rgba(26,42,26,0.08)",
+        "purpose": "Card hover, paired with translateY(-2px). The lift is the feedback."
+      },
+      {
+        "name": "header-scrolled",
+        "value": "0 2px 8px rgba(26,42,26,0.08)",
+        "purpose": "Sticky masthead once scrolled past 4px."
+      },
+      {
+        "name": "overlay",
+        "value": "0 20px 60px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.08)",
+        "purpose": "Modals only. The one place real two-layer depth is warranted."
+      },
+      {
+        "name": "focus-halo",
+        "value": "0 0 0 3px var(--accent-light)",
+        "purpose": "Input focus. Soft meadow tint, not a glow."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": "0.15s",
+        "purpose": "Default control state transitions (buttons, chips, nav)."
+      },
+      {
+        "name": "surface",
+        "value": "0.2s ease",
+        "purpose": "Modal opacity/scale and header shadow."
+      },
+      {
+        "name": "card-enter",
+        "value": "cardFadeIn 0.3s ease-out both",
+        "purpose": "Card entrance: 10px rise + fade."
+      },
+      {
+        "name": "card-stagger",
+        "value": "40ms",
+        "purpose": "Per-card entrance delay, hard-capped at 440ms so long days never feel slow."
+      },
+      {
+        "name": "deep-link-pulse",
+        "value": "deep-link-pulse 0.8s ease-in-out 2",
+        "purpose": "Twice-pulsing 8px accent ring on a deep-linked card."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "upcoming-reflow",
+        "value": "520px"
+      },
+      {
+        "name": "compact",
+        "value": "480px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Event Card",
+      "kind": "card",
+      "refersTo": "event-card",
+      "description": "A pinned notice. Hairline border defines it; the resting shadow is near-invisible. Lifts 2px on hover.",
+      "html": "<article class=\"ds-event-card\"><div class=\"ds-ev-top\"><h3 class=\"ds-event-title\">Trad Session</h3><span class=\"ds-time-pill\">8:00 PM</span></div><a class=\"ds-event-location\" href=\"#\"><span aria-hidden=\"true\">\ud83d\udccd</span> Lawlor's Hotel</a><p class=\"ds-event-desc\">Weekly session in the back bar. All welcome, bring an instrument.</p><div class=\"ds-card-footer\"><div class=\"ds-tags\"><span class=\"ds-tag ds-tag-free\">Free</span><span class=\"ds-tag ds-tag-music\">Music</span></div><button class=\"ds-share-btn\">Share <span aria-hidden=\"true\">\u2197</span></button></div></article>",
+      "css": ".ds-event-card{background:var(--bg-card,#fff);border:1px solid var(--border,#e0e0d8);border-radius:12px;box-shadow:0 1px 3px rgba(26,42,26,0.05);padding:16px 20px;transition:box-shadow .15s ease,transform .15s ease;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}.ds-event-card:hover{box-shadow:0 4px 16px rgba(26,42,26,0.08);transform:translateY(-2px)}.ds-ev-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:4px}.ds-event-title{font-size:1.125rem;font-weight:600;color:var(--ink,#1a3a1a);line-height:1.35;margin:0}.ds-event-location{display:flex;align-items:center;gap:.25rem;color:var(--ink-mid,#4d5b4d);font-size:.75rem;font-weight:500;margin-bottom:.5rem;text-decoration:none}.ds-event-location:hover{color:var(--accent,#2d5a2d);text-decoration:underline}.ds-event-desc{color:var(--ink-light,#5c5848);font-size:.875rem;line-height:1.55;margin:0 0 .75rem}.ds-card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;min-height:28px}.ds-tags{display:flex;gap:.375rem;flex-wrap:wrap}"
+    },
+    {
+      "name": "Time Pill",
+      "kind": "custom",
+      "refersTo": "time-pill",
+      "description": "Signature component. Linen stamp carrying the event time in weathered-leather mono. Shares a 28px min-height with the status badge so the card slot keeps one silhouette.",
+      "html": "<span class=\"ds-time-pill\">8:00 PM</span> <span class=\"ds-status-badge\">ALL DAY</span>",
+      "css": ".ds-time-pill{font-family:'DM Mono',monospace;color:var(--warm,#775F43);font-size:.9375rem;font-weight:600;white-space:nowrap;background:var(--bg-muted,#F5F0E8);border:1px solid var(--border,#e0e0d8);border-radius:999px;padding:.125rem .625rem;min-height:28px;display:inline-flex;align-items:center}.ds-status-badge{font-family:'DM Mono',monospace;color:var(--warm,#775F43);font-size:.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;background:var(--bg-muted,#F5F0E8);border:1px solid var(--border,#e0e0d8);border-radius:999px;padding:.125rem .625rem;min-height:28px;display:inline-flex;align-items:center}"
+    },
+    {
+      "name": "Category Tag",
+      "kind": "chip",
+      "refersTo": "tag",
+      "description": "Uppercase mono stamp in its category's colour pair. All six read as one aged family.",
+      "html": "<span class=\"ds-tag ds-tag-free\">Free</span><span class=\"ds-tag ds-tag-kids\">For kids</span><span class=\"ds-tag ds-tag-music\">Music</span><span class=\"ds-tag ds-tag-sport\">Sport</span><span class=\"ds-tag ds-tag-market\">Markets</span><span class=\"ds-tag ds-tag-theatre\">Theatre</span>",
+      "css": ".ds-tag{display:inline-block;padding:.125rem .5rem;margin-right:.375rem;border-radius:999px;font-size:.6875rem;font-family:'DM Mono',monospace;font-weight:500;text-transform:uppercase;letter-spacing:.06em}.ds-tag-free{background:var(--cat-free-bg,#E8F0E4);color:var(--cat-free,#2d5a2d)}.ds-tag-kids{background:var(--cat-kids-bg,#E0F0F5);color:var(--cat-kids,#1A5F7A)}.ds-tag-music{background:var(--cat-music-bg,#F0E8DE);color:var(--cat-music,#5C3D1E)}.ds-tag-sport{background:var(--cat-sport-bg,#DCF0E6);color:var(--cat-sport,#1A4C2E)}.ds-tag-market{background:var(--cat-markets-bg,#F5EADB);color:var(--cat-markets,#7A4F1F)}.ds-tag-theatre{background:var(--cat-theatre-bg,#F0E0DE);color:var(--cat-theatre,#7B2D2D)}"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "Scrolling category filter. Hover previews the category; active inverts to a full category fill.",
+      "html": "<button class=\"ds-filter-chip\">Free</button><button class=\"ds-filter-chip ds-filter-chip-active\">Music</button>",
+      "css": ".ds-filter-chip{padding:.4375rem 1rem;margin-right:.5rem;border:1.5px solid var(--border,#e0e0d8);background:var(--bg-card,#fff);color:var(--ink-mid,#4d5b4d);font-family:inherit;font-size:.8125rem;font-weight:500;border-radius:6px;cursor:pointer;transition:all .15s;white-space:nowrap}.ds-filter-chip:hover{border-color:var(--cat-music,#5C3D1E);color:var(--cat-music,#5C3D1E);background:var(--cat-music-bg,#F0E8DE)}.ds-filter-chip:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}.ds-filter-chip-active{background:var(--cat-music,#5C3D1E);color:#fff;border-color:var(--cat-music,#5C3D1E)}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single accent fill on the page. Hovers toward deep forest ink, not a lighter green.",
+      "html": "<button class=\"ds-btn-primary\">Submit an Event</button>",
+      "css": ".ds-btn-primary{background:var(--accent,#2d5a2d);color:#fff;border:none;border-radius:8px;padding:.75rem 2rem;font-family:inherit;font-size:.9375rem;font-weight:600;cursor:pointer;transition:background .15s;width:100%;max-width:320px}.ds-btn-primary:hover{background:var(--ink,#1a3a1a)}.ds-btn-primary:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Transparent with a hairline. Border and text both take the accent on hover; never fills.",
+      "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
+      "css": ".ds-btn-secondary{background:transparent;border:1px solid var(--border,#e0e0d8);color:var(--ink-mid,#4d5b4d);border-radius:8px;padding:.75rem 2rem;font-family:inherit;font-size:.9375rem;font-weight:500;cursor:pointer;transition:all .2s}.ds-btn-secondary:hover{border-color:var(--accent,#2d5a2d);color:var(--accent,#2d5a2d)}.ds-btn-secondary:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}"
+    },
+    {
+      "name": "Date Nav Button",
+      "kind": "nav",
+      "refersTo": "date-nav-button",
+      "description": "44px minimum target. The Today variant is the only tinted control on the row.",
+      "html": "<nav class=\"ds-date-nav\"><button class=\"ds-date-btn\">\u2190 Previous</button><button class=\"ds-date-btn ds-date-btn-today\">Today</button><button class=\"ds-date-btn\">Pick a date</button><button class=\"ds-date-btn\">Next \u2192</button></nav>",
+      "css": ".ds-date-nav{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.ds-date-btn{background:transparent;border:1.5px solid var(--border,#e0e0d8);color:var(--ink-mid,#4d5b4d);cursor:pointer;transition:all .15s;min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;padding:.375rem .875rem;border-radius:6px;font-family:inherit;font-size:.8125rem;font-weight:500}.ds-date-btn:hover{border-color:var(--accent,#2d5a2d);color:var(--accent,#2d5a2d)}.ds-date-btn:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}.ds-date-btn-today{background:var(--accent-light,#E8F0E4);border-color:var(--accent,#2d5a2d);color:var(--accent,#2d5a2d);font-weight:600}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Hairline field with a visible label above. Focus shifts the border to accent and adds a 3px meadow halo.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-label\" for=\"ds-i1\">Event title</label><input class=\"ds-input\" id=\"ds-i1\" type=\"text\" placeholder=\"Trad Session\"></div>",
+      "css": ".ds-field{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}.ds-label{display:block;margin-bottom:.5rem;color:var(--ink,#1a3a1a);font-weight:500;font-size:.875rem}.ds-input{width:100%;padding:10px 12px;border:1px solid var(--border,#e0e0d8);border-radius:8px;font-size:.9375rem;font-family:inherit;background:var(--bg-card,#fff);color:var(--ink,#1a3a1a);transition:border-color .2s,box-shadow .2s}.ds-input:focus{outline:none;border-color:var(--accent,#2d5a2d);box-shadow:0 0 0 3px var(--accent-light,#E8F0E4)}"
+    },
+    {
+      "name": "Share Button",
+      "kind": "button",
+      "refersTo": "share-btn",
+      "description": "Compact card-footer action. 1.5px border marks it as pressable in a system with almost no fills.",
+      "html": "<button class=\"ds-share-btn\">Share <span aria-hidden=\"true\">\u2197</span></button>",
+      "css": ".ds-share-btn{background:none;border:1.5px solid var(--border,#e0e0d8);color:var(--ink-mid,#4d5b4d);font-family:inherit;font-size:.75rem;font-weight:500;cursor:pointer;padding:.25rem .625rem;min-height:32px;border-radius:6px;transition:all .15s;white-space:nowrap}.ds-share-btn:hover{border-color:var(--accent,#2d5a2d);color:var(--accent,#2d5a2d)}.ds-share-btn:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Parish Noticeboard",
+    "overview": "This is the civic board everyone in town reads, given a tasteful upgrade. Each event is a pinned notice: a bordered rectangle of equal weight to every other, carrying its own information and asking for nothing. No notice is promoted, enlarged, or given a photograph to make it shout over its neighbours. The board's job is to hold them all legibly, and the design's job is to disappear into that.\n\nThe mood is calm, warm, dependable - unhurried and trustworthy, a page that isn't competing for attention and doesn't need to. Warmth comes from the substrate, not from decoration: an off-white with a green cast (#FAFBF6) rather than clinical white, linen (#F5F0E8) behind the small monospaced details, and a deep forest green that reads as hedgerow rather than corporate. Everything sits on a single 660px column that behaves like a reading measure, not an app viewport. There is no dark mode, no hero, no imagery, and no illustration; the visitor came for an answer and the page gives it in one glance.\n\nThe system's discipline is restraint enforced by borders. Surfaces are separated by a 1px hairline (#e0e0d8), not by shadow, colour-blocking, or spacing tricks. The accent green appears on roughly one element per screen. The six category colours have been deliberately weathered into a single earthy family so that no category out-shouts another. The result is a page that looks maintained rather than designed - which, for a community resource run by one person, is exactly the right impression.",
+    "keyCharacteristics": [
+      "Single 660px column, always one card wide, at every breakpoint",
+      "Hairline borders define every surface; shadows are near-subliminal",
+      "Georgia mastheads over a system sans body; DM Mono reserved strictly for times and tags",
+      "Six category colours muted into one aged, sun-faded family",
+      "44px minimum touch targets throughout, for an audience that skews older",
+      "Light mode only, warm naturals, no imagery whatsoever"
+    ],
+    "rules": [
+      {
+        "name": "The One Green Rule",
+        "body": "Hedgerow green is the only fully saturated voice on the page and appears as a fill at most once per viewport - the submit button, or the active Today chip, not both competing. Everywhere else it is a text or border colour. Its rarity is what makes the submit action findable without a single arrow or animation.",
+        "section": "colors"
+      },
+      {
+        "name": "The Aged Family Rule",
+        "body": "All six category colours must read as the same weathered, sun-faded palette. No category may be brighter, more saturated, or louder than its siblings. Harmony outranks distinguishability here: these are labels on a noticeboard, not a wayfinding system. When adding a category, desaturate it until it sits inside the family, then check it still clears 4.5:1 on its own tint.",
+        "section": "colors"
+      },
+      {
+        "name": "The Warm Text Rule",
+        "body": "Text never uses a neutral grey. Every ink carries either the page's green or the palette's brown. #666 and its relatives are banned outright; they are the single fastest way to make this page look like a template.",
+        "section": "colors"
+      },
+      {
+        "name": "The Contrast Floor Rule",
+        "body": "Every text colour clears WCAG AA (4.5:1) against every background it is placed on. The audience skews older and this is a product constraint, not a preference. The palette currently has no violations: the tightest pair is Weathered Leather on Linen (the time pill, 13px) at 5.29:1, and every other text pair sits between 5.96:1 and 12.6:1. Weathered Leather was deepened from #8B7355 (3.95:1, failing) to reach this floor.",
+        "section": "colors"
+      },
+      {
+        "name": "The Serif-Is-Structure Rule",
+        "body": "Georgia marks a boundary - the masthead, a section heading, a modal title. It never appears inside a card. If serif starts showing up in event content, the hierarchy has collapsed.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono-Means-Time Rule",
+        "body": "DM Mono is reserved for times, dates, and the tag stamps. It is never used for body copy, buttons, or emphasis. One webfont, one job.",
+        "section": "typography"
+      },
+      {
+        "name": "The Modest Title Rule",
+        "body": "An event title is never more than ~1.3x body size. On a noticeboard every notice is the same size; the day's most interesting event earns attention from its own words, not from typography.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Column Rule",
+        "body": "Never introduce a multi-column event grid at any breakpoint. The single column is the noticeboard; a grid is an aggregator, which is the anti-reference.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat-At-Rest Rule",
+        "body": "Any shadow beyond the resting hairline means the user is doing something - hovering, focusing, or looking at an overlay. Static emphasis must be achieved with type, border, or the accent colour, never with elevation.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Radius-Follows-Scale Rule",
+        "body": "Never give a small control a large radius or a card a small one. 6 / 8 / 12 / 16 maps to control / button / card / modal, and the ladder is what makes the surfaces feel like one family.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do define every surface with the 1px hairline (--border). It is the system's structural element, and removing it in favour of shadow or spacing breaks the noticeboard.",
+      "Do keep the events list one column wide at every breakpoint.",
+      "Do tint shadows with rgba(26,42,26,...), never pure black - the modal overlay, which falls on the scrim rather than the page, is the sole documented exception.",
+      "Do reserve DM Mono for times, dates, and tag stamps.",
+      "Do give every interactive control a 44px minimum touch dimension and a real text label - an unlabelled glyph is never the only affordance.",
+      "Do put a status badge (ALL DAY, TBC, or a date range) in the card's top-right whenever there is no time, so every card has the same silhouette.",
+      "Do desaturate any new category colour into the aged family, then verify it clears 4.5:1 on its own tint.",
+      "Do hover primary buttons toward deep forest ink (--ink), not toward a lighter green.",
+      "Do extend prefers-reduced-motion coverage explicitly whenever a new transition is added."
+    ],
+    "donts": [
+      "Don't use pure #FFFFFF as a page background or neutral grey (#666, #888) for any text. Every neutral in this system carries green or brown.",
+      "Don't add a second accent colour. Hedgerow green is the only brand voice, and it appears as a fill roughly once per viewport.",
+      "Don't use elevation to signal importance. Shadows respond to interaction; they never rank content.",
+      "Don't use a category colour as a background fill anywhere except an active filter chip.",
+      "Don't make an event title more than ~1.3x body size, or promote any single event with size, colour, or imagery. Every notice is equal.",
+      "Don't introduce photography, illustration, or decorative imagery. The system deliberately has none.",
+      "Don't add a dark mode. Light-only with warm naturals is a committed decision, not an oversight.",
+      "Don't add an icon library. Text glyphs and inline data-URI SVGs only - the three-dependency budget is a project value.",
+      "Don't put the submit call-to-action above the day's events.",
+      "Don't use a pill radius (999px) on anything that isn't a time pill or a category tag.",
+      "Don't add a webfont beyond DM Mono. Georgia and the system stack are already on the device, and that is the point."
+    ]
+  }
+}

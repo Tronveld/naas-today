@@ -267,18 +267,20 @@ const jsonLd = todayEvents.length > 0 ? {
         today.setHours(0, 0, 0, 0);
         const compareDate = new Date(date);
         compareDate.setHours(0, 0, 0, 0);
+        // The year is dropped for dates in the current year — it is redundant and
+        // pushes the line to two rows on 320px phones. Kept when it is not.
+        const dateOpts = { day: 'numeric', month: 'long' };
+        if (date.getFullYear() !== today.getFullYear()) dateOpts.year = 'numeric';
         if (compareDate.getTime() === today.getTime()) {
             const dayName = date.toLocaleDateString('en-IE', { weekday: 'long' });
-            const fullDate = date.toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' });
-            return `Today – ${dayName}, ${fullDate}`;
+            return `Today – ${dayName}, ${date.toLocaleDateString('en-IE', dateOpts)}`;
         }
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
         if (compareDate.getTime() === tomorrow.getTime()) {
-            const fullDate = date.toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' });
-            return `Tomorrow – ${fullDate}`;
+            return `Tomorrow – ${date.toLocaleDateString('en-IE', dateOpts)}`;
         }
-        return date.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        return date.toLocaleDateString('en-IE', { weekday: 'long', ...dateOpts });
     }
 
     function formatTime(time) {
