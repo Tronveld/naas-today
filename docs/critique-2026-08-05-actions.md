@@ -10,20 +10,19 @@ useful for understanding *why* and useless for working through. Every item below
 exactly once.
 
 **Line numbers are as of `d1489de` and will drift as you edit.** Each item carries enough
-surrounding context to relocate it.
+surrounding context to relocate it. Phase 1 has since shipped (`17a5423`, `fc3d8ed`), so the
+line numbers in the EventsGrid and empty-state items are already historical.
 
 ---
 
 ## How to work through this
 
-Ordered by value, not by file. Each phase is a coherent chunk you can ship on its own.
-
-73 items. The list below is grouped by file, but this is the order I'd work them in — each
-phase is a coherent chunk you can ship on its own.
+75 items, ticked as they land. The list below is grouped by file, but this is the order I'd
+work them in — each phase is a coherent chunk you can ship on its own.
 
 | Phase | Items | Count | Command | Why this order |
 |---|---|---|---|---|
-| 1. Empty day | 1–9 | 9 | `/impeccable clarify` | Highest value, smallest diff. This is the screen most visitors actually see. |
+| ~~1. Empty day~~ **done** | 1–7, 9 | 8 of 9 | shipped in `17a5423`, `fc3d8ed` | Item 8 deliberately left — decide it with the rebuilt screen in front of you. |
 | 2. Mobile chrome | 39–41 | 3 | `/impeccable layout` | Structural. Do it right after phase 1 — item 31 changes the filter row's height, so settle the budget once. |
 | 3. Form data loss | 10–12, 42 | 4 | `/impeccable harden` | Independent of everything else. Every lost submission is invisible to you. |
 | 4. Accessibility | 13–16, 24–38, 43–49, 53–55, 57–58, 60–61 | 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. Item 38 needs a decision, not just an edit. |
@@ -53,36 +52,36 @@ The empty state is currently built as an error screen: hidden until needed, deco
 apology headline, then a request for labour. On a site where most weekdays have nothing on,
 this is the primary screen, not the fallback.
 
-- [ ] **1. [P1] Branch the empty state on cause.** `:52-53` renders "Quiet day in Naas —
+- [x] **1. [P1] Branch the empty state on cause.** `:52-53` renders "Quiet day in Naas —
   Nothing listed yet" whether the day is genuinely empty or a filter emptied it. Tap Theatre
   on a four-event day and the page states something false.
   **Done when:** a filtered-empty day reads "No theatre events on Wednesday 6 August — 4 other
   events on today" and an unfiltered-empty day keeps the current copy.
 
-- [ ] **2. [P1] Add a "Show all events" button to the filtered-empty branch.** There is
+- [x] **2. [P1] Add a "Show all events" button to the filtered-empty branch.** There is
   currently no clear-all-filters control anywhere on the page, and the filter row is not
   sticky, so a scrolled user cannot see which chip caused the emptiness.
   **Done when:** one tap from filtered-empty returns to the full day.
 
-- [ ] **3. [P1] Make "Coming Up" the body of the empty state.** It currently sits *after* the
+- [x] **3. [P1] Make "Coming Up" the body of the empty state.** It currently sits *after* the
   submit CTA and below the fold (`index.astro:67-70`). The one useful thing on the screen
   ranks below a request for unpaid work.
   **Done when:** on an empty day the next few events appear above the submit button.
 
-- [ ] **4. [P1] Demote the submit CTA below the upcoming list**, with quieter treatment than
+- [x] **4. [P1] Demote the submit CTA below the upcoming list**, with quieter treatment than
   the current full-width green fill (`:54`).
   **Done when:** the visitor's question is answered before they are asked for anything.
 
-- [ ] **5. [P2] Delete the decorative SVG** at `:42-50`. DESIGN.md's own Don'ts say
+- [x] **5. [P2] Delete the decorative SVG** at `:42-50`. DESIGN.md's own Don'ts say
   "Don't introduce photography, illustration, or decorative imagery" — this is the only
   violation in the codebase.
   **Done when:** `grep -c "<svg" src/components/EventsGrid.astro` returns 0.
 
-- [ ] **6. [P2] Reduce the empty state's vertical padding.** `.events-container` carries
+- [x] **6. [P2] Reduce the empty state's vertical padding.** `.events-container` carries
   `padding: 0 0 4rem` (`BaseLayout.astro:243-245`) and the empty state adds its own. This is
   the most-shown state; it should not be the most padded.
 
-- [ ] **7. [P1] Replace the container-wide live region.** `:36` puts
+- [x] **7. [P1] Replace the container-wide live region.** `:36` puts
   `aria-live="polite"` on `.events-container`, so every filter tap re-announces every card's
   full text, descriptions included.
   **Done when:** a small dedicated status node announces "3 events" and the container has no
@@ -91,7 +90,7 @@ this is the primary screen, not the fallback.
 - [ ] **8. [P2] Consider disabling rather than hiding zero-count filter chips.** Absence of a
   count is currently ambiguous with not-yet-loaded.
 
-- [ ] **9. [P1] Pre-render upcoming events at build time.** `index.astro:67-70` ships
+- [x] **9. [P1] Pre-render upcoming events at build time.** `index.astro:67-70` ships
   `<h2>Coming Up</h2>` over an empty `<ul>` in the static HTML. First paint, no-JS, and
   slow-connection visitors see a heading promising content with nothing under it. Fetch the
   next 3–5 approved events in the page frontmatter alongside `initialEvents`.
@@ -307,6 +306,40 @@ above lands here too. Four defects are present in *both* copies:
   `closeModal`.
 - [ ] **63. [P3] `.modal-header` isn't sticky** inside a scrolling sheet, so ✕ scrolls out of
   view on the long submit form.
+
+## Found later — not in the original critique
+
+- [ ] **74. [P2] The same event shows two different time formats on one page.** The event card
+  renders 12-hour with a meridiem — `{sidebarTime.time} {sidebarTime.ampm}` →
+  **"2:00 PM"** (`EventCard.astro:68`, via `formatTimeShort` at `:27-32`). The upcoming list
+  passes the stored value straight through — **"14:00"** (`index.astro:593`, and the
+  build-time pre-render added in `17a5423`). So a 2pm event reads one way on its card and
+  another in Coming Up.
+
+  Consistency aside, 24-hour time is the less familiar form for the older audience PRODUCT.md
+  names as a confirmed constraint, and the card's format is the one DESIGN.md documents as the
+  signature Time Pill.
+
+  **Fix in all three places at once** — `EventCard.astro` already has the helper, the client's
+  `renderUpcoming()` needs it, and the pre-render needs it — or the client will overwrite the
+  server's format on hydration and flicker.
+  **Done when:** `grep -o 'class="upcoming-time">[^<]*' dist/index.html` shows meridiem times.
+
+- [ ] **75. [P2] DESIGN.md's page-order rule needs an empty-day clause.** The Layout section
+  states the order is "fixed and load-bearing… masthead → date section → category filters →
+  event list → submit prompt → 'What's next' → footer" and that "the submit call-to-action
+  lives **after** the day's events, never before them, because the visitor's job comes first."
+
+  `fc3d8ed` inverts the last two on an empty day: message → upcoming list → submit prompt. That
+  follows the rule's stated *reason* — on a day with no events the visitor's job is answered by
+  the upcoming list, not by the empty grid — while breaking its letter. Right now DESIGN.md
+  contradicts shipped code, which is the precise failure mode items 64–68 exist to fix.
+
+  Also record that the upcoming heading is now state-dependent: "Next up" when the day is
+  empty, "Coming Up" otherwise. That interacts with item 68, which is about the same heading
+  being called "What's next" in DESIGN.md and "Coming Up" in the code — settle all three names
+  at once.
+  **Done when:** DESIGN.md's Layout section describes both orders and names the condition.
 
 ---
 
