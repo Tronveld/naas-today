@@ -670,9 +670,12 @@ const {
         }
 
         /* ── Empty State ── */
+        /* Most weekdays in Naas have nothing on, so this is the page's most-shown
+           state, not an error. It gets the padding of a normal screen and hands
+           straight off to the upcoming list beneath it. */
         .empty-state {
             text-align: center;
-            padding: 4rem 2rem;
+            padding: 2rem 1rem 1.5rem;
             display: none;
         }
 
@@ -680,8 +683,47 @@ const {
             display: block;
         }
 
-        .empty-icon {
-            margin-bottom: 1rem;
+        .empty-clear-btn {
+            margin-top: 1rem;
+            min-height: 44px;
+            padding: 0.625rem 1.25rem;
+            background: transparent;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            color: var(--ink-mid);
+            font-family: inherit;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: border-color 0.15s, color 0.15s;
+        }
+
+        .empty-clear-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .empty-clear-btn[hidden] {
+            display: none;
+        }
+
+        /* ── Empty day's submit prompt ── */
+        /* Separated by a rule so it reads as a footnote to the answer above it
+           rather than as the answer itself. */
+        .empty-cta {
+            border-top: 1px solid var(--border-light);
+            padding: 1.5rem 0 2rem;
+            text-align: center;
+        }
+
+        .empty-cta p {
+            color: var(--ink-mid);
+            font-size: 0.875rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .empty-cta[hidden] {
+            display: none;
         }
 
         .empty-state h3 {
@@ -1056,7 +1098,8 @@ const {
             .modal, .modal-content { transition: none !important; }
             .date-nav-btn, .filter-btn, .submit-area-btn,
             .btn-primary, .btn-secondary, .share-btn, .desc-toggle-btn,
-            .event-url, .upcoming-item, .modal-close { transition: none !important; }
+            .event-url, .upcoming-item, .modal-close,
+            .empty-clear-btn { transition: none !important; }
         }
     </style>
     <script defer src="https://cloud.umami.is/script.js" data-website-id="8066e0da-4cdf-41c7-9981-f59854563ab5"></script>

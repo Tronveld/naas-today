@@ -33,25 +33,23 @@ const todayEvents = events.filter(e => {
   return e.date === todayStr;
 }).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 ---
-<div class="events-container" aria-live="polite" aria-atomic="false">
+<!-- The status node carries the announcement instead of the container. A live
+     region around the whole list made every filter tap re-read each card in
+     full, descriptions included, rather than "3 events". -->
+<p id="eventsStatus" class="visually-hidden" role="status" aria-live="polite"></p>
+
+<div class="events-container">
     <div class="events-grid" id="eventsGrid" style={todayEvents.length === 0 ? 'display:none' : 'display:grid'}>
         {todayEvents.map(event => <EventCard event={event} />)}
     </div>
 
+    <!-- Message only. The submit prompt now lives after the upcoming list in
+         index.astro, so an empty day answers the visitor's question before it
+         asks them for anything. -->
     <div class="empty-state" id="emptyState" class:list={[{ visible: todayEvents.length === 0 }]}>
-        <div class="empty-icon" aria-hidden="true">
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                <rect x="8" y="6" width="32" height="36" rx="4" stroke="var(--ink-light)" stroke-width="2" fill="none"/>
-                <line x1="8" y1="16" x2="40" y2="16" stroke="var(--ink-light)" stroke-width="2"/>
-                <circle cx="17" cy="11" r="1.5" fill="var(--ink-light)"/>
-                <circle cx="31" cy="11" r="1.5" fill="var(--ink-light)"/>
-                <line x1="15" y1="24" x2="33" y2="24" stroke="var(--border)" stroke-width="2" stroke-linecap="round"/>
-                <line x1="15" y1="30" x2="27" y2="30" stroke="var(--border)" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-        </div>
-        <h3>Quiet day in Naas</h3>
-        <p>Nothing listed yet — know of something happening? Add it to the noticeboard.</p>
-        <button class="submit-area-btn" style="margin-top: 1rem;" id="emptySubmitBtn">Submit an event</button>
+        <h3 id="emptyHeading">Quiet day in Naas</h3>
+        <p id="emptyMessage">Nothing listed for today.</p>
+        <button class="empty-clear-btn" id="clearFiltersBtn" hidden>Show all events</button>
     </div>
 
     <div class="loading-state" id="loadingState">

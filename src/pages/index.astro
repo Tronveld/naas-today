@@ -95,7 +95,7 @@ const jsonLd = todayEvents.length > 0 ? {
       aria-label="Coming up"
       style={upcomingEvents.length === 0 ? 'display:none' : undefined}
     >
-      <h2 class="upcoming-heading">Coming Up</h2>
+      <h2 class="upcoming-heading" id="upcomingHeading">{todayEvents.length === 0 ? 'Next up' : 'Coming Up'}</h2>
       {/* renderUpcoming() replaces these rows on load and adds the click/keyboard
           handling. They ship without role="button"/tabindex on purpose: without JS
           those attributes would announce a control that cannot do anything. */}
@@ -110,6 +110,15 @@ const jsonLd = todayEvents.length > 0 ? {
         ))}
       </ul>
     </section>
+
+    <!-- The empty day's submit prompt, deliberately after the upcoming list.
+         DESIGN.md's page-order rule puts the CTA after the day's events so the
+         visitor's job comes first; on a day with no events that job is answered
+         by the list above, not by the empty grid, so the CTA follows it here. -->
+    <div class="empty-cta" id="emptyCta" hidden={todayEvents.length > 0}>
+      <p>Know of something happening? Add it to the noticeboard.</p>
+      <button class="submit-area-btn" id="emptySubmitBtn">Submit an event</button>
+    </div>
   </main>
   <Footer />
   <DatePickerModal />
@@ -227,22 +236,35 @@ const jsonLd = todayEvents.length > 0 ? {
             filterSportActive   = active.has('sport');
             filterMarketActive  = active.has('markets');
             filterTheatreActive = active.has('theatre');
-            // Sync button aria-pressed and active class
-            const map = [
-                ['filterFree',    filterFreeActive],
-                ['filterKids',    filterKidsActive],
-                ['filterMusic',   filterMusicActive],
-                ['filterSport',   filterSportActive],
-                ['filterMarket',  filterMarketActive],
-                ['filterTheatre', filterTheatreActive],
-            ];
-            map.forEach(([id, isActive]) => {
-                const btn = document.getElementById(id);
-                if (!btn) return;
-                btn.classList.toggle('active', isActive);
-                btn.setAttribute('aria-pressed', String(isActive));
-            });
+            syncFilterButtons();
         }
+    }
+
+    // Pushes the six filter flags back onto their buttons. Shared by readUrlState
+    // and the empty state's "Show all events" escape.
+    function syncFilterButtons() {
+        const map = [
+            ['filterFree',    filterFreeActive],
+            ['filterKids',    filterKidsActive],
+            ['filterMusic',   filterMusicActive],
+            ['filterSport',   filterSportActive],
+            ['filterMarket',  filterMarketActive],
+            ['filterTheatre', filterTheatreActive],
+        ];
+        map.forEach(([id, isActive]) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
+    function clearAllFilters() {
+        filterFreeActive = filterKidsActive = filterMusicActive = false;
+        filterSportActive = filterMarketActive = filterTheatreActive = false;
+        syncFilterButtons();
+        renderEvents();
+        pushUrlState();
     }
 
     // ── Loading State ───────────────────────────────────────────────────
@@ -537,8 +559,10 @@ const jsonLd = todayEvents.length > 0 ? {
             errorState.classList.add('visible');
             // The error state has its own Try again button below it.
             if (submitArea) submitArea.style.display = 'none';
+            setEmptyCtaHidden(true);
             updateJsonLd([]);
             renderUpcoming();
+            announce('Could not load events.');
             return;
         }
         errorState.classList.remove('visible');
@@ -549,6 +573,11 @@ const jsonLd = todayEvents.length > 0 ? {
             }
             return event.date === dateStr;
         });
+
+        // Held before the category filters are applied, so an empty result can tell
+        // "nothing is on today" from "your filters hid everything". Only one of those
+        // is the visitor's to fix, and saying the wrong one reads as a broken site.
+        const dayEvents = filteredEvents;
 
         // Update filter button count badges
         const freeCount = filteredEvents.filter(e => e.isFree).length;
@@ -585,8 +614,9 @@ const jsonLd = todayEvents.length > 0 ? {
         if (filteredEvents.length === 0) {
             grid.style.display = 'none';
             emptyState.classList.add('visible');
-            // The empty state carries its own submit button, so hide this one.
+            // The submit prompt for an empty day lives after the upcoming list.
             if (submitArea) submitArea.style.display = 'none';
+            setEmptyState(dayEvents.length);
             updateJsonLd([]);
             renderUpcoming();
             return;
@@ -595,12 +625,57 @@ const jsonLd = todayEvents.length > 0 ? {
         grid.style.display = 'grid';
         emptyState.classList.remove('visible');
         if (submitArea) submitArea.style.display = '';
+        setEmptyCtaHidden(true);
         filteredEvents.sort((a, b) => a.time.localeCompare(b.time));
         grid.innerHTML = '';
         filteredEvents.forEach(event => grid.appendChild(createEventCard(event)));
         initDescriptionToggles(grid);
         updateJsonLd(filteredEvents);
         renderUpcoming();
+        announce(`${filteredEvents.length} ${filteredEvents.length === 1 ? 'event' : 'events'}.`);
+    }
+
+    // Announces the outcome as a short count. The live region used to wrap the whole
+    // list, so every filter tap re-read each card in full, descriptions included.
+    function announce(text) {
+        const status = document.getElementById('eventsStatus');
+        if (status) status.textContent = text;
+    }
+
+    function setEmptyCtaHidden(hidden) {
+        const cta = document.getElementById('emptyCta');
+        if (cta) cta.hidden = hidden;
+    }
+
+    // An empty day has two causes and they need different words. Telling someone
+    // "nothing listed" when four events are sitting behind a filter they set is
+    // false, and the filter row is not sticky, so they cannot see what caused it.
+    function setEmptyState(dayCount) {
+        const heading  = document.getElementById('emptyHeading');
+        const message  = document.getElementById('emptyMessage');
+        const clearBtn = document.getElementById('clearFiltersBtn');
+        const filtersHidThem = dayCount > 0;
+        // "today" is only true on the day itself; the visitor can be three taps into
+        // next week. The date sits right above this message, so a wrong word here is
+        // the kind of small lie that makes the rest look unreliable.
+        const dayWord = localDateStr(currentDate) === localDateStr(new Date()) ? 'today' : 'this day';
+
+        if (filtersHidThem) {
+            heading.textContent = 'No matching events';
+            message.textContent = dayCount === 1
+                ? `There is 1 other event on ${dayWord}.`
+                : `There are ${dayCount} other events on ${dayWord}.`;
+            clearBtn.hidden = false;
+            // Not the moment to ask for a submission — the day is not empty.
+            setEmptyCtaHidden(true);
+            announce(`No matching events. ${dayCount} ${dayCount === 1 ? 'event' : 'events'} hidden by filters.`);
+        } else {
+            heading.textContent = 'Quiet day in Naas';
+            message.textContent = `Nothing listed for ${dayWord}.`;
+            clearBtn.hidden = true;
+            setEmptyCtaHidden(false);
+            announce('No events on this day.');
+        }
     }
 
     function renderUpcoming() {
@@ -615,6 +690,12 @@ const jsonLd = todayEvents.length > 0 ? {
 
         if (upcoming.length === 0) { section.style.display = 'none'; return; }
         section.style.display = '';
+
+        // On an empty day this list is the answer, not a sidebar, so it says so.
+        const heading = document.getElementById('upcomingHeading');
+        const dayIsEmpty = document.getElementById('emptyState').classList.contains('visible');
+        if (heading) heading.textContent = dayIsEmpty ? 'Next up' : 'Coming Up';
+
         list.innerHTML = '';
 
         upcoming.forEach(event => {
@@ -871,6 +952,7 @@ const jsonLd = todayEvents.length > 0 ? {
     document.getElementById('submitEventFooterBtn').addEventListener('click', openSubmitModal);
     document.getElementById('emptySubmitBtn')?.addEventListener('click', openSubmitModal);
     document.getElementById('retryBtn')?.addEventListener('click', () => fetchEvents());
+    document.getElementById('clearFiltersBtn')?.addEventListener('click', clearAllFilters);
 
     document.getElementById('closeSubmitModal').addEventListener('click', () => closeModal('submitModal'));
     document.getElementById('cancelSubmit').addEventListener('click', () => {
