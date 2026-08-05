@@ -10,8 +10,11 @@ useful for understanding *why* and useless for working through. Every item below
 exactly once.
 
 **Line numbers are as of `d1489de` and will drift as you edit.** Each item carries enough
-surrounding context to relocate it. Phase 1 has since shipped (`17a5423`, `fc3d8ed`), so the
-line numbers in the EventsGrid and empty-state items are already historical.
+surrounding context to relocate it. Phase 1 and item 10 have since shipped (`17a5423`,
+`fc3d8ed`, `34101d9`), so the line numbers in the EventsGrid, empty-state and modal-dismiss
+items are already historical.
+
+**Progress: 10 of 75 done.**
 
 ---
 
@@ -24,7 +27,7 @@ work them in — each phase is a coherent chunk you can ship on its own.
 |---|---|---|---|---|
 | ~~1. Empty day~~ **done** | 1–7, 9 | 8 of 9 | shipped in `17a5423`, `fc3d8ed` | Item 8 deliberately left — decide it with the rebuilt screen in front of you. |
 | 2. Mobile chrome | 39–41 | 3 | `/impeccable layout` | Structural. Do it right after phase 1 — item 31 changes the filter row's height, so settle the budget once. |
-| 3. Form data loss | 10–12, 42 | 4 | `/impeccable harden` | Independent of everything else. Every lost submission is invisible to you. |
+| 3. Form data loss **started** | ~~10~~, 11–12, 42 | 1 of 4 | `/impeccable harden` | Item 10 shipped in `34101d9` and covers dismissal within a page load. A reload or closed tab still loses the draft — that is item 11. |
 | 4. Accessibility | 13–16, 24–38, 43–49, 53–55, 57–58, 60–61 | 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. Item 38 needs a decision, not just an edit. |
 | 5. Trust & consistency | 17–23, 50–52, 56, 59, 62–63 | 14 | `/impeccable polish` | Sweeps what's left; reads the critique snapshot as its own input. |
 | 6. Doc truth | 64–69 | 6 | manual | Fix DESIGN.md's overstated claims *after* the code moves, so it describes what shipped. |
