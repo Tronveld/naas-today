@@ -11,7 +11,7 @@
  * Usage: node scripts/pull-library-events.js
  */
 
-const { loadEnv, HTML_ENT, stripHtml, KIDS_RE, createClient } = require('./lib');
+const { loadEnv, HTML_ENT, stripHtml, KIDS_RE, createClient, exitCode } = require('./lib');
 
 loadEnv();
 
@@ -247,6 +247,16 @@ async function main() {
   } else {
     console.log('\nNo new events to import.');
   }
+
+  // A failed feed fetch already exits above. This catches the quieter case: the
+  // feed read fine but every insert was rejected. That used to exit 0.
+  // process.exitCode rather than process.exit(), so the summary above still
+  // reaches the log instead of being truncated mid-write.
+  const code = exitCode({ eventErrors: errors });
+  if (code !== 0) {
+    console.error(`\nFAILED: ${errors} event error(s) — see the details above.`);
+  }
+  process.exitCode = code;
 }
 
 main().catch(err => {

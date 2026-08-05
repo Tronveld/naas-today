@@ -170,13 +170,14 @@ All scripts `require('./lib')`. Exports:
 | `KIDS_RE` | Regex that matches common "for kids" signals in event text |
 | `normaliseTitle(t)` | Lowercases and collapses punctuation spacing for fuzzy title comparison |
 | `createClient(url, key)` | Returns `{ get, post, isDuplicate, cacheInserted }` bound to the given Supabase URL/key. `isDuplicate` caches per-date DB queries for the lifetime of the instance; call `cacheInserted(title, date)` after each successful insert to keep the cache consistent within a run. |
+| `exitCode({ sourceErrors, eventErrors })` | Returns `1` if either count is above zero, else `0`. Both fetchers set `process.exitCode` from it so a dead source fails the run instead of passing quietly. Finding nothing is deliberately **not** an error — an all-duplicates run is what a healthy second pull of the day looks like. |
 
 #### Script files
 
 | File | Purpose |
 |---|---|
 | `pull-library-events.js` | Fetches upcoming events from the Naas Library RSS feed and imports them into Supabase as `pending`. Skips duplicates via fuzzy title matching. Flags: `--auto-approve`, `--dry-run`. |
-| `scrape-sources.js` | Fetches and extracts events from the URLs listed in `event-sources.md` (Eventbrite, AllEvents.in, WhatsonTonight.ie, IntoKildare.ie, Moat Theatre). Uses JSON-LD extraction for individual event pages and a shared `parseListingPage` helper for listing pages (configured per-site via options). Skips past events and duplicates. Flags: `--auto-approve`, `--dry-run`. |
+| `scrape-sources.js` | Fetches and extracts events from the URLs listed in `event-sources.md` (currently Moat Theatre and WhatsonTonight.ie). Uses JSON-LD extraction for individual event pages and a shared `parseListingPage` helper for listing pages (configured per-site via options). Skips past events and duplicates. Exits non-zero if any source fails. Flags: `--auto-approve`, `--dry-run`. **Eventbrite was removed on 2026-08-05 — it blocks scrapers (`HTTP 405`) and its terms prohibit automated collection. Do not add it back;** see the "Removed sources" section of `event-sources.md`. |
 | `weekly-post.js` | Generates a social media post for the upcoming week's approved events and copies it to the clipboard. Flags: `--list` (output raw JSON), `--select=id1,id2` (pin specific events). |
 | `import-events.js` | Bulk-imports events from a CSV file into Supabase as `pending`. Usage: `node scripts/import-events.js <file.csv> [--dry-run]`. CSV must have a header row; required columns: `title`, `date` (`YYYY-MM-DD`), `location`. |
 | `audit-event-dates.js` | **Read-only.** Checks every row already in `events` against the *current* validators, importing them from the live function rather than reimplementing them. Answers what tests cannot: whether rows inserted while a validator was wrong are still bad. Never writes to Supabase. |
@@ -198,6 +199,7 @@ Until those are set the workflow fails on its first step with a clear message ra
 Notes:
 - Both fetch steps retry three times with a backoff. The library RSS feed has been observed returning `503` transiently, and a blip should not read as a breakage.
 - A step failure still turns the whole job red — silence is what caused the original problem, so a persistent break must be visible.
+- Both scripts exit non-zero when *any* source errors, not only when the script itself crashes. A single rotting source therefore triggers the retry and, if it stays broken, turns the job red. Before this, `Errors: 1` in the summary still exited 0 and the run went green — the original silent failure one level down.
 - Run it by hand from the Actions tab; the `dry_run` input previews without writing.
 - Events land as `pending` by design (nothing publishes itself). To change that, add `--auto-approve` to the script steps — and then enable the `Trigger Netlify rebuild` step, since approved events only reach the pre-rendered HTML on the next build.
 
