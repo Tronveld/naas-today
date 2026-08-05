@@ -1094,22 +1094,22 @@ const jsonLd = todayEvents.length > 0 ? {
     document.getElementById('closeContactModal').addEventListener('click', () => closeModal('contactModal'));
 
     // Close modals on background click or Escape key
+    //
+    // Dismissing deliberately does NOT reset the form. A mistap outside the sheet
+    // or a stray Escape used to wipe a submission with no confirm and no undo, on
+    // a form that requires a description of up to 2000 characters. The modal only
+    // hides, so leaving the fields alone is what lets a half-written event survive
+    // an interruption. Cancel and a successful submit still reset it.
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeModal(modal.id);
-                if (modal.id === 'submitModal') document.getElementById('eventForm').reset();
-            }
+            if (e.target === modal) closeModal(modal.id);
         });
     });
 
     document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
         const activeModal = document.querySelector('.modal.active');
-        if (activeModal) {
-            closeModal(activeModal.id);
-            if (activeModal.id === 'submitModal') document.getElementById('eventForm').reset();
-        }
+        if (activeModal) closeModal(activeModal.id);
     });
 
     // ── Deep Link ────────────────────────────────────────────────────────

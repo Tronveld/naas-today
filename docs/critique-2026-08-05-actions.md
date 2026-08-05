@@ -101,7 +101,7 @@ this is the primary screen, not the fallback.
 
 ## `src/pages/index.astro` — client behaviour
 
-- [ ] **10. [P1] Stop destroying the form on dismiss. [×2]** `:977` and `:987` call
+- [x] **10. [P1] Stop destroying the form on dismiss. [×2]** `:977` and `:987` call
   `document.getElementById('eventForm').reset()` on scrim-click and Escape, with no confirm and
   no undo, on a form with a required description up to 2000 characters.
   **Done when:** typing into the form, pressing Escape, and reopening restores the text.

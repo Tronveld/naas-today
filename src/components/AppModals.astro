@@ -230,21 +230,21 @@ import SubmitEventModal from './modals/SubmitEventModal.astro';
     });
 
     // ESC key + backdrop click
+    //
+    // Dismissing deliberately does NOT reset the form. A mistap outside the sheet
+    // or a stray Escape used to wipe a submission with no confirm and no undo, on
+    // a form that requires a description of up to 2000 characters. The modal only
+    // hides, so leaving the fields alone is what lets a half-written event survive
+    // an interruption. Cancel and a successful submit still reset it.
     document.querySelectorAll<HTMLElement>('.modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeModal(modal.id);
-                if (modal.id === 'submitModal') (document.getElementById('eventForm') as HTMLFormElement).reset();
-            }
+            if (e.target === modal) closeModal(modal.id);
         });
     });
 
     document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
         const activeModal = document.querySelector<HTMLElement>('.modal.active');
-        if (activeModal) {
-            closeModal(activeModal.id);
-            if (activeModal.id === 'submitModal') (document.getElementById('eventForm') as HTMLFormElement).reset();
-        }
+        if (activeModal) closeModal(activeModal.id);
     });
 </script>
