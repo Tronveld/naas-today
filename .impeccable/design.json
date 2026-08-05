@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-04T21:54:38Z",
+  "generatedAt": "2026-08-05T19:34:55Z",
   "title": "Design System: Naas Today",
   "extensions": {
     "colorMeta": {
@@ -169,6 +169,51 @@
           "#F2EEE6"
         ]
       },
+      "scrim": {
+        "role": "neutral",
+        "displayName": "Scrim Green",
+        "canonical": "rgba(26,58,26,0.45)"
+      },
+      "overlay-shadow": {
+        "role": "neutral",
+        "displayName": "Overlay Shadow",
+        "canonical": "rgba(0,0,0,0.12)"
+      },
+      "overlay-shadow-soft": {
+        "role": "neutral",
+        "displayName": "Overlay Shadow Soft",
+        "canonical": "rgba(0,0,0,0.08)"
+      },
+      "cat-free": {
+        "role": "tertiary",
+        "displayName": "Hedgerow Green (Free)",
+        "canonical": "oklch(42.3% 0.088 143.8)",
+        "tonalRamp": [
+          "#001300",
+          "#002F03",
+          "#214E21",
+          "#416E40",
+          "#619060",
+          "#83B482",
+          "#A7D9A5",
+          "#CCFFC9"
+        ]
+      },
+      "cat-free-bg": {
+        "role": "tertiary",
+        "displayName": "Meadow Tint",
+        "canonical": "oklch(94.6% 0.018 134.9)",
+        "tonalRamp": [
+          "#080D06",
+          "#21271E",
+          "#3E443B",
+          "#5D6459",
+          "#7E857A",
+          "#A0A89D",
+          "#C4CCC0",
+          "#E9F1E5"
+        ]
+      },
       "cat-kids": {
         "role": "tertiary",
         "displayName": "Canal Slate",
@@ -182,6 +227,21 @@
           "#6EAFCD",
           "#92D4F2",
           "#B7FAFF"
+        ]
+      },
+      "cat-kids-bg": {
+        "role": "tertiary",
+        "displayName": "Canal Slate Tint",
+        "canonical": "oklch(94.5% 0.018 218.4)",
+        "tonalRamp": [
+          "#030D10",
+          "#1B272B",
+          "#374549",
+          "#566468",
+          "#77858A",
+          "#99A8AD",
+          "#BDCCD1",
+          "#E2F2F7"
         ]
       },
       "cat-music": {
@@ -199,6 +259,21 @@
           "#FFE6C3"
         ]
       },
+      "cat-music-bg": {
+        "role": "tertiary",
+        "displayName": "Fiddle Wood Tint",
+        "canonical": "oklch(93.5% 0.016 73.7)",
+        "tonalRamp": [
+          "#0F0A05",
+          "#2A241D",
+          "#474139",
+          "#676057",
+          "#888178",
+          "#ABA49A",
+          "#D0C8BE",
+          "#F5EDE3"
+        ]
+      },
       "cat-sport": {
         "role": "tertiary",
         "displayName": "Pitch Green",
@@ -212,6 +287,21 @@
           "#80B390",
           "#A4D8B3",
           "#C8FED8"
+        ]
+      },
+      "cat-sport-bg": {
+        "role": "tertiary",
+        "displayName": "Pitch Green Tint",
+        "canonical": "oklch(93.8% 0.025 164.4)",
+        "tonalRamp": [
+          "#020E08",
+          "#192922",
+          "#36463F",
+          "#55665D",
+          "#75877E",
+          "#97AAA1",
+          "#BBCFC5",
+          "#E0F4EA"
         ]
       },
       "cat-markets": {
@@ -229,6 +319,21 @@
           "#FFE4B2"
         ]
       },
+      "cat-markets-bg": {
+        "role": "tertiary",
+        "displayName": "Sacking Ochre Tint",
+        "canonical": "oklch(94.2% 0.023 75.9)",
+        "tonalRamp": [
+          "#110A02",
+          "#2C2418",
+          "#494034",
+          "#696053",
+          "#8B8173",
+          "#AEA395",
+          "#D2C7B9",
+          "#F8EDDE"
+        ]
+      },
       "cat-theatre": {
         "role": "tertiary",
         "displayName": "Curtain Brick",
@@ -244,19 +349,19 @@
           "#FFD2CC"
         ]
       },
-      "cat-free": {
+      "cat-theatre-bg": {
         "role": "tertiary",
-        "displayName": "Hedgerow Green (Free)",
-        "canonical": "oklch(42.3% 0.088 143.8)",
+        "displayName": "Curtain Brick Tint",
+        "canonical": "oklch(91.9% 0.018 26.1)",
         "tonalRamp": [
-          "#001300",
-          "#002F03",
-          "#214E21",
-          "#416E40",
-          "#619060",
-          "#83B482",
-          "#A7D9A5",
-          "#CCFFC9"
+          "#120807",
+          "#2D2220",
+          "#4B3F3D",
+          "#6B5E5C",
+          "#8D7E7D",
+          "#B0A19F",
+          "#D5C5C3",
+          "#FAEAE8"
         ]
       }
     },
@@ -385,8 +490,8 @@
       "kind": "card",
       "refersTo": "event-card",
       "description": "A pinned notice. Hairline border defines it; the resting shadow is near-invisible. Lifts 2px on hover.",
-      "html": "<article class=\"ds-event-card\"><div class=\"ds-ev-top\"><h3 class=\"ds-event-title\">Trad Session</h3><span class=\"ds-time-pill\">8:00 PM</span></div><a class=\"ds-event-location\" href=\"#\"><span aria-hidden=\"true\">\ud83d\udccd</span> Lawlor's Hotel</a><p class=\"ds-event-desc\">Weekly session in the back bar. All welcome, bring an instrument.</p><div class=\"ds-card-footer\"><div class=\"ds-tags\"><span class=\"ds-tag ds-tag-free\">Free</span><span class=\"ds-tag ds-tag-music\">Music</span></div><button class=\"ds-share-btn\">Share <span aria-hidden=\"true\">\u2197</span></button></div></article>",
-      "css": ".ds-event-card{background:var(--bg-card,#fff);border:1px solid var(--border,#e0e0d8);border-radius:12px;box-shadow:0 1px 3px rgba(26,42,26,0.05);padding:16px 20px;transition:box-shadow .15s ease,transform .15s ease;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}.ds-event-card:hover{box-shadow:0 4px 16px rgba(26,42,26,0.08);transform:translateY(-2px)}.ds-ev-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:4px}.ds-event-title{font-size:1.125rem;font-weight:600;color:var(--ink,#1a3a1a);line-height:1.35;margin:0}.ds-event-location{display:flex;align-items:center;gap:.25rem;color:var(--ink-mid,#4d5b4d);font-size:.75rem;font-weight:500;margin-bottom:.5rem;text-decoration:none}.ds-event-location:hover{color:var(--accent,#2d5a2d);text-decoration:underline}.ds-event-desc{color:var(--ink-light,#5c5848);font-size:.875rem;line-height:1.55;margin:0 0 .75rem}.ds-card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;min-height:28px}.ds-tags{display:flex;gap:.375rem;flex-wrap:wrap}"
+      "html": "<article class=\"ds-event-card\"><div class=\"ds-ev-top\"><h3 class=\"ds-event-title\">Trad Session</h3><span class=\"ds-time-pill\">8:00 PM</span></div><a class=\"ds-event-location\" href=\"#\"><span aria-hidden=\"true\">📍</span> Lawlor's Hotel</a><p class=\"ds-event-desc\">Weekly session in the back bar. All welcome, bring an instrument.</p><div class=\"ds-card-footer\"><div class=\"ds-tags\"><span class=\"ds-tag ds-tag-free\">Free</span><span class=\"ds-tag ds-tag-music\">Music</span></div><button class=\"ds-share-btn\">Share <span aria-hidden=\"true\">↗</span></button></div></article>",
+      "css": ".ds-event-card{background:var(--bg-card,#fff);border:1px solid var(--border,#e0e0d8);border-radius:12px;box-shadow:0 1px 3px rgba(26,42,26,0.05);padding:16px 20px;transition:box-shadow .15s ease,transform .15s ease;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}.ds-event-card:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:3px}.ds-event-card:hover{box-shadow:0 4px 16px rgba(26,42,26,0.08);transform:translateY(-2px)}.ds-ev-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:4px}.ds-event-title{font-size:1.125rem;font-weight:600;color:var(--ink,#1a3a1a);line-height:1.35;margin:0}.ds-event-location{display:flex;align-items:center;gap:.25rem;color:var(--ink-mid,#4d5b4d);font-size:.75rem;font-weight:500;margin-bottom:.5rem;text-decoration:none}.ds-event-location:hover{color:var(--accent,#2d5a2d);text-decoration:underline}.ds-event-desc{color:var(--ink-light,#5c5848);font-size:.875rem;line-height:1.55;margin:0 0 .75rem}.ds-card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;min-height:28px}.ds-tags{display:flex;gap:.375rem;flex-wrap:wrap}"
     },
     {
       "name": "Time Pill",
@@ -433,7 +538,7 @@
       "kind": "nav",
       "refersTo": "date-nav-button",
       "description": "44px minimum target. The Today variant is the only tinted control on the row.",
-      "html": "<nav class=\"ds-date-nav\"><button class=\"ds-date-btn\">\u2190 Previous</button><button class=\"ds-date-btn ds-date-btn-today\">Today</button><button class=\"ds-date-btn\">Pick a date</button><button class=\"ds-date-btn\">Next \u2192</button></nav>",
+      "html": "<nav class=\"ds-date-nav\"><button class=\"ds-date-btn\">← Previous</button><button class=\"ds-date-btn ds-date-btn-today\">Today</button><button class=\"ds-date-btn\">Pick a date</button><button class=\"ds-date-btn\">Next →</button></nav>",
       "css": ".ds-date-nav{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.ds-date-btn{background:transparent;border:1.5px solid var(--border,#e0e0d8);color:var(--ink-mid,#4d5b4d);cursor:pointer;transition:all .15s;min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;padding:.375rem .875rem;border-radius:6px;font-family:inherit;font-size:.8125rem;font-weight:500}.ds-date-btn:hover{border-color:var(--accent,#2d5a2d);color:var(--accent,#2d5a2d)}.ds-date-btn:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}.ds-date-btn-today{background:var(--accent-light,#E8F0E4);border-color:var(--accent,#2d5a2d);color:var(--accent,#2d5a2d);font-weight:600}"
     },
     {
@@ -449,8 +554,16 @@
       "kind": "button",
       "refersTo": "share-btn",
       "description": "Compact card-footer action. 1.5px border marks it as pressable in a system with almost no fills.",
-      "html": "<button class=\"ds-share-btn\">Share <span aria-hidden=\"true\">\u2197</span></button>",
+      "html": "<button class=\"ds-share-btn\">Share <span aria-hidden=\"true\">↗</span></button>",
       "css": ".ds-share-btn{background:none;border:1.5px solid var(--border,#e0e0d8);color:var(--ink-mid,#4d5b4d);font-family:inherit;font-size:.75rem;font-weight:500;cursor:pointer;padding:.25rem .625rem;min-height:32px;border-radius:6px;transition:all .15s;white-space:nowrap}.ds-share-btn:hover{border-color:var(--accent,#2d5a2d);color:var(--accent,#2d5a2d)}.ds-share-btn:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}"
+    },
+    {
+      "name": "Modal",
+      "kind": "custom",
+      "refersTo": "modal",
+      "description": "The only surface with real two-layer depth. Linen header with a Georgia title, 16px radius, 540px cap; becomes a bottom sheet below 480px. The scrim is page green, never black.",
+      "html": "<div class=\"ds-modal ds-modal-active\"><div class=\"ds-modal-content\"><div class=\"ds-modal-header\"><h2>Submit an event</h2><button class=\"ds-modal-close\" aria-label=\"Close\">✕</button></div><div class=\"ds-modal-body\"><p>Tell us what's on and we'll check it before it goes up.</p></div></div></div>",
+      "css": ".ds-modal{position:relative;min-height:260px;background:rgba(26,58,26,0.45);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s ease}.ds-modal-active{opacity:1;visibility:visible}.ds-modal-content{background:var(--bg-card,#fff);border:1px solid var(--border,#e0e0d8);border-radius:16px;max-width:540px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.12),0 8px 24px rgba(0,0,0,0.08);transform:scale(.95);transition:transform .2s ease;overflow:hidden}.ds-modal-active .ds-modal-content{transform:scale(1)}.ds-modal-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border-light,#f0ece4);background:var(--bg-muted,#F5F0E8);display:flex;justify-content:space-between;align-items:center}.ds-modal-header h2{font-family:Georgia,serif;font-size:1.375rem;font-weight:700;color:var(--ink,#1a3a1a);margin:0}.ds-modal-close{background:none;border:1px solid transparent;font-size:1.25rem;color:var(--ink-mid,#4d5b4d);cursor:pointer;padding:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:all .2s}.ds-modal-close:hover{color:var(--accent,#2d5a2d)}.ds-modal-close:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}.ds-modal-body{padding:1.5rem;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}.ds-modal-body p{color:var(--ink-mid,#4d5b4d);font-size:.875rem;line-height:1.55;margin:0}"
     }
   ],
   "narrative": {
