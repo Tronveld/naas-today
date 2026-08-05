@@ -14,7 +14,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { loadEnv, stripHtml, KIDS_RE, createClient, exitCode, sourceForUrl } = require('./lib');
+const { loadEnv, stripHtml, KIDS_RE, createClient, exitCode, sourceForUrl, reportInserted } = require('./lib');
 
 loadEnv();
 
@@ -454,6 +454,11 @@ async function main() {
   } else {
     console.log('\nNo new events to import.');
   }
+
+  // Tells the workflow whether a rebuild is worth 15 credits. Zero on a dry run
+  // because nothing was written — reporting the hypothetical count here would
+  // make the output mean something other than what it says.
+  reportInserted(dryRun ? 0 : totalInserted);
 
   // process.exitCode rather than process.exit(): the summary above still has to
   // reach the log. process.exit() would truncate it mid-write.

@@ -188,6 +188,8 @@ All scripts `require('./lib')`. Exports:
 | `createClient(url, key)` | Returns `{ get, post, isDuplicate, cacheInserted }` bound to the given Supabase URL/key. `isDuplicate` caches per-date DB queries for the lifetime of the instance; call `cacheInserted(title, date)` after each successful insert to keep the cache consistent within a run. |
 | `exitCode({ sourceErrors, eventErrors })` | Returns `1` if either count is above zero, else `0`. Both fetchers set `process.exitCode` from it so a dead source fails the run instead of passing quietly. Finding nothing is deliberately **not** an error — an all-duplicates run is what a healthy second pull of the day looks like. |
 | `sourceForUrl(url)` | Bare hostname for the `source` column (`www.` stripped, lowercased), or `null` if the URL will not parse. Never throws — the tag is diagnostic and must not cost the event. |
+| `setOutput(key, value)` | Appends `key=value` to `$GITHUB_OUTPUT`. No-op (returns `false`) when unset, i.e. everywhere but CI. |
+| `reportInserted(count)` | `setOutput('inserted', count)`. Both fetchers call it so the workflow can decide whether a rebuild is worth 15 Netlify credits. Reports `0` on a dry run — nothing was written, so anything else would misstate it. |
 
 #### Script files
 
@@ -197,6 +199,7 @@ All scripts `require('./lib')`. Exports:
 | `scrape-sources.js` | Fetches and extracts events from the URLs listed in `event-sources.md` (currently Moat Theatre and WhatsonTonight.ie). Uses JSON-LD extraction for individual event pages and a shared `parseListingPage` helper for listing pages (configured per-site via options). Skips past events and duplicates. Exits non-zero if any source fails. Flags: `--auto-approve`, `--dry-run`. **Eventbrite was removed on 2026-08-05 — it blocks scrapers (`HTTP 405`) and its terms prohibit automated collection. Do not add it back;** see the "Removed sources" section of `event-sources.md`. |
 | `weekly-post.js` | Generates a social media post for the upcoming week's approved events and copies it to the clipboard. Flags: `--list` (output raw JSON), `--select=id1,id2` (pin specific events). |
 | `import-events.js` | Bulk-imports events from a CSV file into Supabase as `pending`. Usage: `node scripts/import-events.js <file.csv> [--dry-run]`. CSV must have a header row; required columns: `title`, `date` (`YYYY-MM-DD`), `location`. |
+| `check-deploy-budget.js` | **Read-only.** Counts production deploys in the trailing 30 days via the Netlify API and emits `allowed=true\|false` for the workflow's rebuild step. Env: `NETLIFY_AUTH_TOKEN` (optional), `NETLIFY_SITE_ID`, `REBUILD_CAP` (default 15). Fails **open** — no token, or an API error, warns and allows, because the "only rebuild when events arrived" gate is the primary control and a silently disabled rebuild is harder to notice than a warning. |
 | `notify-pending.js` | Emails a reminder while any event is `status = 'pending'` (i.e. a human submission awaiting review). Sends nothing when the queue is empty. Exits non-zero if events are waiting but the mailer is unconfigured or the send fails — an undeliverable reminder must be loud. Flag: `--dry-run` (print the email instead of sending). Env: `RESEND_API_KEY`, `NOTIFY_EMAIL_TO`, optional `NOTIFY_EMAIL_FROM`. |
 | `audit-event-dates.js` | **Read-only.** Checks every row already in `events` against the *current* validators, importing them from the live function rather than reimplementing them. Answers what tests cannot: whether rows inserted while a validator was wrong are still bad. Never writes to Supabase. **The backstop for auto-approved scraper output** — nobody reads those rows before they publish, so run this after any scraper change. |
 | `fix-library-entities.js` | One-time migration: decodes HTML entities in existing Naas Library event records stored in Supabase. |
@@ -214,6 +217,7 @@ All scripts `require('./lib')`. Exports:
 | `RESEND_API_KEY` | Resend API key for the review reminder | Only when something is pending; the step then fails without it |
 | `NOTIFY_EMAIL_TO` | Where the reminder goes | Same |
 | `NETLIFY_BUILD_HOOK` | Build hook URL | No — the step warns and skips |
+| `NETLIFY_AUTH_TOKEN` | Netlify personal access token, for reading the deploy count | No — the cap is skipped with a warning |
 
 Notes:
 - **The fetchers pass `--auto-approve`.** Their feeds are vetted and every row is date-validated, Naas-filtered and duplicate-checked before insert. This is a deliberate trust decision: a scraper bug now publishes to the live site with nobody in the loop. `scripts/audit-event-dates.js` is the read-only backstop — run it after any scraper change.
@@ -223,6 +227,21 @@ Notes:
 - A step failure still turns the whole job red — silence is what caused the original problem, so a persistent break must be visible.
 - Both scripts exit non-zero when *any* source errors, not only when the script itself crashes. A single rotting source therefore triggers the retry and, if it stays broken, turns the job red. Before this, `Errors: 1` in the summary still exited 0 and the run went green — the original silent failure one level down.
 - Run it by hand from the Actions tab; the `dry_run` input previews without writing, skips the rebuild, and prints the email instead of sending it.
+
+### Netlify credits — why the rebuild is conditional
+
+**The free plan is 300 credits a month and a production deploy costs 15 of them, flat, regardless of build duration.** That is a hard ceiling of **20 production deploys a month**, out of a pool also drawn on by bandwidth (20/GB) and web requests (2 per 10k). Exhaust it and Netlify **pauses every project on the team** — visitors get "Site not available" until the next billing cycle. This is not a degraded-builds failure; the site goes dark.
+
+A daily unconditional rebuild is 30 deploys — 450 credits — over budget before a single hand-pushed commit. So the rebuild step is gated twice:
+
+1. **Only when events actually arrived.** Both fetchers report their insert count via `reportInserted`, and the step requires one of them to be above zero. Historically only 2–7 days a month bring new events, so this is the control that does the real work.
+2. **A cap on total production deploys.** `check-deploy-budget.js` counts the trailing 30 days — including pushes to `main`, which cost the same 15 credits — and blocks past `REBUILD_CAP` (default 15, leaving headroom inside the 20).
+
+A trailing 30-day window is used rather than the billing month because the team's cycle starts on the 14th, not the 1st, and guessing that boundary optimistically is what pauses the site.
+
+**Known edge case, accepted.** The fetch steps retry up to three times. If attempt 1 inserts rows and then dies, attempt 2 sees them as duplicates and reports `inserted=0`, so no rebuild fires. Those events are still live for visitors — `fetchEvents()` reads `get-events` on every page load — and reach the static HTML on the next rebuild. It fails toward *fewer* deploys, which is the safe direction. The same applies to a submission approved by hand in the admin panel.
+
+Nothing here affects what visitors see. The rebuild only refreshes the pre-rendered HTML that first paint and SEO read.
 
 ## Deployment
 

@@ -81,12 +81,27 @@ jobs:
           echo "::error::pull-library-events.js failed after 3 attempts"
           exit 1
 
-      # Events now arrive approved, so they are live for visitors the moment
-      # they land — get-events is fetched client-side on every page load. The
-      # pre-rendered HTML is what lags, and that is what first paint and SEO
-      # read, so kick a build.
+      # Netlify's free plan is 300 credits a month and a production deploy costs
+      # 15 of them flat — 20 deploys a month, shared with bandwidth and web
+      # requests. Overspend and every project on the team is paused: visitors
+      # get "Site not available" until the next billing cycle.
+      - name: Check deploy budget
+        id: budget
+        if: ${{ !cancelled() && !inputs.dry_run }}
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: node scripts/check-deploy-budget.js
+
+      # Only rebuild when something actually arrived. Events are live for
+      # visitors the moment they land (get-events is fetched client-side on
+      # every page load); the rebuild exists solely to refresh the pre-rendered
+      # HTML that first paint and SEO read. Rebuilding byte-identical content
+      # costs the same 15 credits as rebuilding real changes, and most days
+      # bring nothing new — 2 to 7 days a month, historically.
       - name: Trigger Netlify rebuild
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !cancelled() && !inputs.dry_run
+                && (steps.scrape.outputs.inserted > 0 || steps.library.outputs.inserted > 0)
+                && steps.budget.outputs.allowed == 'true' }}
         env:
           HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
         run: |
@@ -94,7 +109,15 @@ jobs:
             echo "::warning::NETLIFY_BUILD_HOOK is not set — skipping the rebuild. New events are live for visitors but will be missing from the pre-rendered HTML until the next deploy."
             exit 0
           fi
+          echo "New events arrived (scrape: ${{ steps.scrape.outputs.inserted }}, library: ${{ steps.library.outputs.inserted }}) — rebuilding."
           curl -fsS -X POST -d '{}' "$HOOK"
+
+      # Without this, a skipped rebuild is invisible in the run summary and
+      # "nothing was published today" looks identical to "the step is broken".
+      - name: Explain a skipped rebuild
+        if: ${{ !cancelled() && !inputs.dry_run
+                && steps.scrape.outputs.inserted == 0 && steps.library.outputs.inserted == 0 }}
+        run: echo "No new events today — skipping the rebuild and saving 15 Netlify credits."
 
       # Runs even when a fetcher failed: a broken scrape is no reason to leave
       # a waiting submission unmentioned. Not continue-on-error — a reminder
