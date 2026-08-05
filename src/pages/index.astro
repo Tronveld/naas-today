@@ -36,6 +36,31 @@ const todayEvents = initialEvents.filter(e => {
   return e.date === todayStr;
 });
 
+// "Coming Up" is built client-side by renderUpcoming(), but the static HTML shipped a
+// heading over an empty <ul>. First paint, no-JS visitors and anything slow enough to
+// see the pre-rendered page got a promise with nothing under it — on the section that
+// most often holds the only answer, since most weekdays in Naas have no events at all.
+//
+// This mirrors renderUpcoming() rather than improving on it, because the client replaces
+// the list on load and any difference would show as a flicker. That means: compare on
+// `date` alone (a multi-day run that started before today is deliberately not "upcoming",
+// matching the client), take the first five, and lean on the query's date.asc,time.asc
+// ordering instead of re-sorting.
+const upcomingEvents = initialEvents.filter(e => e.date > todayStr).slice(0, 5);
+
+function upcomingDateLabel(dateStr: string): string {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-IE', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function upcomingTimeLabel(event: any): string {
+  if (event.is_all_day) return 'All day';
+  return event.time ? event.time.substring(0, 5) : '';
+}
+
 // Build JSON-LD for today's events
 const jsonLd = todayEvents.length > 0 ? {
   '@context': 'https://schema.org',
@@ -64,9 +89,26 @@ const jsonLd = todayEvents.length > 0 ? {
     <FilterControls />
     <h2 class="visually-hidden" id="events-list-heading">Today's events</h2>
     <EventsGrid events={initialEvents} todayStr={todayStr} />
-    <section id="upcomingSection" class="upcoming-section" aria-label="Coming up">
+    <section
+      id="upcomingSection"
+      class="upcoming-section"
+      aria-label="Coming up"
+      style={upcomingEvents.length === 0 ? 'display:none' : undefined}
+    >
       <h2 class="upcoming-heading">Coming Up</h2>
-      <ul id="upcomingList" class="upcoming-list"></ul>
+      {/* renderUpcoming() replaces these rows on load and adds the click/keyboard
+          handling. They ship without role="button"/tabindex on purpose: without JS
+          those attributes would announce a control that cannot do anything. */}
+      <ul id="upcomingList" class="upcoming-list">
+        {upcomingEvents.map(event => (
+          <li class="upcoming-item">
+            <span class="upcoming-date">{upcomingDateLabel(event.date)}</span>
+            <span class="upcoming-time">{upcomingTimeLabel(event)}</span>
+            <span class="upcoming-title">{event.title}</span>
+            <span class="upcoming-location">{event.location}</span>
+          </li>
+        ))}
+      </ul>
     </section>
   </main>
   <Footer />
