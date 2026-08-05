@@ -51,7 +51,7 @@ const todayEvents = events.filter(e => {
         </div>
         <h3>Quiet day in Naas</h3>
         <p>Nothing listed yet — know of something happening? Add it to the noticeboard.</p>
-        <button class="submit-area-btn" style="margin-top: 1rem;" onclick="document.getElementById('eventDate').value = localDateStr(currentDate); openModal('submitModal');">Submit an event</button>
+        <button class="submit-area-btn" style="margin-top: 1rem;" id="emptySubmitBtn">Submit an event</button>
     </div>
 
     <div class="loading-state" id="loadingState">
@@ -64,10 +64,12 @@ const todayEvents = events.filter(e => {
     <div class="error-state" id="errorState">
         <h3>Couldn't load events</h3>
         <p>Something went sideways on our end. Give it another go.</p>
-        <button class="submit-area-btn" style="margin-top: 1rem;" onclick="fetchEvents()">Try again</button>
+        <button class="submit-area-btn" style="margin-top: 1rem;" id="retryBtn">Try again</button>
     </div>
 
-    <div class="submit-area">
-        <button class="submit-area-btn" id="submitEventBtn">+ Submit an event</button>
+    <!-- Hidden whenever the empty or error state is showing: both carry their
+         own button, and two stacked green CTAs is worse than one. -->
+    <div class="submit-area" id="submitArea" style={todayEvents.length === 0 ? 'display:none' : ''}>
+        <button class="submit-area-btn" id="submitEventBtn">Submit an event</button>
     </div>
 </div>

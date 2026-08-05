@@ -75,7 +75,22 @@ function extractJsonLd(html) {
       candidates.push(data);
     }
 
+    // Listing pages (Eventbrite's Naas search, among others) publish their
+    // events inside a schema.org ItemList rather than at the top level. Unwrap
+    // one level: itemListElement holds either ListItem wrappers with the Event
+    // under .item, or the Events directly.
+    for (const obj of [...candidates]) {
+      if (!obj || obj['@type'] !== 'ItemList') continue;
+      const listed = obj.itemListElement;
+      if (!Array.isArray(listed)) continue;
+      for (const entry of listed) {
+        if (!entry) continue;
+        candidates.push(entry['@type'] === 'ListItem' && entry.item ? entry.item : entry);
+      }
+    }
+
     for (const obj of candidates) {
+      if (!obj) continue;
       const type = obj['@type'];
       if (type === 'Event' || (Array.isArray(type) && type.includes('Event'))) {
         events.push(obj);
@@ -123,6 +138,29 @@ function detectFree(offers, title, description) {
 }
 
 // ── Convert a JSON-LD Event object to a Supabase row ─────────────────────────
+// ── Naas relevance ───────────────────────────────────────────────────────────
+// Broad search listings return county-wide results and location-less online
+// events next to the real ones. This site is Naas-specific, so county-level
+// content is filtered down rather than allowed to broaden it. An event with no
+// location at all is not Naas — that is how Eventbrite represents online events.
+function isNaasEvent(ldEvent) {
+  const parts = [];
+  const collect = (loc) => {
+    if (!loc) return;
+    if (Array.isArray(loc)) { loc.forEach(collect); return; }
+    if (typeof loc === 'string') { parts.push(loc); return; }
+    if (typeof loc !== 'object') return;
+    if (loc.name) parts.push(String(loc.name));
+    const addr = loc.address;
+    if (typeof addr === 'string') parts.push(addr);
+    else if (addr && typeof addr === 'object') {
+      parts.push(String(addr.addressLocality || ''), String(addr.streetAddress || ''));
+    }
+  };
+  collect(ldEvent && ldEvent.location);
+  return /\bnaas\b/i.test(parts.join(' '));
+}
+
 function jsonLdToEvent(ldEvent, sourceUrl) {
   const { date, time }         = parseIsoDateTime(ldEvent.startDate);
   const { date: endDate, time: timeEnd } = parseIsoDateTime(ldEvent.endDate);
@@ -265,13 +303,16 @@ async function extractEvents(url) {
 
   let events  = [];
   let warning = null;
+  let offTown = 0;   // JSON-LD events dropped as not Naas — reported, never silent
 
   if (type === 'individual') {
     const ldEvents = extractJsonLd(html);
     if (ldEvents.length > 0) {
-      events = ldEvents.map(e => jsonLdToEvent(e, url)).filter(e => e.title && e.date);
+      const naasOnly = ldEvents.filter(isNaasEvent);
+      offTown = ldEvents.length - naasOnly.length;
+      events = naasOnly.map(e => jsonLdToEvent(e, url)).filter(e => e.title && e.date);
     }
-    if (events.length === 0) {
+    if (events.length === 0 && offTown === 0) {
       warning = 'No JSON-LD Event found';
     }
   } else if (type === 'whatsontonight') {
@@ -283,7 +324,7 @@ async function extractEvents(url) {
   // Drop past events
   events = events.filter(e => e.date >= TODAY);
 
-  return { events, warning };
+  return { events, warning, offTown };
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -292,7 +333,9 @@ async function main() {
   const dryRun       = process.argv.includes('--dry-run');
   const insertStatus = autoApprove ? 'approved' : 'pending';
 
-  if (!dryRun && (!SUPABASE_URL || !SECRET_KEY)) {
+  // Required even for a dry run: the preview checks for duplicates, so that
+  // "would insert" means what it says rather than counting rows already stored.
+  if (!SUPABASE_URL || !SECRET_KEY) {
     console.error('ERROR: SUPABASE_URL and SUPABASE_SECRET_KEY must be set (check .env).');
     process.exit(1);
   }
@@ -303,7 +346,7 @@ async function main() {
   const urls = readSources();
   console.log(`Loaded ${urls.length} source URL(s) from event-sources.md.\n`);
 
-  let totalFound = 0, totalInserted = 0, totalSkipped = 0, totalErrors = 0;
+  let totalFound = 0, totalInserted = 0, totalSkipped = 0, totalErrors = 0, totalOffTown = 0;
   const log = [];
 
   for (const url of urls) {
@@ -323,18 +366,14 @@ async function main() {
     if (result.warning) {
       console.log(`WARN (${result.warning})`);
     } else {
-      console.log(`OK (${result.events.length} event(s))`);
+      const offTownNote = result.offTown ? `, ${result.offTown} not Naas` : '';
+      console.log(`OK (${result.events.length} event(s)${offTownNote})`);
     }
+    totalOffTown += result.offTown || 0;
 
     totalFound += result.events.length;
 
     for (const evt of result.events) {
-      if (dryRun) {
-        log.push({ status: 'DRY  ', date: evt.date, title: evt.title, kids: evt.is_for_kids, loc: evt.location });
-        totalInserted++;
-        continue;
-      }
-
       let dupe = false;
       try { dupe = await sb.isDuplicate(evt.title, evt.date); }
       catch (err) {
@@ -346,6 +385,13 @@ async function main() {
       if (dupe) {
         totalSkipped++;
         log.push({ status: 'SKIP ', date: evt.date, title: evt.title, note: 'already exists' });
+        continue;
+      }
+
+      if (dryRun) {
+        sb.cacheInserted(evt.title, evt.date);   // so repeats within one run dedupe too
+        totalInserted++;
+        log.push({ status: 'DRY  ', date: evt.date, title: evt.title, kids: evt.is_for_kids, loc: evt.location });
         continue;
       }
 
@@ -372,8 +418,9 @@ async function main() {
     console.log(`  Would insert         : ${totalInserted}`);
   } else {
     console.log(`  Inserted (${insertStatus.padEnd(8)}) : ${totalInserted}`);
-    console.log(`  Skipped (dupes)      : ${totalSkipped}`);
   }
+  console.log(`  Skipped (dupes)      : ${totalSkipped}`);
+  console.log(`  Dropped (not Naas)   : ${totalOffTown}`);
   console.log(`  Errors               : ${totalErrors}`);
 
   if (log.length) {
@@ -404,7 +451,14 @@ async function main() {
   }
 }
 
-main().catch(err => {
-  console.error('Unexpected error:', err);
-  process.exit(1);
-});
+// Only run when invoked directly, so tests can require the pure helpers below
+// without kicking off a live scrape.
+if (require.main === module) {
+  main().catch(err => {
+    console.error('Unexpected error:', err);
+    process.exit(1);
+  });
+}
+
+// Exported for tests only — the CLI path above is what actually runs.
+module.exports = { extractJsonLd, isNaasEvent };

@@ -1,0 +1,53 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          "public/admin.html"
+        ],
+        "createdAt": "2026-08-04T23:04:01.271Z",
+        "reason": "Admin is an internal operator tool with its own visual language; user confirmed inconsistency with the public site is intentional"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "*",
+        "files": [
+          "public/admin.html"
+        ],
+        "createdAt": "2026-08-04T23:04:01.327Z",
+        "reason": "Admin is an internal operator tool with its own visual language; user confirmed inconsistency with the public site is intentional"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "*",
+        "files": [
+          "public/admin.html"
+        ],
+        "createdAt": "2026-08-04T23:04:01.382Z",
+        "reason": "Admin is an internal operator tool with its own visual language; user confirmed inconsistency with the public site is intentional"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "*",
+        "files": [
+          "public/admin.html"
+        ],
+        "createdAt": "2026-08-04T23:04:01.438Z",
+        "reason": "Admin is an internal operator tool with its own visual language; user confirmed inconsistency with the public site is intentional"
+      },
+      {
+        "rule": "overused-font",
+        "value": "*",
+        "files": [
+          "public/admin.html"
+        ],
+        "createdAt": "2026-08-04T23:04:01.493Z",
+        "reason": "Admin is an internal operator tool with its own visual language; user confirmed inconsistency with the public site is intentional"
+      }
+    ]
+  }
+}

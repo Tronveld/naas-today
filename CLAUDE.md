@@ -66,10 +66,14 @@ src/
   components/
     Header.astro             — logo, site title
     DateNav.astro            — date display + prev/today/change/next buttons
-    FilterControls.astro     — free/kids filter buttons + submit event button
+    FilterControls.astro     — scrolling row of six category filter buttons
+                               (free, kids, music, sport, markets, theatre)
     EventCard.astro          — single event card (accepts raw Supabase row as prop)
-    EventsGrid.astro         — grid of EventCards + empty/loading/error state divs
-    Footer.astro             — copyright + about/contact/submit links
+    EventsGrid.astro         — grid of EventCards, empty/loading/error states,
+                               and the submit-event area below the list
+    Footer.astro             — copyright + about/contact/terms/submit links
+    AppModals.astro          — About/Contact/Submit modals bundled with their own
+                               copy of the modal JS (see the note below)
     modals/
       DatePickerModal.astro
       SubmitEventModal.astro
@@ -77,10 +81,13 @@ src/
       ContactModal.astro
   pages/
     index.astro              — fetches events at build time, assembles all components, embeds client JS
+    terms.astro              — static terms & disclaimer page (own scoped <style>)
 public/
   admin.html                 — password-protected admin interface (static, no build step)
   robots.txt
 ```
+
+**Note — the modal JS exists in two places.** `index.astro` imports the four modals individually and defines `openModal`/`closeModal`/`trapFocus` in its own client script. `terms.astro` imports `AppModals.astro`, which bundles three modals *plus a second TypeScript copy of the same logic*, because it does not load `index.astro`'s script. **A fix to the modal system in one file does not fix the other** — change both, or the About/Contact modals will behave differently on `/` and `/terms`.
 
 **`src/pages/index.astro`** — Key sections:
 - Frontmatter fetches approved events from Supabase at build time; pre-renders `EventsGrid` with today's events; emits JSON-LD structured data.
@@ -168,11 +175,31 @@ All scripts `require('./lib')`. Exports:
 
 | File | Purpose |
 |---|---|
-| `pull-library-events.js` | Fetches upcoming events from the Naas Library RSS feed and imports them into Supabase as `pending` (use `--auto-approve` to insert as `approved` directly). Skips duplicates via fuzzy title matching. |
+| `pull-library-events.js` | Fetches upcoming events from the Naas Library RSS feed and imports them into Supabase as `pending`. Skips duplicates via fuzzy title matching. Flags: `--auto-approve`, `--dry-run`. |
 | `scrape-sources.js` | Fetches and extracts events from the URLs listed in `event-sources.md` (Eventbrite, AllEvents.in, WhatsonTonight.ie, IntoKildare.ie, Moat Theatre). Uses JSON-LD extraction for individual event pages and a shared `parseListingPage` helper for listing pages (configured per-site via options). Skips past events and duplicates. Flags: `--auto-approve`, `--dry-run`. |
 | `weekly-post.js` | Generates a social media post for the upcoming week's approved events and copies it to the clipboard. Flags: `--list` (output raw JSON), `--select=id1,id2` (pin specific events). |
 | `import-events.js` | Bulk-imports events from a CSV file into Supabase as `pending`. Usage: `node scripts/import-events.js <file.csv> [--dry-run]`. CSV must have a header row; required columns: `title`, `date` (`YYYY-MM-DD`), `location`. |
+| `audit-event-dates.js` | **Read-only.** Checks every row already in `events` against the *current* validators, importing them from the live function rather than reimplementing them. Answers what tests cannot: whether rows inserted while a validator was wrong are still bad. Never writes to Supabase. |
 | `fix-library-entities.js` | One-time migration: decodes HTML entities in existing Naas Library event records stored in Supabase. |
+
+## Scheduled fetching
+
+`.github/workflows/scrape-events.yml` runs `scrape-sources.js` and `pull-library-events.js` daily at 05:10 UTC, inserting as `pending`. It exists because both scripts were manual and the library went five and a half weeks without a pull — the site quietly showed nothing on most weekdays, with no error to notice.
+
+**Requires two repository secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `SUPABASE_URL` | Same as the local `.env` |
+| `SUPABASE_SECRET_KEY` | The service-role key |
+
+Until those are set the workflow fails on its first step with a clear message rather than running half-configured.
+
+Notes:
+- Both fetch steps retry three times with a backoff. The library RSS feed has been observed returning `503` transiently, and a blip should not read as a breakage.
+- A step failure still turns the whole job red — silence is what caused the original problem, so a persistent break must be visible.
+- Run it by hand from the Actions tab; the `dry_run` input previews without writing.
+- Events land as `pending` by design (nothing publishes itself). To change that, add `--auto-approve` to the script steps — and then enable the `Trigger Netlify rebuild` step, since approved events only reach the pre-rendered HTML on the next build.
 
 ## Deployment
 
@@ -180,7 +207,23 @@ Pushing to the connected branch auto-deploys via Netlify. The `netlify.toml` set
 
 Analytics are provided by Umami Cloud (`https://cloud.umami.is`), which is allowed in the CSP.
 
+## Design authority
+
+Three files at the repo root own design and product decisions. **Read them before changing UI; they outrank this section and the specs in `docs/superpowers/specs/`.**
+
+| File | Owns |
+|---|---|
+| `PRODUCT.md` | Durable product truth — users, purpose, positioning, capabilities, constraints, and explicitly undecided facts. |
+| `DESIGN.md` | The visual system — colour, type, layout, elevation, shape, and component tokens, with named rules. Frontmatter tokens are normative. |
+| `.impeccable/design.json` | Sidecar extending DESIGN.md: tonal ramps, shadow/motion tokens, breakpoints, and renderable component snippets. |
+
+The older specs in `docs/superpowers/specs/` are historical. The 2026-03-24 spec in particular describes a time-sidebar card layout and a brighter category palette that were **never shipped** — do not treat it as current.
+
+A design detector runs on edit and flags any font-size, radius, or colour absent from DESIGN.md's frontmatter. When it fires, first check whether DESIGN.md is incomplete rather than assuming the CSS is wrong.
+
 ## Design Context
+
+*Summary only — `PRODUCT.md` and `DESIGN.md` are authoritative where they disagree.*
 
 ### Users
 Local residents of Naas, County Kildare, Ireland — all ages, checking what's happening today or this week. Primary use case: quick daily scan on mobile to find something to do. Secondary: parents filtering for kids/free events. Not tourists, not event organisers — just neighbours.

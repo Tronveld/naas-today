@@ -1,0 +1,94 @@
+name: Fetch events
+
+# The site's freshness used to depend on someone remembering to run two scripts
+# by hand. It went five and a half weeks without a library pull, and the page
+# quietly showed nothing on most weekdays — no error, no warning. This runs them
+# on a schedule so silence is no longer the failure mode.
+
+on:
+  schedule:
+    # 05:10 UTC daily — 06:10 Irish summer time, 05:10 in winter. Before anyone
+    # checks the site in the morning. Deliberately not on the hour: GitHub's
+    # scheduler is busiest then and delays runs.
+    - cron: '10 5 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview only — do not write to the database'
+        type: boolean
+        default: false
+
+# Two runs writing at once would race on the duplicate check.
+concurrency:
+  group: fetch-events
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      SUPABASE_URL:        ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      DRY: ${{ inputs.dry_run && '--dry-run' || '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check credentials are present
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SECRET_KEY" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_SECRET_KEY must be set as repository secrets."
+            exit 1
+          fi
+
+      # Both sources are third-party and both have been seen to fail
+      # transiently (the library feed returned 503 during development). Retry
+      # before treating it as broken, so a blip doesn't page anyone.
+      - name: Scrape listing sources
+        id: scrape
+        continue-on-error: true
+        run: |
+          for attempt in 1 2 3; do
+            echo "--- attempt $attempt"
+            if node scripts/scrape-sources.js $DRY; then exit 0; fi
+            sleep $((attempt * 30))
+          done
+          echo "::error::scrape-sources.js failed after 3 attempts"
+          exit 1
+
+      - name: Pull Naas Library RSS
+        id: library
+        continue-on-error: true
+        run: |
+          for attempt in 1 2 3; do
+            echo "--- attempt $attempt"
+            if node scripts/pull-library-events.js $DRY; then exit 0; fi
+            sleep $((attempt * 30))
+          done
+          echo "::error::pull-library-events.js failed after 3 attempts"
+          exit 1
+
+      # New rows land as `pending` and are invisible until approved, so there is
+      # nothing to rebuild for. Kept here, disabled, for the day auto-approve is
+      # turned on: the site is pre-rendered, so approved events only reach the
+      # static HTML on the next build. Add NETLIFY_BUILD_HOOK to enable.
+      - name: Trigger Netlify rebuild
+        if: false
+        run: curl -fsS -X POST -d '{}' "${{ secrets.NETLIFY_BUILD_HOOK }}"
+
+      # continue-on-error above lets the library run even when the scrape fails.
+      # This makes the job itself red if either did, so a persistent break is
+      # visible instead of silent — silence is what caused the original problem.
+      - name: Report failures
+        if: steps.scrape.outcome == 'failure' || steps.library.outcome == 'failure'
+        run: |
+          echo "scrape:  ${{ steps.scrape.outcome }}"
+          echo "library: ${{ steps.library.outcome }}"
+          echo "::error::One or more fetchers failed — see the step logs above."
+          exit 1

@@ -6,43 +6,58 @@ a source URL; everything else is ignored, so headings and notes are safe to add.
 Keep URLs bare — no `?` query strings. Tracking parameters (`aff=`, `_gl=`) add
 nothing for the scraper and can carry personal analytics identifiers.
 
-Individual event pages are scraped via JSON-LD; listing pages use
-`parseListingPage`. Past events are skipped automatically, so stale entries are
-harmless — but prune them when convenient.
+## Prefer listing pages over individual event pages
 
-## Eventbrite (individual events)
+**Listing pages endure; individual event pages rot.** A page for one event stops
+returning anything once that event passes, and within a couple of months a list
+of them yields nothing at all.
 
-https://www.eventbrite.ie/e/festa-de-pascoa-brasileira-tickets-1985003223075
-https://www.eventbrite.com/e/pure-gas-comedy-club-tickets-1984557566103
-https://www.eventbrite.ie/e/gpconsult-live-educational-study-day-2026-tickets-1982510510304
-https://www.eventbrite.ie/e/fashion-on-a-human-level-tickets-1984187790093
-https://www.eventbrite.com/e/jetset-meet-mixer-naas-tickets-1984672514918
-https://www.eventbrite.com/e/the-highstool-prophets-live-in-concert-at-lawlors-hotel-naas-tickets-1979974180072
-https://www.eventbrite.ie/e/the-good-the-bad-and-the-business-tickets-1985064269667
-https://www.eventbrite.ie/e/irbeas-25th-national-bioenergy-conference-solid-biomass-tickets-1983876147963
-https://www.eventbrite.ie/e/avcon-racetrack-day-afterburner-networking-event-tickets-1979759502967
+Measured on 2026-08-04: of 28 sources, 26 were individual event pages left over
+from March and Easter. They produced **1 event between them**. The two listing
+pages produced **86**. The individual pages have been removed.
 
-## AllEvents.in (individual events)
+Add a listing page for a venue or aggregator, not a link to tonight's gig.
 
-https://allevents.in/kildare/japfest-2026/200029678528446
-https://allevents.in/kildare/red-bull-drift-masters-2026%E3%83%BBround-3%E3%83%BBireland/200029327388943
-https://allevents.in/kildare/bimmerfest-26-mondello-park-bank-holiday-monday-3rd-august-irelands-largest-event-for-bmw-and-mini/200029504217934
-https://allevents.in/kildare/mondello-action-day-bank-holiday-monday-1st-june/200029504218843
-https://allevents.in/kildare/idhba-kildare-branch-show/200029612415504
-https://allevents.in/kildare/nuffield-ireland-2026-agri-summit/200029804000742
-https://allevents.in/kildare/retrostock-2026/200029422025928
-https://allevents.in/kildare/bathrooms4u-naas-showroom-open-day/200029788923219
-https://allevents.in/kildare/pete-kavanagh-and-band/200029627555632
-https://allevents.in/kildare/irbeas-25th-national-bioenergy-conference-solid-biomass/200029744365300
-https://allevents.in/kildare/discovery-playtime-easter-camp/200029638946523
-https://allevents.in/kildare/ice-expo/200029744364857
-https://allevents.in/kildare/kwwspca-easter-egg-hunt-and-dog-walk/200029696289757
-https://allevents.in/kildare/quid-games-fundraising-event/200029596671728
-https://allevents.in/kildare/unbeatable-coaching-workshop-2/200029696290804
-https://allevents.in/kildare/drive-out-and-grease-movie-experience/200029596674644
+## How each source is parsed
+
+| Host | Method |
+|---|---|
+| `moattheatre.com` | Custom listing parser (`parseListingPage`) |
+| `whatsontonight.ie` | Custom listing parser (`parseListingPage`) |
+| anything else | JSON-LD extraction — works when the page publishes `Event` objects, including inside a schema.org `ItemList` |
+
+A new host without JSON-LD needs a parser adding to `scrape-sources.js` (see
+`sourceKind()` near the top). Checked on 2026-08-04: `allevents.in` and
+`intokildare.ie` listing pages publish no usable JSON-LD `Event` data, so they
+would need that work before they can be added back.
+
+Past events are skipped automatically. Duplicates are skipped by fuzzy title
+match within a date.
 
 ## Listing pages
 
-https://whatsontonight.ie/events/Kildare/Naas
-https://intokildare.ie/event/read-in-company-naas-march-edition/
+### Moat Theatre — the single biggest source
+
 https://www.moattheatre.com/shows
+
+### WhatsOnTonight — Naas listings
+
+https://whatsontonight.ie/events/Kildare/Naas
+
+### Eventbrite — Naas area search
+
+Publishes its events inside a schema.org `ItemList`. Many results are county-wide
+and get filtered out, but it reaches the community classes, training and meetups
+the venue-based sources miss — including midweek.
+
+https://www.eventbrite.ie/d/ireland--naas/events/
+
+## Known coverage gap — midweek
+
+As of 2026-08-04 the recurring series carrying most of the database (Naas
+Racecourse, Moat Theatre, Naas Potato Market) are **weekend-only**: zero of their
+events fall Monday to Thursday. Naas Library is the only regular weekday source.
+
+What would close the gap is not aggregator-shaped — GAA and soccer clubs, pub
+trad sessions, the parish newsletter, community centre classes. Most publish to
+Facebook or nowhere, so they likely need direct submission rather than scraping.

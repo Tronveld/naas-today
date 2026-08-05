@@ -26,7 +26,11 @@ try {
   // silently fall back to empty array; client-side fetch will populate
 }
 
-const todayStr = new Date().toISOString().split('T')[0];
+// "Today" means today in Naas, not on the build server (Netlify builds in UTC).
+// toISOString() would return yesterday's date for any build run between midnight
+// and 1am Irish summer time, pre-rendering the wrong day's events and JSON-LD.
+// en-CA gives YYYY-MM-DD.
+const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Dublin' }).format(new Date());
 const todayEvents = initialEvents.filter(e => {
   if (e.end_date) return e.date <= todayStr && e.end_date >= todayStr;
   return e.date === todayStr;
@@ -204,6 +208,8 @@ const jsonLd = todayEvents.length > 0 ? {
         document.getElementById('eventsGrid').style.display = 'none';
         document.getElementById('emptyState').classList.remove('visible');
         document.getElementById('loadingState').classList.add('visible');
+        const submitArea = document.getElementById('submitArea');
+        if (submitArea) submitArea.style.display = 'none';
     }
 
     function hideLoading() {
@@ -267,18 +273,20 @@ const jsonLd = todayEvents.length > 0 ? {
         today.setHours(0, 0, 0, 0);
         const compareDate = new Date(date);
         compareDate.setHours(0, 0, 0, 0);
+        // The year is dropped for dates in the current year — it is redundant and
+        // pushes the line to two rows on 320px phones. Kept when it is not.
+        const dateOpts = { day: 'numeric', month: 'long' };
+        if (date.getFullYear() !== today.getFullYear()) dateOpts.year = 'numeric';
         if (compareDate.getTime() === today.getTime()) {
             const dayName = date.toLocaleDateString('en-IE', { weekday: 'long' });
-            const fullDate = date.toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' });
-            return `Today – ${dayName}, ${fullDate}`;
+            return `Today – ${dayName}, ${date.toLocaleDateString('en-IE', dateOpts)}`;
         }
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
         if (compareDate.getTime() === tomorrow.getTime()) {
-            const fullDate = date.toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' });
-            return `Tomorrow – ${fullDate}`;
+            return `Tomorrow – ${date.toLocaleDateString('en-IE', dateOpts)}`;
         }
-        return date.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        return date.toLocaleDateString('en-IE', { weekday: 'long', ...dateOpts });
     }
 
     function formatTime(time) {
@@ -478,12 +486,15 @@ const jsonLd = todayEvents.length > 0 ? {
         const grid = document.getElementById('eventsGrid');
         const emptyState = document.getElementById('emptyState');
         const errorState = document.getElementById('errorState');
+        const submitArea = document.getElementById('submitArea');
         const dateStr = localDateStr(currentDate);
 
         if (isError) {
             grid.style.display = 'none';
             emptyState.classList.remove('visible');
             errorState.classList.add('visible');
+            // The error state has its own Try again button below it.
+            if (submitArea) submitArea.style.display = 'none';
             updateJsonLd([]);
             renderUpcoming();
             return;
@@ -532,6 +543,8 @@ const jsonLd = todayEvents.length > 0 ? {
         if (filteredEvents.length === 0) {
             grid.style.display = 'none';
             emptyState.classList.add('visible');
+            // The empty state carries its own submit button, so hide this one.
+            if (submitArea) submitArea.style.display = 'none';
             updateJsonLd([]);
             renderUpcoming();
             return;
@@ -539,6 +552,7 @@ const jsonLd = todayEvents.length > 0 ? {
 
         grid.style.display = 'grid';
         emptyState.classList.remove('visible');
+        if (submitArea) submitArea.style.display = '';
         filteredEvents.sort((a, b) => a.time.localeCompare(b.time));
         grid.innerHTML = '';
         filteredEvents.forEach(event => grid.appendChild(createEventCard(event)));
@@ -804,15 +818,17 @@ const jsonLd = todayEvents.length > 0 ? {
         }, 0);
     });
 
-    document.getElementById('submitEventBtn').addEventListener('click', () => {
+    // Every submit entry point opens the modal on the day currently being viewed,
+    // not on today.
+    function openSubmitModal() {
         document.getElementById('eventDate').value = localDateStr(currentDate);
         openModal('submitModal');
-    });
+    }
 
-    document.getElementById('submitEventFooterBtn').addEventListener('click', () => {
-        document.getElementById('eventDate').value = localDateStr(currentDate);
-        openModal('submitModal');
-    });
+    document.getElementById('submitEventBtn').addEventListener('click', openSubmitModal);
+    document.getElementById('submitEventFooterBtn').addEventListener('click', openSubmitModal);
+    document.getElementById('emptySubmitBtn')?.addEventListener('click', openSubmitModal);
+    document.getElementById('retryBtn')?.addEventListener('click', () => fetchEvents());
 
     document.getElementById('closeSubmitModal').addEventListener('click', () => closeModal('submitModal'));
     document.getElementById('cancelSubmit').addEventListener('click', () => {

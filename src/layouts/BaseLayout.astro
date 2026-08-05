@@ -49,7 +49,7 @@ const {
             --ink-light:    #5c5848;
             --accent:       #2d5a2d;
             --accent-light: #E8F0E4;
-            --warm:         #8B7355;
+            --warm:         #775F43;
             --border:       #e0e0d8;
             --border-light: #f0ece4;
             --shadow-sm:    0 1px 3px rgba(26,42,26,0.05);
@@ -313,14 +313,19 @@ const {
         .ev-time {
             font-family: 'DM Mono', monospace;
             color: var(--warm);
-            font-size: 0.8125rem;
+            font-size: 0.9375rem;
             font-weight: 600;
             white-space: nowrap;
             flex-shrink: 0;
             background: var(--bg-muted);
             border: 1px solid var(--border);
             border-radius: 999px;
-            padding: 0.125rem 0.5rem;
+            padding: 0.125rem 0.625rem;
+            /* Shared with .ev-allday so the card's top-right slot keeps one
+               height whether it holds a time, ALL DAY, TBC, or a date range. */
+            min-height: 28px;
+            display: inline-flex;
+            align-items: center;
         }
 
         .ev-allday {
@@ -335,7 +340,10 @@ const {
             background: var(--bg-muted);
             border: 1px solid var(--border);
             border-radius: 999px;
-            padding: 0.125rem 0.5rem;
+            padding: 0.125rem 0.625rem;
+            min-height: 28px;
+            display: inline-flex;
+            align-items: center;
         }
 
         .event-title {

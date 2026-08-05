@@ -144,12 +144,17 @@ function itemToEvent(item) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
   const autoApprove  = process.argv.includes('--auto-approve');
+  const dryRun       = process.argv.includes('--dry-run');
   const insertStatus = autoApprove ? 'approved' : 'pending';
 
+  // Credentials are required even for a dry run: the preview still checks for
+  // duplicates, so that "would insert" means what it says.
   if (!SUPABASE_URL || !SECRET_KEY) {
     console.error('ERROR: SUPABASE_URL and SUPABASE_SECRET_KEY must be set (check .env).');
     process.exit(1);
   }
+
+  if (dryRun) console.log('[DRY RUN] No events will be inserted.\n');
 
   console.log('Fetching Naas Library RSS feed…');
   let xml;
@@ -188,6 +193,13 @@ async function main() {
       continue;
     }
 
+    if (dryRun) {
+      sb.cacheInserted(evt.title, evt.date);   // so repeats within one feed dedupe too
+      inserted++;
+      log.push({ status: 'DRY  ', date: evt.date, title: evt.title, kids: evt.is_for_kids });
+      continue;
+    }
+
     try {
       await sb.post('/events', { ...evt, status: insertStatus });
       sb.cacheInserted(evt.title, evt.date);
@@ -206,7 +218,11 @@ async function main() {
   console.log(bar);
   console.log(`  RSS items found      : ${rawItems.length}`);
   console.log(`  Parseable events     : ${events.length}  (${skipped} skipped — no date found)`);
-  console.log(`  Inserted (${insertStatus.padEnd(8)}) : ${inserted}`);
+  if (dryRun) {
+    console.log(`  Would insert         : ${inserted}`);
+  } else {
+    console.log(`  Inserted (${insertStatus.padEnd(8)}) : ${inserted}`);
+  }
   console.log(`  Skipped (dupes)      : ${dupes}`);
   console.log(`  Errors               : ${errors}`);
 
@@ -221,7 +237,9 @@ async function main() {
   }
 
   console.log(bar);
-  if (inserted > 0) {
+  if (dryRun) {
+    console.log(`\n[DRY RUN] ${inserted} event(s) would be inserted as "${insertStatus}".`);
+  } else if (inserted > 0) {
     console.log(`\n✓ ${inserted} new event(s) added with status "${insertStatus}".`);
     if (insertStatus === 'pending') {
       console.log('  Review and approve them in the admin panel (/admin.html).');
