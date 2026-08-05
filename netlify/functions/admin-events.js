@@ -82,7 +82,7 @@ async function handleGet(event, supabaseUrl, secretKey) {
   const params  = event.queryStringParameters || {};
   const status  = params.status; // 'pending' | 'approved' | undefined
 
-  let url = `${supabaseUrl}/rest/v1/events?order=date.asc,time.asc&select=id,title,date,end_date,time,time_end,is_all_day,location,description,is_free,is_for_kids,is_music,is_sport,is_market,is_theatre,url,status,created_at,recurring_group_id`;
+  let url = `${supabaseUrl}/rest/v1/events?order=date.asc,time.asc&select=id,title,date,end_date,time,time_end,is_all_day,location,description,is_free,is_for_kids,is_music,is_sport,is_market,is_theatre,url,status,created_at,recurring_group_id,source`;
   if (status === 'pending' || status === 'approved') {
     url += `&status=eq.${status}`;
   }

@@ -130,4 +130,30 @@ function createClient(url, key) {
   return { get, post, isDuplicate, cacheInserted };
 }
 
-module.exports = { loadEnv, HTML_ENT, stripHtml, KIDS_RE, normaliseTitle, createClient };
+// A fetcher that hits errors must exit non-zero. Exiting 0 on a dead source is
+// how a broken feed hides: the workflow goes green, nobody looks, and the site
+// quietly thins out — the same failure that let the library feed go five and a
+// half weeks without a pull. Non-zero makes the workflow retry, and makes a
+// persistent break red.
+//
+// Finding nothing is deliberately not an error: a run where every event is a
+// duplicate is what a healthy second pull of the day looks like.
+function exitCode({ sourceErrors = 0, eventErrors = 0 } = {}) {
+  return sourceErrors > 0 || eventErrors > 0 ? 1 : 0;
+}
+
+// Where a scraped row came from, for the `source` column. Bare host, so the
+// bare and www. forms of one site do not tally as two separate feeds.
+// Returns null rather than throwing: the tag is diagnostic, and failing to
+// derive one must not cost the event itself.
+function sourceForUrl(url) {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
+module.exports = {
+  loadEnv, HTML_ENT, stripHtml, KIDS_RE, normaliseTitle, createClient, exitCode, sourceForUrl,
+};

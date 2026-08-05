@@ -5,6 +5,10 @@
 // weeks). Eventbrite's Naas listing publishes its events wrapped in a schema.org
 // ItemList, which the extractor originally walked straight past — 56 events on
 // the page, 0 found.
+//
+// Eventbrite itself was removed as a source on 2026-08-05 (it blocks scrapers —
+// see event-sources.md). ItemList handling stays: it is the standard wrapper for
+// any listing page, not an Eventbrite quirk. Do not re-add the source.
 
 const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');

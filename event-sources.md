@@ -44,13 +44,21 @@ https://www.moattheatre.com/shows
 
 https://whatsontonight.ie/events/Kildare/Naas
 
-### Eventbrite — Naas area search
+## Removed sources
 
-Publishes its events inside a schema.org `ItemList`. Many results are county-wide
-and get filtered out, but it reaches the community classes, training and meetups
-the venue-based sources miss — including midweek.
+### Eventbrite — removed 2026-08-05
 
-https://www.eventbrite.ie/d/ireland--naas/events/
+`https://www.eventbrite.ie/d/ireland--naas/events/` — **do not add back.**
+
+It returned `HTTP 405 Not Allowed` on the first scheduled run, which is a
+deliberate block rather than a fault: the method was refused outright before any
+content was served. Eventbrite's terms prohibit automated collection, and a site
+that answers that way is asking not to be scraped. Removed for that reason, not
+the technical one — working around the block would be the wrong fix.
+
+It was the only source reaching community classes, training and meetups, so its
+removal widens the midweek gap below. Direct submission is the route back to
+that material.
 
 ## Known coverage gap — midweek
 

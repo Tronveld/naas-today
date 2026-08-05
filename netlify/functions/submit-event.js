@@ -179,7 +179,11 @@ exports.handler = async function(event, context) {
         is_market:  isMarket,
         is_theatre: isTheatre,
         url: url || null,
-        status: 'pending'
+        status: 'pending',
+        // A person wrote this, so it needs a person to read it. The vetted
+        // feeds auto-approve; anything tagged 'submission' is what the daily
+        // notify script emails about.
+        source: 'submission'
       })
     });
 

@@ -185,6 +185,7 @@ exports.handler = async function(event) {
     is_theatre: isTheatre,
     url: url || null,
     status: 'pending',
+    source: 'submission',   // written by a person — see submit-event.js
     recurring_group_id: groupId,
   }));
 

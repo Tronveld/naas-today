@@ -14,7 +14,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { loadEnv, stripHtml, KIDS_RE, createClient } = require('./lib');
+const { loadEnv, stripHtml, KIDS_RE, createClient, exitCode, sourceForUrl } = require('./lib');
 
 loadEnv();
 
@@ -346,11 +346,15 @@ async function main() {
   const urls = readSources();
   console.log(`Loaded ${urls.length} source URL(s) from event-sources.md.\n`);
 
-  let totalFound = 0, totalInserted = 0, totalSkipped = 0, totalErrors = 0, totalOffTown = 0;
+  // Source errors and per-event errors are counted apart: a dead source means
+  // the whole listing is missing, which is the one worth naming in the summary.
+  let totalFound = 0, totalInserted = 0, totalSkipped = 0, totalOffTown = 0;
+  let sourceErrors = 0, eventErrors = 0;
   const log = [];
 
   for (const url of urls) {
     const shortUrl = url.length > 70 ? url.slice(0, 67) + '…' : url;
+    const source   = sourceForUrl(url);
     process.stdout.write(`Fetching: ${shortUrl} … `);
 
     let result;
@@ -358,7 +362,7 @@ async function main() {
       result = await extractEvents(url);
     } catch (err) {
       console.log('ERROR');
-      totalErrors++;
+      sourceErrors++;
       log.push({ status: 'ERROR', url: shortUrl, note: err.message });
       continue;
     }
@@ -377,7 +381,7 @@ async function main() {
       let dupe = false;
       try { dupe = await sb.isDuplicate(evt.title, evt.date); }
       catch (err) {
-        totalErrors++;
+        eventErrors++;
         log.push({ status: 'ERROR', date: evt.date, title: evt.title, note: err.message });
         continue;
       }
@@ -396,12 +400,12 @@ async function main() {
       }
 
       try {
-        await sb.post('/events', { ...evt, status: insertStatus });
+        await sb.post('/events', { ...evt, status: insertStatus, source });
         sb.cacheInserted(evt.title, evt.date);
         totalInserted++;
         log.push({ status: 'NEW  ', date: evt.date, title: evt.title, kids: evt.is_for_kids });
       } catch (err) {
-        totalErrors++;
+        eventErrors++;
         log.push({ status: 'ERROR', date: evt.date, title: evt.title, note: err.message });
       }
     }
@@ -421,7 +425,8 @@ async function main() {
   }
   console.log(`  Skipped (dupes)      : ${totalSkipped}`);
   console.log(`  Dropped (not Naas)   : ${totalOffTown}`);
-  console.log(`  Errors               : ${totalErrors}`);
+  console.log(`  Sources failed       : ${sourceErrors} of ${urls.length}`);
+  console.log(`  Event errors         : ${eventErrors}`);
 
   if (log.length) {
     console.log('');
@@ -449,6 +454,17 @@ async function main() {
   } else {
     console.log('\nNo new events to import.');
   }
+
+  // process.exitCode rather than process.exit(): the summary above still has to
+  // reach the log. process.exit() would truncate it mid-write.
+  const code = exitCode({ sourceErrors, eventErrors });
+  if (code !== 0) {
+    console.error(
+      `\nFAILED: ${sourceErrors} source(s) unreachable, ${eventErrors} event error(s). ` +
+      'A source that stays broken needs removing from event-sources.md or fixing.'
+    );
+  }
+  process.exitCode = code;
 }
 
 // Only run when invoked directly, so tests can require the pure helpers below
