@@ -818,15 +818,17 @@ const jsonLd = todayEvents.length > 0 ? {
         }, 0);
     });
 
-    document.getElementById('submitEventBtn').addEventListener('click', () => {
+    // Every submit entry point opens the modal on the day currently being viewed,
+    // not on today.
+    function openSubmitModal() {
         document.getElementById('eventDate').value = localDateStr(currentDate);
         openModal('submitModal');
-    });
+    }
 
-    document.getElementById('submitEventFooterBtn').addEventListener('click', () => {
-        document.getElementById('eventDate').value = localDateStr(currentDate);
-        openModal('submitModal');
-    });
+    document.getElementById('submitEventBtn').addEventListener('click', openSubmitModal);
+    document.getElementById('submitEventFooterBtn').addEventListener('click', openSubmitModal);
+    document.getElementById('emptySubmitBtn')?.addEventListener('click', openSubmitModal);
+    document.getElementById('retryBtn')?.addEventListener('click', () => fetchEvents());
 
     document.getElementById('closeSubmitModal').addEventListener('click', () => closeModal('submitModal'));
     document.getElementById('cancelSubmit').addEventListener('click', () => {
