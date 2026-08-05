@@ -14,7 +14,7 @@ surrounding context to relocate it. Phase 1 and item 10 have since shipped (`17a
 `fc3d8ed`, `34101d9`), so the line numbers in the EventsGrid, empty-state and modal-dismiss
 items are already historical.
 
-**Progress: 10 of 75 done.**
+**Progress: 9 of 75 done** — items 1–7, 9 and 10. Item 8 is still open.
 
 ---
 
