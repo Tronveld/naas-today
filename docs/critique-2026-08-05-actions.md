@@ -393,6 +393,35 @@ you let it; `/impeccable shape` is the command that answers them on purpose.
 
 ---
 
+## Session handoff — 2026-08-05
+
+Loose ends that are **not** numbered items above, because they are about the state of the work
+rather than changes to make. Clear or confirm these before building on top.
+
+- [ ] **Confirm the `dev` push did not spend Netlify credits.** `netlify.toml` carries no
+  branch config, so the production branch lives in the Netlify dashboard. `main` is almost
+  certainly it — it holds the "Merge branch 'dev'" commits and there is a `/merge-to-main`
+  skill — which would make a `dev` push a branch deploy or nothing. But `d1489de` exists
+  entirely to protect a 20-production-deploy monthly ceiling, past which Netlify pauses the
+  team and visitors get "Site not available". Worth one look at the deploys tab.
+
+- [ ] **Verify the three code paths that were never observed running.** No browser automation
+  was available in the session that wrote them, so they were reasoned through and checked
+  against built HTML, not watched. The empty-day path *was* verified against `dist/index.html`
+  and the live dev server; these three were not:
+  1. the filtered-empty branch (navigate to a day with events — Thu 6 Aug has the library
+     talk — then apply a filter that matches nothing);
+  2. the "Show all events" button clearing all six filters and the URL;
+  3. populated-day ordering, that cards → submit-area → Coming Up still reads correctly.
+
+- [ ] **Nothing from 2026-08-05 is live.** All of it is on `dev`. The empty-day rebuild reaches
+  naastoday.com on the merge to `main`.
+
+**Shipped 2026-08-05:** `eee3da8` (critique + this list), `17a5423` (item 9), `fc3d8ed`
+(items 1–7), `259a182` (items 74–75), `34101d9` (item 10), `63d91f1` + `74a2e7e` (tracker).
+
+---
+
 ## Re-measuring
 
 After a phase, re-run the critique to see the score move:
