@@ -139,7 +139,23 @@ Table: `events`
 | `url` | text | Optional event website URL |
 | `status` | text | `'pending'` (submitted) or `'approved'` (visible on site) |
 | `recurring_group_id` | uuid | Optional; shared by all occurrences in a recurring series |
+| `source` | text | Where the row came from — see below. Null on rows created before 2026-08-05 |
 | `created_at` | timestamptz | |
+
+#### `source` and what `pending` means
+
+`source` records the origin of every row, because the admin queue used to mix two streams with very different trust levels and no way to tell them apart:
+
+| Writer | `source` | Lands as |
+|---|---|---|
+| `submit-event.js`, `submit-recurring.js` | `submission` | `pending` |
+| `scrape-sources.js` | the URL's hostname (`moattheatre.com`, `whatsontonight.ie`) | `approved` in CI |
+| `pull-library-events.js` | `naas-library` | `approved` in CI |
+| `import-events.js` | `csv-import` | `pending` |
+
+The scheduled workflow passes `--auto-approve` to both fetchers, so **`status = 'pending'` now means "a person wrote this and it needs reading"**. That is what `notify-pending.js` relies on. Before this, ~88 scraped rows a week buried the ~1 human submission, and submissions sat unreviewed for weeks.
+
+`source` is read-only: it is in the `admin-events` GET select list but deliberately **not** in `ALLOWED_PATCH_FIELDS`. It records what happened and should not be editable.
 
 To approve a submitted event, change its `status` to `'approved'` — either in the Supabase Table Editor or via the admin panel at `/admin.html`. Events only appear on the public site when `status = 'approved'`.
 
@@ -171,6 +187,7 @@ All scripts `require('./lib')`. Exports:
 | `normaliseTitle(t)` | Lowercases and collapses punctuation spacing for fuzzy title comparison |
 | `createClient(url, key)` | Returns `{ get, post, isDuplicate, cacheInserted }` bound to the given Supabase URL/key. `isDuplicate` caches per-date DB queries for the lifetime of the instance; call `cacheInserted(title, date)` after each successful insert to keep the cache consistent within a run. |
 | `exitCode({ sourceErrors, eventErrors })` | Returns `1` if either count is above zero, else `0`. Both fetchers set `process.exitCode` from it so a dead source fails the run instead of passing quietly. Finding nothing is deliberately **not** an error — an all-duplicates run is what a healthy second pull of the day looks like. |
+| `sourceForUrl(url)` | Bare hostname for the `source` column (`www.` stripped, lowercased), or `null` if the URL will not parse. Never throws — the tag is diagnostic and must not cost the event. |
 
 #### Script files
 
@@ -180,28 +197,32 @@ All scripts `require('./lib')`. Exports:
 | `scrape-sources.js` | Fetches and extracts events from the URLs listed in `event-sources.md` (currently Moat Theatre and WhatsonTonight.ie). Uses JSON-LD extraction for individual event pages and a shared `parseListingPage` helper for listing pages (configured per-site via options). Skips past events and duplicates. Exits non-zero if any source fails. Flags: `--auto-approve`, `--dry-run`. **Eventbrite was removed on 2026-08-05 — it blocks scrapers (`HTTP 405`) and its terms prohibit automated collection. Do not add it back;** see the "Removed sources" section of `event-sources.md`. |
 | `weekly-post.js` | Generates a social media post for the upcoming week's approved events and copies it to the clipboard. Flags: `--list` (output raw JSON), `--select=id1,id2` (pin specific events). |
 | `import-events.js` | Bulk-imports events from a CSV file into Supabase as `pending`. Usage: `node scripts/import-events.js <file.csv> [--dry-run]`. CSV must have a header row; required columns: `title`, `date` (`YYYY-MM-DD`), `location`. |
-| `audit-event-dates.js` | **Read-only.** Checks every row already in `events` against the *current* validators, importing them from the live function rather than reimplementing them. Answers what tests cannot: whether rows inserted while a validator was wrong are still bad. Never writes to Supabase. |
+| `notify-pending.js` | Emails a reminder while any event is `status = 'pending'` (i.e. a human submission awaiting review). Sends nothing when the queue is empty. Exits non-zero if events are waiting but the mailer is unconfigured or the send fails — an undeliverable reminder must be loud. Flag: `--dry-run` (print the email instead of sending). Env: `RESEND_API_KEY`, `NOTIFY_EMAIL_TO`, optional `NOTIFY_EMAIL_FROM`. |
+| `audit-event-dates.js` | **Read-only.** Checks every row already in `events` against the *current* validators, importing them from the live function rather than reimplementing them. Answers what tests cannot: whether rows inserted while a validator was wrong are still bad. Never writes to Supabase. **The backstop for auto-approved scraper output** — nobody reads those rows before they publish, so run this after any scraper change. |
 | `fix-library-entities.js` | One-time migration: decodes HTML entities in existing Naas Library event records stored in Supabase. |
 
 ## Scheduled fetching
 
-`.github/workflows/scrape-events.yml` runs `scrape-sources.js` and `pull-library-events.js` daily at 05:10 UTC, inserting as `pending`. It exists because both scripts were manual and the library went five and a half weeks without a pull — the site quietly showed nothing on most weekdays, with no error to notice.
+`.github/workflows/scrape-events.yml` runs daily at 05:10 UTC and does three things: fetches both feeds, rebuilds the site, and emails about anything awaiting review. It exists because both scripts were manual and the library went five and a half weeks without a pull — the site quietly showed nothing on most weekdays, with no error to notice.
 
-**Requires two repository secrets** (Settings → Secrets and variables → Actions):
+**Requires repository secrets** (Settings → Secrets and variables → Actions):
 
-| Secret | Value |
-|---|---|
-| `SUPABASE_URL` | Same as the local `.env` |
-| `SUPABASE_SECRET_KEY` | The service-role key |
-
-Until those are set the workflow fails on its first step with a clear message rather than running half-configured.
+| Secret | Value | Required? |
+|---|---|---|
+| `SUPABASE_URL` | Same as the local `.env` | Yes — the job fails on its first step without it |
+| `SUPABASE_SECRET_KEY` | The service-role key | Yes — same |
+| `RESEND_API_KEY` | Resend API key for the review reminder | Only when something is pending; the step then fails without it |
+| `NOTIFY_EMAIL_TO` | Where the reminder goes | Same |
+| `NETLIFY_BUILD_HOOK` | Build hook URL | No — the step warns and skips |
 
 Notes:
+- **The fetchers pass `--auto-approve`.** Their feeds are vetted and every row is date-validated, Naas-filtered and duplicate-checked before insert. This is a deliberate trust decision: a scraper bug now publishes to the live site with nobody in the loop. `scripts/audit-event-dates.js` is the read-only backstop — run it after any scraper change.
+- Because of that, `status = 'pending'` means a human submission. `notify-pending.js` emails while any remain, every day until they are dealt with. The repetition is the point; a single email is what gets missed.
+- The notify step runs even when a fetcher failed (`if: !cancelled()`) — a broken scrape is no reason to leave a waiting submission unmentioned. It is deliberately *not* `continue-on-error`: an undeliverable reminder must go red.
 - Both fetch steps retry three times with a backoff. The library RSS feed has been observed returning `503` transiently, and a blip should not read as a breakage.
 - A step failure still turns the whole job red — silence is what caused the original problem, so a persistent break must be visible.
 - Both scripts exit non-zero when *any* source errors, not only when the script itself crashes. A single rotting source therefore triggers the retry and, if it stays broken, turns the job red. Before this, `Errors: 1` in the summary still exited 0 and the run went green — the original silent failure one level down.
-- Run it by hand from the Actions tab; the `dry_run` input previews without writing.
-- Events land as `pending` by design (nothing publishes itself). To change that, add `--auto-approve` to the script steps — and then enable the `Trigger Netlify rebuild` step, since approved events only reach the pre-rendered HTML on the next build.
+- Run it by hand from the Actions tab; the `dry_run` input previews without writing, skips the rebuild, and prints the email instead of sending it.
 
 ## Deployment
 

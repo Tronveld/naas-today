@@ -47,6 +47,13 @@ jobs:
             exit 1
           fi
 
+      # --auto-approve: these feeds are vetted (Moat Theatre, WhatsOnTonight,
+      # Naas Library) and every row is already date-validated, Naas-filtered and
+      # duplicate-checked before insert. Reviewing ~88 machine rows a week to
+      # find the ~1 human submission is what made the admin panel easy to
+      # forget, and submissions then sat for weeks. Leaving `pending` to mean
+      # "a person wrote this" is what makes the review step small enough to do.
+      #
       # Both sources are third-party and both have been seen to fail
       # transiently (the library feed returned 503 during development). Retry
       # before treating it as broken, so a blip doesn't page anyone.
@@ -56,7 +63,7 @@ jobs:
         run: |
           for attempt in 1 2 3; do
             echo "--- attempt $attempt"
-            if node scripts/scrape-sources.js $DRY; then exit 0; fi
+            if node scripts/scrape-sources.js --auto-approve $DRY; then exit 0; fi
             sleep $((attempt * 30))
           done
           echo "::error::scrape-sources.js failed after 3 attempts"
@@ -68,25 +75,43 @@ jobs:
         run: |
           for attempt in 1 2 3; do
             echo "--- attempt $attempt"
-            if node scripts/pull-library-events.js $DRY; then exit 0; fi
+            if node scripts/pull-library-events.js --auto-approve $DRY; then exit 0; fi
             sleep $((attempt * 30))
           done
           echo "::error::pull-library-events.js failed after 3 attempts"
           exit 1
 
-      # New rows land as `pending` and are invisible until approved, so there is
-      # nothing to rebuild for. Kept here, disabled, for the day auto-approve is
-      # turned on: the site is pre-rendered, so approved events only reach the
-      # static HTML on the next build. Add NETLIFY_BUILD_HOOK to enable.
+      # Events now arrive approved, so they are live for visitors the moment
+      # they land — get-events is fetched client-side on every page load. The
+      # pre-rendered HTML is what lags, and that is what first paint and SEO
+      # read, so kick a build.
       - name: Trigger Netlify rebuild
-        if: false
-        run: curl -fsS -X POST -d '{}' "${{ secrets.NETLIFY_BUILD_HOOK }}"
+        if: ${{ !inputs.dry_run }}
+        env:
+          HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::NETLIFY_BUILD_HOOK is not set — skipping the rebuild. New events are live for visitors but will be missing from the pre-rendered HTML until the next deploy."
+            exit 0
+          fi
+          curl -fsS -X POST -d '{}' "$HOOK"
+
+      # Runs even when a fetcher failed: a broken scrape is no reason to leave
+      # a waiting submission unmentioned. Not continue-on-error — a reminder
+      # that cannot be delivered has to go red, since a notification failing
+      # quietly is the exact bug this step exists to fix.
+      - name: Email pending submissions
+        if: ${{ !cancelled() }}
+        env:
+          RESEND_API_KEY:  ${{ secrets.RESEND_API_KEY }}
+          NOTIFY_EMAIL_TO: ${{ secrets.NOTIFY_EMAIL_TO }}
+        run: node scripts/notify-pending.js $DRY
 
       # continue-on-error above lets the library run even when the scrape fails.
       # This makes the job itself red if either did, so a persistent break is
       # visible instead of silent — silence is what caused the original problem.
       - name: Report failures
-        if: steps.scrape.outcome == 'failure' || steps.library.outcome == 'failure'
+        if: ${{ !cancelled() && (steps.scrape.outcome == 'failure' || steps.library.outcome == 'failure') }}
         run: |
           echo "scrape:  ${{ steps.scrape.outcome }}"
           echo "library: ${{ steps.library.outcome }}"

@@ -112,6 +112,7 @@ function rowToEvent(row) {
     is_for_kids: bool(row.is_for_kids) ?? false,
     url:         optional(row.url),
     status:      'pending',
+    source:      'csv-import',
   };
 }
 

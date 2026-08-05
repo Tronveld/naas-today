@@ -142,4 +142,18 @@ function exitCode({ sourceErrors = 0, eventErrors = 0 } = {}) {
   return sourceErrors > 0 || eventErrors > 0 ? 1 : 0;
 }
 
-module.exports = { loadEnv, HTML_ENT, stripHtml, KIDS_RE, normaliseTitle, createClient, exitCode };
+// Where a scraped row came from, for the `source` column. Bare host, so the
+// bare and www. forms of one site do not tally as two separate feeds.
+// Returns null rather than throwing: the tag is diagnostic, and failing to
+// derive one must not cost the event itself.
+function sourceForUrl(url) {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
+module.exports = {
+  loadEnv, HTML_ENT, stripHtml, KIDS_RE, normaliseTitle, createClient, exitCode, sourceForUrl,
+};

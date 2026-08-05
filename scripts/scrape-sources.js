@@ -14,7 +14,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { loadEnv, stripHtml, KIDS_RE, createClient, exitCode } = require('./lib');
+const { loadEnv, stripHtml, KIDS_RE, createClient, exitCode, sourceForUrl } = require('./lib');
 
 loadEnv();
 
@@ -354,6 +354,7 @@ async function main() {
 
   for (const url of urls) {
     const shortUrl = url.length > 70 ? url.slice(0, 67) + '…' : url;
+    const source   = sourceForUrl(url);
     process.stdout.write(`Fetching: ${shortUrl} … `);
 
     let result;
@@ -399,7 +400,7 @@ async function main() {
       }
 
       try {
-        await sb.post('/events', { ...evt, status: insertStatus });
+        await sb.post('/events', { ...evt, status: insertStatus, source });
         sb.cacheInserted(evt.title, evt.date);
         totalInserted++;
         log.push({ status: 'NEW  ', date: evt.date, title: evt.title, kids: evt.is_for_kids });

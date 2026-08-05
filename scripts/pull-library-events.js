@@ -201,7 +201,7 @@ async function main() {
     }
 
     try {
-      await sb.post('/events', { ...evt, status: insertStatus });
+      await sb.post('/events', { ...evt, status: insertStatus, source: 'naas-library' });
       sb.cacheInserted(evt.title, evt.date);
       inserted++;
       log.push({ status: 'NEW  ', date: evt.date, title: evt.title, kids: evt.is_for_kids });

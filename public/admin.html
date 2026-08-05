@@ -582,6 +582,24 @@
             white-space: nowrap;
         }
 
+        /* Where the row came from. Muted on purpose — it is diagnostic, not a
+           call to action, and must not compete with the status badge. */
+        .badge-source {
+            font-size: 0.7em;
+            background: #f0efec;
+            color: #5f5b54;
+            border-radius: 3px;
+            padding: 1px 5px;
+            margin-left: 6px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        /* A human wrote this one, so it is the one that needs reading. */
+        .badge-source[data-source="submission"] {
+            background: #fdf2e3;
+            color: #8a5a1a;
+        }
+
         .recurring-info-bar {
             background: #e8f4fd;
             color: #1a6fa0;
@@ -1218,6 +1236,15 @@
                 recurBadge.className = 'badge-recurring';
                 recurBadge.textContent = '↻ Recurring';
                 tdTitle.appendChild(recurBadge);
+            }
+            // Rows created before the source column exists have none. Show
+            // nothing rather than "unknown" — an empty badge is noise.
+            if (ev.source) {
+                const sourceBadge = document.createElement('span');
+                sourceBadge.className = 'badge-source';
+                sourceBadge.dataset.source = ev.source;
+                sourceBadge.textContent = ev.source === 'submission' ? '✉ Submitted' : ev.source;
+                tdTitle.appendChild(sourceBadge);
             }
             tr.appendChild(tdTitle);
 
