@@ -802,7 +802,11 @@ const {
             transition: opacity 0.2s ease, visibility 0.2s ease;
         }
 
-        /* Set while any modal is open, so the page behind the sheet cannot scroll. */
+        /* Set while any modal is open, so the page behind the sheet cannot scroll.
+           ponytail: overflow+overscroll-behavior, not the position:fixed body trick.
+           Ceiling — older iOS Safari can still rubber-band the page behind the sheet.
+           Upgrade path is fixing <body> and restoring scrollY on close, which costs a
+           scroll-position restore bug; take it only if the chaining proves worse. */
         body.modal-open {
             overflow: hidden;
         }
