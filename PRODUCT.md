@@ -34,7 +34,7 @@ A general aggregator cannot truthfully claim this, because the value comes from 
 
 **How events reach the site (three paths, all converging on a moderation queue):**
 
-1. **Automated scraping** — `scripts/scrape-sources.js` pulls from a maintained URL list in `event-sources.md` (Eventbrite, AllEvents.in, WhatsonTonight.ie, IntoKildare.ie, Moat Theatre). `scripts/pull-library-events.js` pulls the Naas Library RSS feed.
+1. **Automated scraping** — `scripts/scrape-sources.js` pulls from a maintained URL list in `event-sources.md` (Moat Theatre, WhatsonTonight.ie, Kildare Heritage, IntoKildare.ie, WhatsGoingOn.ie). `scripts/pull-library-events.js` pulls the Naas Library RSS feed. Eventbrite and AllEvents.in were removed on 2026-08-05 — see the "Removed sources" section of `event-sources.md`.
 2. **Community submission** — a public form on the site, including a recurring-series option (weekly/fortnightly/monthly).
 3. **Bulk CSV import** — `scripts/import-events.js`, operator-run.
 
@@ -75,13 +75,13 @@ Everything lands as `pending`. The operator approves or rejects via a password-p
 - **Binding visual constraints already in force:** forest green `#2d5a2d` as the brand anchor; warm beige/linen backgrounds; Georgia for headings, system UI stack for body, DM Mono for times and tags; **light mode only**.
 - **Anti-references** the operator has already ruled out: purple gradients and SaaS hero patterns; Facebook Events clutter; Airbnb-style aspirational photography; the generic Eventbrite grid.
 
-Design system detail beyond these commitments lives in the code and in `docs/superpowers/specs/`, not here.
+Design system detail beyond these commitments lives in `DESIGN.md` and its sidecar `.impeccable/design.json`, not here.
 
 ## Evidence on Hand
 
 - **Real event data** in Supabase — genuine Naas events with real titles, venues, dates. Never fabricate sample events that read as real listings.
 - **Real source list** — `event-sources.md`, the actual scraper input.
-- **Prior design records** — `docs/superpowers/specs/` and `docs/superpowers/plans/` hold the 2026-03-24 UI/UX overhaul, the 2026-03-25 layout and event-card redesigns, and the 2026-04-02 terms page.
+- **Prior design records** — `docs/superpowers/plans/` holds the 2026-03-25 layout and event-card redesigns and the 2026-04-02 terms page. The matching `specs/` directory was deleted on 2026-08-06: it described a card layout and palette that were never shipped, so it misled anyone who read it. Recover from git if the history is ever needed.
 - **Analytics** via Umami Cloud exist, but no traffic figures have been shared.
 
 **Absences future work must not fill by invention:** no testimonials, no user research, no traffic or usage numbers, no press, no partnership or endorsement from any venue, business, or Kildare County Council body, no logo asset beyond the wordmark treatment in the header. Do not imply official or council backing — the site is independent.

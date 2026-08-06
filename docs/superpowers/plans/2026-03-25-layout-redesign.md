@@ -8,7 +8,7 @@
 
 **Tech Stack:** Astro (SSG), vanilla CSS in BaseLayout.astro, Netlify Dev for local preview.
 
-**Spec:** `docs/superpowers/specs/2026-03-25-layout-redesign-design.md`
+**Spec:** `docs/superpowers/specs/2026-03-25-layout-redesign-design.md` — deleted on 2026-08-06 along with the rest of `specs/`, which described a layout that was never shipped. Recover from git if needed; `DESIGN.md` is the current authority.
 
 ---
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-05T19:34:55Z",
+  "generatedAt": "2026-08-06T23:45:00Z",
   "title": "Design System: Naas Today",
   "extensions": {
     "colorMeta": {
@@ -513,9 +513,9 @@
       "name": "Filter Chip",
       "kind": "chip",
       "refersTo": "filter-chip",
-      "description": "Scrolling category filter. Hover previews the category; active inverts to a full category fill.",
-      "html": "<button class=\"ds-filter-chip\">Free</button><button class=\"ds-filter-chip ds-filter-chip-active\">Music</button>",
-      "css": ".ds-filter-chip{padding:.4375rem 1rem;margin-right:.5rem;border:1.5px solid var(--border,#e0e0d8);background:var(--bg-card,#fff);color:var(--ink-mid,#4d5b4d);font-family:inherit;font-size:.8125rem;font-weight:500;border-radius:6px;cursor:pointer;transition:all .15s;white-space:nowrap}.ds-filter-chip:hover{border-color:var(--cat-music,#5C3D1E);color:var(--cat-music,#5C3D1E);background:var(--cat-music-bg,#F0E8DE)}.ds-filter-chip:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}.ds-filter-chip-active{background:var(--cat-music,#5C3D1E);color:#fff;border-color:var(--cat-music,#5C3D1E)}"
+      "description": "Category filter row. Wraps rather than scrolling, so all six are visible without interaction. Each chip carries a live count; hover previews the category, active inverts to a full category fill, and a zero-count chip dims its container only.",
+      "html": "<div class=\"ds-filter-group\"><button class=\"ds-filter-chip\"><span>Free (3)</span></button><button class=\"ds-filter-chip ds-filter-chip-active\"><span>Music (2)</span></button><button class=\"ds-filter-chip ds-filter-chip-empty\"><span>Sport</span></button></div>",
+      "css": ".ds-filter-group{display:flex;gap:.5rem;flex-wrap:wrap}.ds-filter-chip{display:flex;align-items:center;gap:.5rem;padding:.4375rem 1rem;border:1.5px solid var(--border,#e0e0d8);background:var(--bg-card,#fff);color:var(--ink-mid,#4d5b4d);font-family:inherit;font-size:.8125rem;font-weight:500;border-radius:6px;cursor:pointer;transition:all .15s;white-space:nowrap}.ds-filter-chip:hover{border-color:var(--cat-music,#5C3D1E);color:var(--cat-music,#5C3D1E);background:var(--cat-music-bg,#F0E8DE)}.ds-filter-chip:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}.ds-filter-chip-empty{background:var(--bg,#FAFBF6);border-color:var(--border-light,#f0ece4)}.ds-filter-chip-active{background:var(--cat-music,#5C3D1E);color:#fff;border-color:var(--cat-music,#5C3D1E)}"
     },
     {
       "name": "Primary Button",
