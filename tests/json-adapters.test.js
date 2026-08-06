@@ -206,3 +206,55 @@ describe('detectFree', () => {
     assert.equal(text('Gluten-free options available at the food stalls.'), false);
   });
 });
+
+// Curated categories beat prose. KIDS_RE over a full description gets Moat's
+// listings exactly backwards: Chris Kent's adult stand-up blurb says "Between
+// kids, marriage and..." and scores true, while the children's panto scores
+// false. Moat tags them Comedy and Children/Family respectively, so when a
+// source supplies categories they are trusted and the regex is not consulted.
+describe('jsonLdToEvent — category mapping', () => {
+  const { jsonLdToEvent } = require('../scripts/scrape-sources.js');
+  const ev = (over = {}) => ({
+    '@type': 'Event', name: 'A Show', startDate: '2026-08-15T20:00',
+    location: { name: 'Moat Theatre, Naas' }, description: '', ...over,
+  });
+  const row = (over) => jsonLdToEvent(ev(over), 'https://www.moattheatre.com/shows');
+
+  test('maps Moat categories onto the site filter flags', () => {
+    assert.equal(row({ categories: ['Music'] }).is_music, true);
+    assert.equal(row({ categories: ['Drama'] }).is_theatre, true);
+    assert.equal(row({ categories: ['Family'] }).is_for_kids, true);
+    assert.equal(row({ categories: ['Children'] }).is_for_kids, true);
+  });
+
+  test('tolerates the duplicated "Drama 2" category', () => {
+    assert.equal(row({ categories: ['Drama 2'] }).is_theatre, true);
+  });
+
+  test('accepts IntoKildare category objects as well as plain strings', () => {
+    assert.equal(row({ categories: [{ name: 'Music' }] }).is_music, true);
+  });
+
+  test('ignores scheduling categories that are not filters', () => {
+    const r = row({ categories: ['Coming Soon', 'This Week', 'Christmas'] });
+    assert.equal(r.is_music, false);
+    assert.equal(r.is_theatre, false);
+    assert.equal(r.is_for_kids, false);
+  });
+
+  // The two cases that motivated this.
+  test('a comedy show is not for kids, whatever its blurb says', () => {
+    const r = row({ categories: ['Comedy'], description: 'Between kids, marriage and the mortgage.' });
+    assert.equal(r.is_for_kids, false);
+  });
+
+  test('a childrens panto is for kids, even with none of the words', () => {
+    const r = row({ categories: ['Children', 'Christmas', 'Comedy', 'Family'], description: 'The Panto Legends Return!' });
+    assert.equal(r.is_for_kids, true);
+  });
+
+  test('falls back to the text when a source gives no categories', () => {
+    assert.equal(row({ description: 'A storytime for toddlers.' }).is_for_kids, true);
+    assert.equal(row({ categories: [], description: 'A storytime for toddlers.' }).is_for_kids, true);
+  });
+});

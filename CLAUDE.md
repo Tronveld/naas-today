@@ -132,7 +132,7 @@ Table: `events`
 | `is_all_day` | boolean | When true, no time is required or shown |
 | `is_free` | boolean | |
 | `is_for_kids` | boolean | |
-| `is_music` | boolean | Category filter flag; default `false` |
+| `is_music` | boolean | Category filter flag; default `false`. Set from the source's own categories — see below |
 | `is_market` | boolean | Category filter flag; default `false` |
 | `is_sport` | boolean | Category filter flag; default `false` |
 | `is_theatre` | boolean | Category filter flag; default `false` |
@@ -158,6 +158,25 @@ The scheduled workflow passes `--auto-approve` to both fetchers, so **`status = 
 `source` is read-only: it is in the `admin-events` GET select list but deliberately **not** in `ALLOWED_PATCH_FIELDS`. It records what happened and should not be editable.
 
 To approve a submitted event, change its `status` to `'approved'` — either in the Supabase Table Editor or via the admin panel at `/admin.html`. Events only appear on the public site when `status = 'approved'`.
+
+#### Category flags come from the source, not from the text
+
+`CATEGORY_FLAGS` in `scrape-sources.js` maps a source's own tags onto the six
+filters: `Music` → `is_music`, `Drama`/`Theatre` → `is_theatre`,
+`Family`/`Children`/`Kids` → `is_for_kids`, and so on. Both Moat Theatre
+(Squarespace) and IntoKildare (The Events Calendar) publish tags; plain strings
+and `{name}` objects are both accepted, and a trailing digit is stripped so
+Moat's duplicated `Drama 2` lands on `drama`.
+
+**When a source supplies categories they are trusted outright and `KIDS_RE` is
+not consulted.** The regex over a full description gets Moat exactly backwards:
+Chris Kent's adult stand-up blurb says "Between kids, marriage and…" and scores
+true, while the children's panto — "The Panto Legends Return!" — scores false.
+Moat tags them `Comedy` and `Children`/`Family`. Sources with no categories keep
+the old text-matching behaviour.
+
+Unmapped tags (`Comedy`, `Coming Soon`, `This Week`, `Christmas`, `Talks`) set
+nothing. Comedy is deliberately not folded into theatre — stand-up is not a play.
 
 #### `admin_config` table
 

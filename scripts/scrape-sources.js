@@ -196,6 +196,46 @@ function isNaasEvent(ldEvent) {
   return /\bnaas\b/i.test(text) || NAAS_VENUES.test(text);
 }
 
+// ── Source categories → the site's filter flags ──────────────────────────────
+// Moat Theatre and IntoKildare both tag their events, and a curated tag beats
+// guessing from prose every time. KIDS_RE over a full description gets Moat
+// exactly backwards: Chris Kent's adult stand-up blurb says "Between kids,
+// marriage and..." and scores true, while the children's panto — "The Panto
+// Legends Return!" — scores false. Moat tags them Comedy and Children/Family.
+//
+// So when a source supplies categories they are trusted outright and the regex
+// is not consulted. Sources that supply none keep the old text behaviour.
+//
+// Unmapped tags (Comedy, Coming Soon, This Week, Christmas, Talks, Art) simply
+// set nothing — the site has no filter for them. Comedy in particular is left
+// alone rather than folded into theatre: stand-up is not a play.
+const CATEGORY_FLAGS = {
+  music:    'is_music',
+  drama:    'is_theatre',
+  theatre:  'is_theatre',
+  theater:  'is_theatre',
+  family:   'is_for_kids',
+  children: 'is_for_kids',
+  kids:     'is_for_kids',
+  sport:    'is_sport',
+  sports:   'is_sport',
+  market:   'is_market',
+  markets:  'is_market',
+};
+
+// Accepts plain strings (Squarespace) or {name} objects (The Events Calendar).
+// Trailing digits are stripped so Moat's duplicated "Drama 2" lands on drama.
+function categoryFlags(categories) {
+  const flags = {};
+  if (!Array.isArray(categories)) return { flags, tagged: false };
+  for (const c of categories) {
+    const name = typeof c === 'string' ? c : (c && c.name) || '';
+    const key  = name.toLowerCase().trim().replace(/\s*\d+$/, '');
+    if (CATEGORY_FLAGS[key]) flags[CATEGORY_FLAGS[key]] = true;
+  }
+  return { flags, tagged: categories.length > 0 };
+}
+
 function jsonLdToEvent(ldEvent, sourceUrl) {
   const { date, time }         = parseIsoDateTime(ldEvent.startDate);
   const { date: endDate, time: timeEnd } = parseIsoDateTime(ldEvent.endDate);
@@ -210,7 +250,9 @@ function jsonLdToEvent(ldEvent, sourceUrl) {
 
   const location    = extractLocation(ldEvent.location) || extractLocation(ldEvent.organizer);
   const is_free     = detectFree(ldEvent.offers, title, description);
-  const is_for_kids = KIDS_RE.test(`${title} ${description}`);
+
+  const { flags, tagged } = categoryFlags(ldEvent.categories);
+  const is_for_kids = tagged ? !!flags.is_for_kids : KIDS_RE.test(`${title} ${description}`);
 
   // Prefer the canonical URL embedded in JSON-LD over the source URL
   const url = ldEvent.url || ldEvent['@id'] || sourceUrl;
@@ -225,6 +267,10 @@ function jsonLdToEvent(ldEvent, sourceUrl) {
     description,
     is_free,
     is_for_kids,
+    is_music:   !!flags.is_music,
+    is_theatre: !!flags.is_theatre,
+    is_sport:   !!flags.is_sport,
+    is_market:  !!flags.is_market,
     is_all_day: !time,
     url,
     status:    null, // set by caller
@@ -279,6 +325,7 @@ function squarespaceEventToLd(item, sourceUrl) {
     endDate:     dublinLocal(item.endDate),
     location:    place ? { '@type': 'Place', name: place } : null,
     description: item.excerpt || item.body || '',
+    categories:  item.categories || [],
     url:         item.fullUrl ? new URL(item.fullUrl, sourceUrl).href : sourceUrl,
   };
 }
@@ -314,6 +361,7 @@ function intoKildareToLd(e) {
     endDate:     bare(end),
     location:    place ? { '@type': 'Place', name: place } : null,
     description: e.excerpt || e.description || '',
+    categories:  e.categories || [],
     offers:      /^(free|0|€\s*0)$/i.test(cost) ? { price: 0 } : undefined,
     url:         e.website || e.url,
   };
@@ -613,5 +661,5 @@ if (require.main === module) {
 // duplicating the fetch.
 module.exports = {
   extractJsonLd, isNaasEvent, squarespaceEventToLd, intoKildareToLd, detectFree,
-  fetchSquarespaceEvents,
+  jsonLdToEvent, fetchSquarespaceEvents,
 };
