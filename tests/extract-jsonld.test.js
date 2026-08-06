@@ -120,4 +120,16 @@ describe('isNaasEvent', () => {
   test('handles an array of locations', () => {
     assert.equal(isNaasEvent(at([{ name: 'Somewhere' }, { address: { addressLocality: 'Naas' } }])), true);
   });
+
+  // County-wide feeds are roughly 90% non-Naas, so the filter has to stay tight.
+  // But a few venues that are in Naas do not say so anywhere in their listing,
+  // and were being dropped: Mondello Park is in Donore, Naas.
+  test('accepts a known Naas venue that does not carry the word', () => {
+    assert.equal(isNaasEvent(at({ name: 'Mondello Park' })), true);
+    assert.equal(isNaasEvent(at({ name: 'Punchestown Racecourse' })), true);
+  });
+
+  test('the venue allowlist does not widen the filter to nearby towns', () => {
+    assert.equal(isNaasEvent(at({ name: 'Riverbank Arts Centre', address: { addressLocality: 'Newbridge' } })), false);
+  });
 });
