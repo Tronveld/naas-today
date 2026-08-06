@@ -9,6 +9,8 @@ import DatePickerModal from '../components/modals/DatePickerModal.astro';
 import SubmitEventModal from '../components/modals/SubmitEventModal.astro';
 import AboutModal from '../components/modals/AboutModal.astro';
 import ContactModal from '../components/modals/ContactModal.astro';
+// Same query get-events.js serves at runtime — see that module for why it is shared.
+import { APPROVED_EVENTS_QUERY } from '../../netlify/functions/lib/events-query.js';
 
 const SUPABASE_URL = import.meta.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.SUPABASE_ANON_KEY;
@@ -17,7 +19,7 @@ let initialEvents: any[] = [];
 try {
   if (SUPABASE_URL && SUPABASE_ANON_KEY) {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/events?status=eq.approved&order=date.asc,time.asc&select=id,title,date,end_date,time,time_end,is_all_day,location,description,is_free,is_for_kids,is_music,is_sport,is_market,is_theatre,url`,
+      `${SUPABASE_URL}${APPROVED_EVENTS_QUERY}`,
       { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
     );
     if (res.ok) initialEvents = await res.json();
