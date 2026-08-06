@@ -660,13 +660,17 @@ const jsonLd = todayEvents.length > 0 ? {
         // "today" is only true on the day itself; the visitor can be three taps into
         // next week. The date sits right above this message, so a wrong word here is
         // the kind of small lie that makes the rest look unreliable.
-        const dayWord = localDateStr(currentDate) === localDateStr(new Date()) ? 'today' : 'this day';
+        const isToday = localDateStr(currentDate) === localDateStr(new Date());
+        const dayWord = isToday ? 'today' : 'this day';
+        // "today" already carries its own preposition — "on today" is not English,
+        // and reads as broken to exactly the older resident this is built for.
+        const dayPhrase = isToday ? 'today' : 'on this day';
 
         if (filtersHidThem) {
             heading.textContent = 'No matching events';
             message.textContent = dayCount === 1
-                ? `There is 1 other event on ${dayWord}.`
-                : `There are ${dayCount} other events on ${dayWord}.`;
+                ? `There is 1 other event ${dayPhrase}.`
+                : `There are ${dayCount} other events ${dayPhrase}.`;
             clearBtn.hidden = false;
             // Not the moment to ask for a submission — the day is not empty.
             setEmptyCtaHidden(true);
