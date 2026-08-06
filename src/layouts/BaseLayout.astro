@@ -28,7 +28,10 @@ const {
     <meta name="twitter:title" content={title}>
     <meta name="twitter:description" content={description}>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><rect width='48' height='48' rx='8' fill='%232d5a2d'/><text x='24' y='34' font-size='20' font-family='serif' font-weight='bold' fill='white' text-anchor='middle'>NT</text></svg>">
-    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+    {/* The id matters: updateJsonLd() replaces #jsonld-events on every render.
+        Without it the client appended a second block beside this one, leaving
+        the page with both the pre-rendered day and the day being viewed. */}
+    {jsonLd && <script type="application/ld+json" id="jsonld-events" set:html={JSON.stringify(jsonLd)} />}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">

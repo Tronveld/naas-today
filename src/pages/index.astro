@@ -132,7 +132,7 @@ const jsonLd = todayEvents.length > 0 ? {
   </script>
 
   <script>
-    import { apply as applyDraft, saveDraft, hasDraft, clearDraft, readDraft } from '../scripts/draft.js';
+    import { initModals, initSubmitForm, openModal, closeModal } from '../scripts/modal-form.js';
 
     // ── Utilities ──────────────────────────────────────────────────────
 
@@ -172,45 +172,44 @@ const jsonLd = todayEvents.length > 0 ? {
         root.querySelectorAll('p.event-description[data-truncatable="true"]').forEach(setupDescriptionToggle);
     }
 
+    // Maps a Supabase row onto the camelCase shape the rest of this file uses.
+    // Called for the build-time events and again for whatever get-events returns.
+    function toEvent(row, index) {
+        return {
+            id: row.id || index + 1,
+            title: decodeHTML(row.title || ''),
+            date: row.date || '',
+            endDate: row.end_date || '',
+            time: row.time ? row.time.substring(0, 5) : '',
+            timeEnd: row.time_end ? row.time_end.substring(0, 5) : '',
+            isAllDay: Boolean(row.is_all_day),
+            location: decodeHTML(row.location || ''),
+            description: decodeHTML(row.description || ''),
+            isFree: Boolean(row.is_free),
+            isForKids: Boolean(row.is_for_kids),
+            isMusic:   Boolean(row.is_music),
+            isSport:   Boolean(row.is_sport),
+            isMarket:  Boolean(row.is_market),
+            isTheatre: Boolean(row.is_theatre),
+            url: row.url || ''
+        };
+    }
+
     // ── State ───────────────────────────────────────────────────────────
-    // Use build-time events as initial state (mapped to camelCase)
-    let events = (window.__INITIAL_EVENTS__ || []).map((row, index) => ({
-        id: row.id || index + 1,
-        title: decodeHTML(row.title || ''),
-        date: row.date || '',
-        endDate: row.end_date || '',
-        time: row.time ? row.time.substring(0, 5) : '',
-        timeEnd: row.time_end ? row.time_end.substring(0, 5) : '',
-        isAllDay: Boolean(row.is_all_day),
-        location: decodeHTML(row.location || ''),
-        description: decodeHTML(row.description || ''),
-        isFree: Boolean(row.is_free),
-        isForKids: Boolean(row.is_for_kids),
-        isMusic:   Boolean(row.is_music),
-        isSport:   Boolean(row.is_sport),
-        isMarket:  Boolean(row.is_market),
-        isTheatre: Boolean(row.is_theatre),
-        url: row.url || ''
-    }));
+    let events = (window.__INITIAL_EVENTS__ || []).map(toEvent);
     let currentDate = new Date();
-    let filterFreeActive    = false;
-    let filterKidsActive    = false;
-    let filterMusicActive   = false;
-    let filterSportActive   = false;
-    let filterMarketActive  = false;
-    let filterTheatreActive = false;
     let isError = false;
 
-    // The six category chips, in row order. Only used for the count badges — the
-    // toggle handlers and URL state still name their own variables, because those
-    // are six separate `let`s and collapsing them is a bigger change than this.
+    // The six category chips, in row order. `active` lives here rather than in
+    // six separate `let`s, so the count badges, the toggle handlers, the URL
+    // round-trip and the filtering all read one list. `slug` is the URL token.
     const FILTER_CHIPS = [
-        { id: 'filterFree',    label: 'Free',     match: e => e.isFree },
-        { id: 'filterKids',    label: 'For kids', match: e => e.isForKids },
-        { id: 'filterMusic',   label: 'Music',    match: e => e.isMusic },
-        { id: 'filterSport',   label: 'Sport',    match: e => e.isSport },
-        { id: 'filterMarket',  label: 'Markets',  match: e => e.isMarket },
-        { id: 'filterTheatre', label: 'Theatre',  match: e => e.isTheatre },
+        { id: 'filterFree',    slug: 'free',     label: 'Free',     match: e => e.isFree,     active: false },
+        { id: 'filterKids',    slug: 'kids',     label: 'For kids', match: e => e.isForKids,  active: false },
+        { id: 'filterMusic',   slug: 'music',    label: 'Music',    match: e => e.isMusic,    active: false },
+        { id: 'filterSport',   slug: 'sport',    label: 'Sport',    match: e => e.isSport,    active: false },
+        { id: 'filterMarket',  slug: 'markets',  label: 'Markets',  match: e => e.isMarket,   active: false },
+        { id: 'filterTheatre', slug: 'theatre',  label: 'Theatre',  match: e => e.isTheatre,  active: false },
     ];
 
     function pushUrlState() {
@@ -218,14 +217,7 @@ const jsonLd = todayEvents.length > 0 ? {
         const todayStr = localDateStr(new Date());
         const dateStr = localDateStr(currentDate);
         if (dateStr !== todayStr) params.set('date', dateStr);
-        const activeFilters = [
-            filterFreeActive    && 'free',
-            filterKidsActive    && 'kids',
-            filterMusicActive   && 'music',
-            filterSportActive   && 'sport',
-            filterMarketActive  && 'markets',
-            filterTheatreActive && 'theatre',
-        ].filter(Boolean);
+        const activeFilters = FILTER_CHIPS.filter(c => c.active).map(c => c.slug);
         if (activeFilters.length) params.set('filters', activeFilters.join(','));
         // Preserve ?event= deep link param if present
         const eventParam = new URLSearchParams(location.search).get('event');
@@ -244,12 +236,7 @@ const jsonLd = todayEvents.length > 0 ? {
         const filtersParam = params.get('filters');
         if (filtersParam) {
             const active = new Set(filtersParam.split(','));
-            filterFreeActive    = active.has('free');
-            filterKidsActive    = active.has('kids');
-            filterMusicActive   = active.has('music');
-            filterSportActive   = active.has('sport');
-            filterMarketActive  = active.has('markets');
-            filterTheatreActive = active.has('theatre');
+            FILTER_CHIPS.forEach(c => { c.active = active.has(c.slug); });
             syncFilterButtons();
         }
     }
@@ -257,25 +244,16 @@ const jsonLd = todayEvents.length > 0 ? {
     // Pushes the six filter flags back onto their buttons. Shared by readUrlState
     // and the empty state's "Show all events" escape.
     function syncFilterButtons() {
-        const map = [
-            ['filterFree',    filterFreeActive],
-            ['filterKids',    filterKidsActive],
-            ['filterMusic',   filterMusicActive],
-            ['filterSport',   filterSportActive],
-            ['filterMarket',  filterMarketActive],
-            ['filterTheatre', filterTheatreActive],
-        ];
-        map.forEach(([id, isActive]) => {
+        FILTER_CHIPS.forEach(({ id, active }) => {
             const btn = document.getElementById(id);
             if (!btn) return;
-            btn.classList.toggle('active', isActive);
-            btn.setAttribute('aria-pressed', String(isActive));
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-pressed', String(active));
         });
     }
 
     function clearAllFilters() {
-        filterFreeActive = filterKidsActive = filterMusicActive = false;
-        filterSportActive = filterMarketActive = filterTheatreActive = false;
+        FILTER_CHIPS.forEach(c => { c.active = false; });
         syncFilterButtons();
         renderEvents();
         pushUrlState();
@@ -304,24 +282,7 @@ const jsonLd = todayEvents.length > 0 ? {
             if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
             const data = await response.json();
             if (Array.isArray(data) && data.length > 0) {
-                events = data.map((row, index) => ({
-                    id: row.id || index + 1,
-                    title: decodeHTML(row.title || ''),
-                    date: row.date || '',
-                    endDate: row.end_date || '',
-                    time: row.time ? row.time.substring(0, 5) : '',
-                    timeEnd: row.time_end ? row.time_end.substring(0, 5) : '',
-                    isAllDay: Boolean(row.is_all_day),
-                    location: decodeHTML(row.location || ''),
-                    description: decodeHTML(row.description || ''),
-                    isFree: Boolean(row.is_free),
-                    isForKids: Boolean(row.is_for_kids),
-                    isMusic:   Boolean(row.is_music),
-                    isSport:   Boolean(row.is_sport),
-                    isMarket:  Boolean(row.is_market),
-                    isTheatre: Boolean(row.is_theatre),
-                    url: row.url || ''
-                }));
+                events = data.map(toEvent);
             }
         } catch (error) {
             console.error('Error fetching events:', error);
@@ -368,11 +329,8 @@ const jsonLd = todayEvents.length > 0 ? {
     }
 
     function formatTime(time) {
-        const [hours, minutes] = time.split(':');
-        const hour = parseInt(hours);
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        const displayHour = hour % 12 || 12;
-        return `${displayHour}:${minutes} ${ampm}`;
+        const { time: t, ampm } = formatTimeShort(time);
+        return `${t} ${ampm}`;
     }
 
     function formatEventTime(event) {
@@ -598,12 +556,10 @@ const jsonLd = todayEvents.length > 0 ? {
             btn.classList.toggle('is-empty', count === 0);
         });
 
-        if (filterFreeActive)    filteredEvents = filteredEvents.filter(e => e.isFree);
-        if (filterKidsActive)    filteredEvents = filteredEvents.filter(e => e.isForKids);
-        if (filterMusicActive)   filteredEvents = filteredEvents.filter(e => e.isMusic);
-        if (filterSportActive)   filteredEvents = filteredEvents.filter(e => e.isSport);
-        if (filterMarketActive)  filteredEvents = filteredEvents.filter(e => e.isMarket);
-        if (filterTheatreActive) filteredEvents = filteredEvents.filter(e => e.isTheatre);
+        // AND across the active chips, as before: an event must match every one.
+        for (const chip of FILTER_CHIPS) {
+            if (chip.active) filteredEvents = filteredEvents.filter(chip.match);
+        }
 
         if (filteredEvents.length === 0) {
             grid.style.display = 'none';
@@ -784,46 +740,6 @@ const jsonLd = todayEvents.length > 0 ? {
         pushUrlState();
     }
 
-    // ── Focus Trap (for accessible modals) ─────────────────────────────
-    let previouslyFocused = null;
-
-    function trapFocus(modal) {
-        const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        modal._trapHandler = function(e) {
-            if (e.key !== 'Tab') return;
-            if (e.shiftKey) {
-                if (document.activeElement === first) { e.preventDefault(); last.focus(); }
-            } else {
-                if (document.activeElement === last) { e.preventDefault(); first.focus(); }
-            }
-        };
-        modal.addEventListener('keydown', modal._trapHandler);
-    }
-
-    // ── Modal Helpers ───────────────────────────────────────────────────
-    function openModal(id) {
-        previouslyFocused = document.activeElement;
-        const modal = document.getElementById(id);
-        modal.classList.add('active');
-        document.body.classList.add('modal-open');
-        const firstFocusable = modal.querySelector('button, [href], input, select, textarea');
-        if (firstFocusable) firstFocusable.focus();
-        trapFocus(modal);
-    }
-
-    function closeModal(id) {
-        const modal = document.getElementById(id);
-        modal.classList.remove('active');
-        document.body.classList.remove('modal-open');
-        if (modal._trapHandler) {
-            modal.removeEventListener('keydown', modal._trapHandler);
-            delete modal._trapHandler;
-        }
-        if (previouslyFocused) previouslyFocused.focus();
-    }
-
     // ── Event Listeners ─────────────────────────────────────────────────
     window.addEventListener('popstate', () => {
         readUrlState();
@@ -858,292 +774,18 @@ const jsonLd = todayEvents.length > 0 ? {
         closeModal('dateModal');
     });
 
-    document.getElementById('filterFree').addEventListener('click', function() {
-        filterFreeActive = !filterFreeActive;
-        this.classList.toggle('active');
-        this.setAttribute('aria-pressed', filterFreeActive);
-        renderEvents();
-        pushUrlState();
-    });
-
-    document.getElementById('filterKids').addEventListener('click', function() {
-        filterKidsActive = !filterKidsActive;
-        this.classList.toggle('active');
-        this.setAttribute('aria-pressed', filterKidsActive);
-        renderEvents();
-        pushUrlState();
-    });
-
-    document.getElementById('filterMusic').addEventListener('click', function() {
-        filterMusicActive = !filterMusicActive;
-        this.classList.toggle('active');
-        this.setAttribute('aria-pressed', filterMusicActive);
-        renderEvents();
-        pushUrlState();
-    });
-
-    document.getElementById('filterSport').addEventListener('click', function() {
-        filterSportActive = !filterSportActive;
-        this.classList.toggle('active');
-        this.setAttribute('aria-pressed', filterSportActive);
-        renderEvents();
-        pushUrlState();
-    });
-
-    document.getElementById('filterMarket').addEventListener('click', function() {
-        filterMarketActive = !filterMarketActive;
-        this.classList.toggle('active');
-        this.setAttribute('aria-pressed', filterMarketActive);
-        renderEvents();
-        pushUrlState();
-    });
-
-    document.getElementById('filterTheatre').addEventListener('click', function() {
-        filterTheatreActive = !filterTheatreActive;
-        this.classList.toggle('active');
-        this.setAttribute('aria-pressed', filterTheatreActive);
-        renderEvents();
-        pushUrlState();
-    });
-
-    // Character counter for description
-    const descTextarea = document.getElementById('eventDescription');
-    const charCounter = document.getElementById('descCharCounter');
-    if (descTextarea && charCounter) {
-        descTextarea.addEventListener('input', () => {
-            charCounter.textContent = `${descTextarea.value.length} / 2000`;
-        });
-    }
-
-    // Time mode toggle in submit form
-    document.querySelectorAll('input[name="timeMode"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            const isAllDay = this.value === 'allday';
-            const isRange = this.value === 'range';
-            const timeInputsEl = document.getElementById('timeInputs');
-            const timeEndEl = document.getElementById('eventTimeEnd');
-            const timeSepEl = document.getElementById('timeRangeSep');
-            const timeStartEl = document.getElementById('eventTimeStart');
-            timeInputsEl.style.display = isAllDay ? 'none' : 'flex';
-            timeEndEl.style.display = isRange ? '' : 'none';
-            timeSepEl.style.display = isRange ? '' : 'none';
-            timeStartEl.required = !isAllDay;
+    FILTER_CHIPS.forEach(chip => {
+        document.getElementById(chip.id).addEventListener('click', function() {
+            chip.active = !chip.active;
+            this.classList.toggle('active', chip.active);
+            this.setAttribute('aria-pressed', String(chip.active));
+            renderEvents();
+            pushUrlState();
         });
     });
 
-    // Reset time mode UI when form resets
-    document.getElementById('eventForm').addEventListener('reset', () => {
-        setTimeout(() => {
-            document.getElementById('timeInputs').style.display = 'flex';
-            document.getElementById('eventTimeEnd').style.display = 'none';
-            document.getElementById('timeRangeSep').style.display = 'none';
-            document.getElementById('eventTimeStart').required = true;
-        }, 0);
-    });
-
-    // ── Draft persistence ────────────────────────────────────────────────
-    //
-    // Item 10 stopped a stray Escape wiping the form, but only within one page
-    // load. A reload, a crash, or a tab the phone evicted still lost everything.
-    // The draft is written on every keystroke and lives until the submission
-    // lands or the visitor explicitly cancels. Shape and storage live in
-    // src/scripts/draft.js, shared with AppModals.astro's copy of this form.
-    const draftFields = () => document.getElementById('eventForm').querySelectorAll('input, textarea, select');
-
-    function restoreDraft() {
-        const draft = readDraft();
-        if (!draft) return;
-        applyDraft(draftFields(), draft);
-        // Values alone leave the dependent UI wrong — the recurring section stays
-        // hidden, the end-time input stays collapsed, the counter reads 0. Re-fire
-        // the events those handlers already listen for rather than repeating them.
-        document.getElementById('isRecurring').dispatchEvent(new Event('change'));
-        document.querySelector('input[name="timeMode"]:checked').dispatchEvent(new Event('change'));
-        document.getElementById('eventDescription').dispatchEvent(new Event('input'));
-        updateRecurrenceHint();
-    }
-
-    document.getElementById('eventForm').addEventListener('input', () => saveDraft(draftFields()));
-    document.getElementById('eventForm').addEventListener('reset', clearDraft);
-
-    // Every submit entry point opens the modal on the day currently being viewed,
-    // not on today — unless a draft is waiting, in which case the date the visitor
-    // typed outranks the day they happen to be looking at.
-    function openSubmitModal() {
-        if (!hasDraft()) document.getElementById('eventDate').value = localDateStr(currentDate);
-        openModal('submitModal');
-    }
-
-    document.getElementById('submitEventBtn').addEventListener('click', openSubmitModal);
-    document.getElementById('submitEventFooterBtn').addEventListener('click', openSubmitModal);
-    document.getElementById('emptySubmitBtn')?.addEventListener('click', openSubmitModal);
     document.getElementById('retryBtn')?.addEventListener('click', () => fetchEvents());
     document.getElementById('clearFiltersBtn')?.addEventListener('click', clearAllFilters);
-
-    document.getElementById('closeSubmitModal').addEventListener('click', () => closeModal('submitModal'));
-
-    // Cancel is the one deliberate discard, so it is the one place that asks.
-    // A native confirm() rather than a styled panel: this is a destructive
-    // action, which is what the platform dialog is actually for. (The eight
-    // alert() calls item 17 removes are validation and success messaging —
-    // a different problem with the same-looking box.)
-    document.getElementById('cancelSubmit').addEventListener('click', () => {
-        if (hasDraft() && !confirm('Discard this event? What you have typed will be lost.')) return;
-        closeModal('submitModal');
-        document.getElementById('eventForm').reset();
-    });
-
-    // ── Recurring toggle ─────────────────────────────────────────────────
-    function updateRecurrenceHint() {
-        const startDate = document.getElementById('eventDate').value;
-        const endDate   = document.getElementById('recurrenceEndDate').value;
-        const freq      = document.getElementById('recurrenceFrequency').value;
-        const hint      = document.getElementById('recurrenceHint');
-        if (!startDate || !endDate || endDate <= startDate) { hint.textContent = ''; return; }
-        let count = 0, cur = new Date(startDate + 'T00:00:00');
-        const end = endDate;
-        while (count < 104) {
-            const s = cur.toISOString().slice(0, 10);
-            if (s > end) break;
-            count++;
-            if (freq === 'weekly')       cur.setDate(cur.getDate() + 7);
-            else if (freq === 'fortnightly') cur.setDate(cur.getDate() + 14);
-            else cur.setMonth(cur.getMonth() + 1);
-        }
-        hint.textContent = count > 0 ? `~${count} occurrence${count !== 1 ? 's' : ''}` : '';
-    }
-
-    document.getElementById('isRecurring').addEventListener('change', function() {
-        const section = document.getElementById('recurringSection');
-        section.style.display = this.checked ? '' : 'none';
-        document.getElementById('recurrenceEndDate').required = this.checked;
-    });
-
-    document.getElementById('recurrenceFrequency').addEventListener('change', updateRecurrenceHint);
-    document.getElementById('recurrenceEndDate').addEventListener('change', updateRecurrenceHint);
-    document.getElementById('eventDate').addEventListener('change', updateRecurrenceHint);
-
-    // Also hide recurring section on form reset
-    document.getElementById('eventForm').addEventListener('reset', () => {
-        setTimeout(() => {
-            document.getElementById('recurringSection').style.display = 'none';
-            document.getElementById('recurrenceEndDate').required = false;
-            document.getElementById('recurrenceHint').textContent = '';
-        }, 0);
-    });
-
-    document.getElementById('eventForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
-        submitBtn.textContent = 'Submitting...';
-        submitBtn.disabled = true;
-
-        const timeMode = document.querySelector('input[name="timeMode"]:checked').value;
-        const baseEvent = {
-            title: document.getElementById('eventTitle').value.trim(),
-            date: document.getElementById('eventDate').value,
-            endDate: document.getElementById('eventEndDate').value || null,
-            isAllDay: timeMode === 'allday',
-            time: timeMode !== 'allday' ? document.getElementById('eventTimeStart').value : null,
-            timeEnd: timeMode === 'range' ? document.getElementById('eventTimeEnd').value : null,
-            location: document.getElementById('eventLocation').value.trim(),
-            description: document.getElementById('eventDescription').value.trim(),
-            isFree: document.getElementById('isFree').checked,
-            isForKids: document.getElementById('isForKids').checked,
-            isMusic:   document.getElementById('isMusic').checked,
-            isSport:   document.getElementById('isSport').checked,
-            isMarket:  document.getElementById('isMarket').checked,
-            isTheatre: document.getElementById('isTheatre').checked,
-            url: document.getElementById('eventUrl').value.trim() || null
-        };
-
-        if (baseEvent.endDate && baseEvent.endDate < baseEvent.date) {
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-            alert('The end date must be on or after the start date.');
-            return;
-        }
-
-        const isRecurring = document.getElementById('isRecurring').checked;
-
-        if (isRecurring) {
-            const recEndDate  = document.getElementById('recurrenceEndDate').value;
-            const frequency   = document.getElementById('recurrenceFrequency').value;
-
-            if (!recEndDate || recEndDate <= baseEvent.date) {
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-                alert('Please set a "Repeat until" date that is after the event start date.');
-                return;
-            }
-
-            try {
-                const response = await fetch('/.netlify/functions/submit-recurring', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        baseEvent,
-                        recurrence: { frequency, endDate: recEndDate }
-                    })
-                });
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.error || `Submit failed: ${response.status}`);
-                closeModal('submitModal');
-                document.getElementById('eventForm').reset();
-                alert(`Events Submitted!\n\nThanks for your help! Your ${result.count} events have been submitted. They'll appear once approved.\n\nQuestions? Email me at naastoday.tile693@passinbox.com`);
-            } catch (error) {
-                console.error('Error submitting recurring events:', error);
-                alert('Sorry, something went wrong. Please try again or email naastoday.tile693@passinbox.com.');
-            } finally {
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-            }
-        } else {
-            try {
-                const response = await fetch('/.netlify/functions/submit-event', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(baseEvent)
-                });
-                if (!response.ok) throw new Error(`Submit failed: ${response.status}`);
-                closeModal('submitModal');
-                document.getElementById('eventForm').reset();
-                alert('Event Submitted! 🎉\n\nThanks for your help! I\'ll review your submission and it should appear on the site within a day or two.\n\nQuestions? Email me at naastoday.tile693@passinbox.com');
-            } catch (error) {
-                console.error('Error submitting event:', error);
-                alert('Sorry, something went wrong. Please try again or email naastoday.tile693@passinbox.com.');
-            } finally {
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-            }
-        }
-    });
-
-    // ── Footer Modals ────────────────────────────────────────────────────
-    document.getElementById('aboutBtn').addEventListener('click', () => openModal('aboutModal'));
-    document.getElementById('closeAboutModal').addEventListener('click', () => closeModal('aboutModal'));
-    document.getElementById('contactBtn').addEventListener('click', () => openModal('contactModal'));
-    document.getElementById('closeContactModal').addEventListener('click', () => closeModal('contactModal'));
-
-    // Close modals on background click or Escape key
-    //
-    // Dismissing deliberately does NOT reset the form. A mistap outside the sheet
-    // or a stray Escape used to wipe a submission with no confirm and no undo, on
-    // a form that requires a description of up to 2000 characters. The modal only
-    // hides, so leaving the fields alone is what lets a half-written event survive
-    // an interruption. Cancel and a successful submit still reset it.
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal(modal.id);
-        });
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key !== 'Escape') return;
-        const activeModal = document.querySelector('.modal.active');
-        if (activeModal) closeModal(activeModal.id);
-    });
 
     // ── Deep Link ────────────────────────────────────────────────────────
     function handleDeepLink() {
@@ -1169,7 +811,12 @@ const jsonLd = todayEvents.length > 0 ? {
     readUrlState();
     updateDateDisplay();
     initDescriptionToggles(document.getElementById('eventsGrid'));
-    restoreDraft();   // last: it re-fires the change/input handlers registered above
+    initModals();
+    // The submit modal opens on the day being viewed, not on today — a visitor
+    // three taps into next week is almost certainly adding an event for then.
+    // initSubmitForm restores any waiting draft, so it goes last: doing that
+    // re-fires the change/input handlers it has just registered.
+    initSubmitForm({ defaultDate: () => localDateStr(currentDate) });
     fetchEvents().then(handleDeepLink);
   </script>
 </BaseLayout>

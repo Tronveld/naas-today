@@ -72,13 +72,16 @@ src/
     EventsGrid.astro         — grid of EventCards, empty/loading/error states,
                                and the submit-event area below the list
     Footer.astro             — copyright + about/contact/terms/submit links
-    AppModals.astro          — About/Contact/Submit modals bundled with their own
-                               copy of the modal JS (see the note below)
+    AppModals.astro          — About/Contact/Submit modals for pages that are not
+                               index.astro; wires the shared script (see below)
     modals/
       DatePickerModal.astro
       SubmitEventModal.astro
       AboutModal.astro
       ContactModal.astro
+  scripts/
+    draft.js                 — submit-form draft persistence (sessionStorage)
+    modal-form.js            — modal system + submit form, shared by index and AppModals
   pages/
     index.astro              — fetches events at build time, assembles all components, embeds client JS
     terms.astro              — static terms & disclaimer page (own scoped <style>)
@@ -87,7 +90,9 @@ public/
   robots.txt
 ```
 
-**Note — the modal JS exists in two places.** `index.astro` imports the four modals individually and defines `openModal`/`closeModal`/`trapFocus` in its own client script. `terms.astro` imports `AppModals.astro`, which bundles three modals *plus a second TypeScript copy of the same logic*, because it does not load `index.astro`'s script. **A fix to the modal system in one file does not fix the other** — change both, or the About/Contact modals will behave differently on `/` and `/terms`.
+**The modal system and the submit form live in `src/scripts/modal-form.js`**, shared by `index.astro` and `AppModals.astro` (which `/terms` uses). It exports `openModal`, `closeModal`, `initModals()` and `initSubmitForm({ defaultDate })`; `defaultDate` is the only thing that differs between the two callers — on `/` the day being viewed, on `/terms` today.
+
+This used to be two copies, the second a TypeScript retype of the first, and CLAUDE.md carried a warning that fixing one did not fix the other. Two copies of a form that takes a 2000-character description is two chances to lose someone's typing. `src/scripts/draft.js` was already shared for the same reason — a draft started on `/` has to still be there on `/terms`.
 
 **`src/pages/index.astro`** — Key sections:
 - Frontmatter fetches approved events from Supabase at build time; pre-renders `EventsGrid` with today's events; emits JSON-LD structured data.
@@ -97,7 +102,8 @@ public/
   - **`fetchEvents()`** — calls `/.netlify/functions/get-events`; skips loading spinner if pre-rendered events are already visible.
   - **`renderEvents()`** — filters `events` array by `currentDate`, active filters, then calls `createEventCard()` per event.
   - **`createEventCard(event)`** — builds event cards using DOM methods (`textContent` only — never `innerHTML` with user data).
-  - **Modal system** — `openModal(id)` / `closeModal(id)` manage focus, ARIA, and a per-modal Tab key trap stored on `modal._trapHandler`.
+  - **`FILTER_CHIPS`** — the six category chips as one array carrying `id`, `slug`, `label`, `match` and `active`. The count badges, the toggle handlers, the `?filters=` round-trip and the filtering all read it; there is no separate per-filter variable.
+  - **Modal system** — imported from `src/scripts/modal-form.js`; `index.astro` calls `openModal`/`closeModal` directly only for the date picker.
 
 `public/admin.html` — password-protected admin interface. On load it calls `admin-auth` with `check_setup` to determine whether to show the first-time setup form or the login form. Once authenticated, it calls `admin-events` to list, approve/reject, edit, or delete events. The password is stored only in `sessionStorage` (cleared on tab close) and sent via the `x-admin-password` header on every admin API request.
 
