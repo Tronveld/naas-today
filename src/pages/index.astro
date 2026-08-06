@@ -132,6 +132,8 @@ const jsonLd = todayEvents.length > 0 ? {
   </script>
 
   <script>
+    import { apply as applyDraft, saveDraft, hasDraft, clearDraft, readDraft } from '../scripts/draft.js';
+
     // ── Utilities ──────────────────────────────────────────────────────
 
     // Decodes HTML entities (e.g. &eacute; → é) safely via a textarea element
@@ -809,6 +811,7 @@ const jsonLd = todayEvents.length > 0 ? {
         previouslyFocused = document.activeElement;
         const modal = document.getElementById(id);
         modal.classList.add('active');
+        document.body.classList.add('modal-open');
         const firstFocusable = modal.querySelector('button, [href], input, select, textarea');
         if (firstFocusable) firstFocusable.focus();
         trapFocus(modal);
@@ -817,6 +820,7 @@ const jsonLd = todayEvents.length > 0 ? {
     function closeModal(id) {
         const modal = document.getElementById(id);
         modal.classList.remove('active');
+        document.body.classList.remove('modal-open');
         if (modal._trapHandler) {
             modal.removeEventListener('keydown', modal._trapHandler);
             delete modal._trapHandler;
@@ -941,10 +945,36 @@ const jsonLd = todayEvents.length > 0 ? {
         }, 0);
     });
 
+    // ── Draft persistence ────────────────────────────────────────────────
+    //
+    // Item 10 stopped a stray Escape wiping the form, but only within one page
+    // load. A reload, a crash, or a tab the phone evicted still lost everything.
+    // The draft is written on every keystroke and lives until the submission
+    // lands or the visitor explicitly cancels. Shape and storage live in
+    // src/scripts/draft.js, shared with AppModals.astro's copy of this form.
+    const draftFields = () => document.getElementById('eventForm').querySelectorAll('input, textarea, select');
+
+    function restoreDraft() {
+        const draft = readDraft();
+        if (!draft) return;
+        applyDraft(draftFields(), draft);
+        // Values alone leave the dependent UI wrong — the recurring section stays
+        // hidden, the end-time input stays collapsed, the counter reads 0. Re-fire
+        // the events those handlers already listen for rather than repeating them.
+        document.getElementById('isRecurring').dispatchEvent(new Event('change'));
+        document.querySelector('input[name="timeMode"]:checked').dispatchEvent(new Event('change'));
+        document.getElementById('eventDescription').dispatchEvent(new Event('input'));
+        updateRecurrenceHint();
+    }
+
+    document.getElementById('eventForm').addEventListener('input', () => saveDraft(draftFields()));
+    document.getElementById('eventForm').addEventListener('reset', clearDraft);
+
     // Every submit entry point opens the modal on the day currently being viewed,
-    // not on today.
+    // not on today — unless a draft is waiting, in which case the date the visitor
+    // typed outranks the day they happen to be looking at.
     function openSubmitModal() {
-        document.getElementById('eventDate').value = localDateStr(currentDate);
+        if (!hasDraft()) document.getElementById('eventDate').value = localDateStr(currentDate);
         openModal('submitModal');
     }
 
@@ -955,7 +985,14 @@ const jsonLd = todayEvents.length > 0 ? {
     document.getElementById('clearFiltersBtn')?.addEventListener('click', clearAllFilters);
 
     document.getElementById('closeSubmitModal').addEventListener('click', () => closeModal('submitModal'));
+
+    // Cancel is the one deliberate discard, so it is the one place that asks.
+    // A native confirm() rather than a styled panel: this is a destructive
+    // action, which is what the platform dialog is actually for. (The eight
+    // alert() calls item 17 removes are validation and success messaging —
+    // a different problem with the same-looking box.)
     document.getElementById('cancelSubmit').addEventListener('click', () => {
+        if (hasDraft() && !confirm('Discard this event? What you have typed will be lost.')) return;
         closeModal('submitModal');
         document.getElementById('eventForm').reset();
     });
@@ -1136,6 +1173,7 @@ const jsonLd = todayEvents.length > 0 ? {
     readUrlState();
     updateDateDisplay();
     initDescriptionToggles(document.getElementById('eventsGrid'));
+    restoreDraft();   // last: it re-fires the change/input handlers registered above
     fetchEvents().then(handleDeepLink);
   </script>
 </BaseLayout>

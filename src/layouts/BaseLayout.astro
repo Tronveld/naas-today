@@ -798,7 +798,13 @@ const {
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
+            overscroll-behavior: contain;
             transition: opacity 0.2s ease, visibility 0.2s ease;
+        }
+
+        /* Set while any modal is open, so the page behind the sheet cannot scroll. */
+        body.modal-open {
+            overflow: hidden;
         }
 
         .modal.active {
@@ -812,7 +818,7 @@ const {
             border-radius: 16px;
             max-width: 540px;
             width: 100%;
-            max-height: 90vh;
+            max-height: 90dvh;
             overflow-y: auto;
             box-shadow: 0 20px 60px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.08);
             border: 1px solid var(--border);
@@ -1082,7 +1088,7 @@ const {
             .modal-content {
                 border-radius: 16px 16px 0 0;
                 max-width: 100%;
-                max-height: 100vh;
+                max-height: 100dvh;
                 position: fixed;
                 bottom: 0;
                 left: 0;
