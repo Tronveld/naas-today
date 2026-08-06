@@ -928,9 +928,13 @@ const {
             cursor: pointer;
         }
 
+        /* Wraps for the same reason .time-mode-group does: six category labels in
+           one row are far wider than a 375px sheet, and without this the whole
+           modal scrolls sideways with a blank gutter beside every other field. */
         .checkbox-group {
             display: flex;
-            gap: 1.5rem;
+            flex-wrap: wrap;
+            gap: 0.75rem 1.5rem;
             margin-top: 0.75rem;
         }
 
