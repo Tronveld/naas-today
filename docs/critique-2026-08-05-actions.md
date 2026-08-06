@@ -437,6 +437,31 @@ above lands here too. Four defects are present in *both* copies:
   (`:275`), and `:407` forbids a category colour as a fill anywhere but an active chip. The
   chip and the tag also carry the same *word*, so the colour would be redundant reinforcement.
 
+- [x] **79. [P1] Half the category chips were invisible on a phone.** The chip row was a
+  horizontally-scrolling one-liner (`.filter-scroll` with `overflow-x: auto`, `.filter-group`
+  with `flex-wrap: nowrap`). At 375px only Free, For kids and Music fit — and there was no cue
+  that the rest existed: no edge fade, no chip clipped mid-word at the boundary, and no
+  scrollbar, because iOS only paints one while you are actively scrolling. A visitor who never
+  swiped would reasonably conclude the site has three categories, not six. Reported from an
+  iPhone.
+
+  `.filter-group` now wraps and `.filter-scroll` is deleted — it existed solely to enable the
+  scroll, and `.controls-inner` was already a wrapping flex container, so the chips need no
+  wrapper of their own. Two rows on a phone, still one on desktop; the existing `gap: 0.5rem`
+  covers the row gap. `.filter-btn`'s `white-space: nowrap` is untouched, so labels still never
+  break mid-word.
+
+  **This overrides a design decision, not an oversight.** `DESIGN.md:348` read "The chip row
+  scrolls horizontally rather than wrapping, so the filter bar is always exactly one line
+  tall." Updated in the same change, or the detector would flag the correct CSS as the error.
+  With six short chips, one-line-ness was not worth hiding three filters.
+
+  **Knock-on for item 31:** raising `.filter-btn`'s height now multiplies across two rows on
+  mobile, not one. The two should be sized together.
+
+  Same failure as item 76 — a non-wrapping flex row that only breaks below ~400px. That is now
+  twice. **Third instance is a pattern: audit every remaining `flex-wrap: nowrap`.**
+
 ---
 
 ## `DESIGN.md` — claims that don't hold

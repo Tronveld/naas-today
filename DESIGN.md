@@ -345,7 +345,7 @@ Borders are the primary form-giver, and their weight carries meaning: **1px for 
 ### Chips
 - **Filter chips:** White fill, 1.5px hairline, sage-ink label at 0.8125rem, 6px radius. Each carries a `data-cat` attribute that binds it to its own category colour pair.
 - **State:** On hover, the chip previews its category — border, text, and background all shift to that category's colours. When active, it inverts fully: category colour as the fill, white text. **A filter chip is the only element permitted to use a category colour as a background fill.**
-- **Overflow:** The chip row scrolls horizontally rather than wrapping, so the filter bar is always exactly one line tall.
+- **Overflow:** The chip row **wraps** rather than scrolling — one line on desktop, two on a phone. Every filter must be visible without interaction; a horizontally-scrolling row clipped at the viewport edge hid half the categories from anyone who did not think to swipe. Height is the cheaper thing to spend.
 
 ### Cards / Containers
 - **Corner Style:** 12px.

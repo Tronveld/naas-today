@@ -193,17 +193,14 @@ const {
             align-items: center;
         }
 
-        .filter-scroll {
-            flex: 1;
-            min-width: 0;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
+        /* Wraps rather than scrolls. A clipped row is a hidden affordance: with no
+           fade, no partial chip at the edge and no scrollbar on iOS, Sport, Markets
+           and Theatre were invisible on a phone unless you happened to swipe. Two
+           rows on mobile, one on desktop. */
         .filter-group {
             display: flex;
             gap: 0.5rem;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
         }
 
         .filter-btn {
