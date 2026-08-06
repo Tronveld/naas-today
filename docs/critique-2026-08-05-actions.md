@@ -14,7 +14,7 @@ surrounding context to relocate it. Phase 1 and item 10 have since shipped (`17a
 `fc3d8ed`, `34101d9`), so the line numbers in the EventsGrid, empty-state and modal-dismiss
 items are already historical.
 
-**Progress: 18 of 77 done** — items 1–7, 9–12, 39–43, 76–77. Item 8 is still open.
+**Progress: 19 of 77 done** — items 1–12, 39–43, 76–77. Phase 1 is now fully closed.
 
 Phases 1–3 are complete, which was the stated "if you only do part of this list, do this part"
 threshold: both P1 findings `polish` refuses to touch are now closed. **Everything shipped so
@@ -31,7 +31,7 @@ work them in — each phase is a coherent chunk you can ship on its own.
 
 | Phase | Items | Count | Command | Why this order |
 |---|---|---|---|---|
-| ~~1. Empty day~~ **done** | 1–7, 9 | 8 of 9 | shipped in `17a5423`, `fc3d8ed` | Item 8 deliberately left — decide it with the rebuilt screen in front of you. |
+| ~~1. Empty day~~ **done** | 1–9 | 9 of 9 | `17a5423`, `fc3d8ed`, `2f0e0d1` | Item 8 was held back deliberately and decided on 2026-08-06 with the rebuilt screen in front of us. |
 | ~~2. Mobile chrome~~ **done** | 39–41 | 3 of 3 | shipped in `03c21d0` | Also closed item 43, which the sticky move would otherwise have re-created under a new selector. |
 | ~~3. Form data loss~~ **done** | 10–12, 42 | 4 of 4 | `34101d9`, `ee9d332` | Item 12's `confirm()` is flagged for item 17 to re-decide, not to inherit. |
 | 4. Accessibility | 13–16, 24–38, ~~43~~, 44–49, 53–55, 57–58, 60–61 | 1 of 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. Item 38 needs a decision, not just an edit. |
@@ -99,8 +99,20 @@ this is the primary screen, not the fallback.
   **Done when:** a small dedicated status node announces "3 events" and the container has no
   `aria-live`.
 
-- [ ] **8. [P2] Consider disabling rather than hiding zero-count filter chips.** Absence of a
+- [x] **8. [P2] Consider disabling rather than hiding zero-count filter chips.** Absence of a
   count is currently ambiguous with not-yet-loaded.
+  **The item's premise was slightly wrong** — nothing was hidden. Chips rendered `Free (3)` above
+  zero and a bare `Free` at zero, so it was the *count* that vanished, not the chip.
+  **Decided against disabling, dimmed instead.** A disabled chip strands anyone whose active
+  filter has just fallen to zero — they cannot clear it — and disabled controls drop out of the
+  tab order, which is the opposite of what the rest of phase 4 is doing.
+  `.filter-btn.is-empty:not(.active)` recedes the *container* only (page background, lighter
+  border); the label stays `--ink-mid` at **7.2:1**. Recolouring the label was the obvious first
+  idea and is useless here — `--ink-light` measures 7.13:1 against `--ink-mid`'s 7.20:1, a hue
+  change with no lightness change, so it would dim nothing.
+  Also collapsed the six near-identical count blocks into `FILTER_CHIPS`.
+  **Now unambiguous three ways:** solid + count = events; dimmed + no count = zero; solid +
+  no count = not rendered yet.
 
 - [x] **9. [P1] Pre-render upcoming events at build time.** `index.astro:67-70` ships
   `<h2>Coming Up</h2>` over an empty `<ul>` in the static HTML. First paint, no-JS, and
@@ -501,16 +513,17 @@ Two findings came out of the device pass — see items 76 and 77 below.
 
 ### Still open after the verification pass
 
-- [ ] **A successful submit clearing the draft is untested.** Every other draft path was
-  walked; this one writes a real `pending` row to live Supabase that then needs deleting via
-  `/admin.html`, so it was left. The code path is the same `form.reset()` → `reset` listener →
-  `clearDraft()` that Cancel uses and that *was* verified, so the risk is low but not zero.
+- [x] **A successful submit clearing the draft is untested — accepted, not testing it.**
+  Testing it means writing a real `pending` row to live Supabase and deleting it again via
+  `/admin.html`. The path is the same `form.reset()` → `reset` listener → `clearDraft()` that
+  Cancel uses, and Cancel *was* verified on device. Decision 2026-08-06: not worth the round
+  trip. Do not re-raise.
 
-- [ ] **Item 1's copy deviates from its own acceptance check, deliberately.** The check asked
+- [x] **Item 1's copy deviates from its own acceptance check — confirmed fine.** The check asked
   for "No theatre events on Wednesday 6 August"; the code says "No matching events" and leaves
-  the category unnamed. Reasoning: the lit chip is on screen and item 39 made the date bar
-  sticky, so naming either in prose restates what the visitor can see. Recorded rather than
-  silently dropped — reopen if you disagree.
+  the category unnamed, because the lit chip is on screen and item 39 made the date bar sticky,
+  so naming either in prose restates what the visitor can see. Reviewed and accepted
+  2026-08-06. The acceptance line above is now historical — the code is correct as shipped.
 
 ---
 

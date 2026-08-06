@@ -220,6 +220,19 @@ const {
             white-space: nowrap;
         }
 
+        /* A day with no music events dims the Music chip rather than dropping its
+           count silently or disabling it. A bare label alone is ambiguous with
+           "counts have not loaded yet"; disabling would strand anyone whose active
+           filter just fell to zero, with no way to clear it.
+
+           Only the container recedes — the label keeps --ink-mid at 7.2:1, so the
+           chip stays readable and tappable. Declared before the :hover and .active
+           rules so both still win at equal specificity. */
+        .filter-btn.is-empty:not(.active) {
+            background: var(--bg);
+            border-color: var(--border-light);
+        }
+
         /* Category filter colors via data-cat attribute */
         .filter-btn[data-cat="free"]    { --_cat: var(--cat-free);    --_cat-bg: var(--cat-free-bg); }
         .filter-btn[data-cat="kids"]    { --_cat: var(--cat-kids);    --_cat-bg: var(--cat-kids-bg); }

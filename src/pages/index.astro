@@ -201,6 +201,18 @@ const jsonLd = todayEvents.length > 0 ? {
     let filterTheatreActive = false;
     let isError = false;
 
+    // The six category chips, in row order. Only used for the count badges — the
+    // toggle handlers and URL state still name their own variables, because those
+    // are six separate `let`s and collapsing them is a bigger change than this.
+    const FILTER_CHIPS = [
+        { id: 'filterFree',    label: 'Free',     match: e => e.isFree },
+        { id: 'filterKids',    label: 'For kids', match: e => e.isForKids },
+        { id: 'filterMusic',   label: 'Music',    match: e => e.isMusic },
+        { id: 'filterSport',   label: 'Sport',    match: e => e.isSport },
+        { id: 'filterMarket',  label: 'Markets',  match: e => e.isMarket },
+        { id: 'filterTheatre', label: 'Theatre',  match: e => e.isTheatre },
+    ];
+
     function pushUrlState() {
         const params = new URLSearchParams();
         const todayStr = localDateStr(new Date());
@@ -581,30 +593,17 @@ const jsonLd = todayEvents.length > 0 ? {
         // is the visitor's to fix, and saying the wrong one reads as a broken site.
         const dayEvents = filteredEvents;
 
-        // Update filter button count badges
-        const freeCount = filteredEvents.filter(e => e.isFree).length;
-        document.querySelector('#filterFree span').textContent =
-            freeCount > 0 ? `Free (${freeCount})` : 'Free';
-
-        const kidsCount = filteredEvents.filter(e => e.isForKids).length;
-        document.querySelector('#filterKids span').textContent =
-            kidsCount > 0 ? `For kids (${kidsCount})` : 'For kids';
-
-        const musicCount = filteredEvents.filter(e => e.isMusic).length;
-        document.querySelector('#filterMusic span').textContent =
-            musicCount > 0 ? `Music (${musicCount})` : 'Music';
-
-        const sportCount = filteredEvents.filter(e => e.isSport).length;
-        document.querySelector('#filterSport span').textContent =
-            sportCount > 0 ? `Sport (${sportCount})` : 'Sport';
-
-        const marketCount = filteredEvents.filter(e => e.isMarket).length;
-        document.querySelector('#filterMarket span').textContent =
-            marketCount > 0 ? `Markets (${marketCount})` : 'Markets';
-
-        const theatreCount = filteredEvents.filter(e => e.isTheatre).length;
-        document.querySelector('#filterTheatre span').textContent =
-            theatreCount > 0 ? `Theatre (${theatreCount})` : 'Theatre';
+        // Count badges. A zero-count chip is dimmed rather than left as a bare
+        // label — see the .is-empty rule in BaseLayout for why not disabled.
+        // Counts are taken before the category filters are applied, so they
+        // always mean "events today with this tag", not "…that also survive
+        // your other chips". A chip can therefore be both .active and .is-empty.
+        FILTER_CHIPS.forEach(({ id, label, match }) => {
+            const count = filteredEvents.filter(match).length;
+            const btn = document.getElementById(id);
+            btn.querySelector('span').textContent = count > 0 ? `${label} (${count})` : label;
+            btn.classList.toggle('is-empty', count === 0);
+        });
 
         if (filterFreeActive)    filteredEvents = filteredEvents.filter(e => e.isFree);
         if (filterKidsActive)    filteredEvents = filteredEvents.filter(e => e.isForKids);
