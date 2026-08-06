@@ -90,14 +90,6 @@ const {
             background: var(--bg-card);
             border-bottom: 1px solid var(--border-light);
             padding: 0.625rem 0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            transition: box-shadow 0.2s ease;
-        }
-
-        header.scrolled {
-            box-shadow: 0 2px 8px rgba(26,42,26,0.08);
         }
 
         .masthead {
@@ -125,6 +117,14 @@ const {
             background: var(--bg);
             border-bottom: 1px solid var(--border);
             padding: 0.75rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .date-section.scrolled {
+            box-shadow: 0 2px 8px rgba(26,42,26,0.08);
         }
 
         .date-header {
@@ -137,6 +137,7 @@ const {
         .current-date {
             font-size: clamp(1.625rem, 3.5vw, 2rem);
             font-weight: 700;
+            line-height: 1.2;
             color: var(--ink);
         }
 
@@ -1073,6 +1074,7 @@ const {
         @media (max-width: 480px) {
             .container { padding: 0 1rem; }
             .current-date { font-size: 1.125rem; }
+            .tagline { display: none; }
             .date-nav {
                 width: 100%;
                 justify-content: space-between;
@@ -1096,7 +1098,7 @@ const {
         @media (prefers-reduced-motion: reduce) {
             .event-card { animation: none !important; }
             .modal, .modal-content { transition: none !important; }
-            .date-nav-btn, .filter-btn, .submit-area-btn,
+            .date-section, .date-nav-btn, .filter-btn, .submit-area-btn,
             .btn-primary, .btn-secondary, .share-btn, .desc-toggle-btn,
             .event-url, .upcoming-item, .modal-close,
             .empty-clear-btn { transition: none !important; }
@@ -1105,9 +1107,9 @@ const {
     <script defer src="https://cloud.umami.is/script.js" data-website-id="8066e0da-4cdf-41c7-9981-f59854563ab5"></script>
     <script>
         (function() {
-            var hdr = document.querySelector('header');
+            var hdr = document.querySelector('.date-section');
             if (!hdr) return;
-            function onScroll() { hdr.classList.toggle('scrolled', window.scrollY > 4); }
+            function onScroll() { hdr.classList.toggle('scrolled', hdr.getBoundingClientRect().top <= 0); }
             window.addEventListener('scroll', onScroll, { passive: true });
             onScroll();
         })();
