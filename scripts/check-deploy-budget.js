@@ -34,7 +34,7 @@ const WINDOW_DAYS = 30;
 const MS_PER_DAY  = 24 * 60 * 60 * 1000;
 
 /**
- * Is there room for one more production deploy?
+ * Production deploys inside the trailing window.
  *
  * A trailing 30-day window rather than the billing month on purpose: this team
  * was created on the 14th, so the real cycle boundary is probably the 14th and
@@ -43,13 +43,17 @@ const MS_PER_DAY  = 24 * 60 * 60 * 1000;
  *
  * `now` is a parameter rather than a call to the clock so the window is testable.
  */
-function withinBudget(deploys, cap, now) {
+function recentProduction(deploys, now) {
   const cutoff = now.getTime() - WINDOW_DAYS * MS_PER_DAY;
-  const recent = deploys.filter(d =>
+  return deploys.filter(d =>
     d.context === 'production' && new Date(d.created_at).getTime() >= cutoff
   );
-  // `<` not `<=`: at the cap, the next deploy is the one that breaches it.
-  return recent.length < cap;
+}
+
+// Is there room for one more?
+// `<` not `<=`: at the cap, the next deploy is the one that breaches it.
+function withinBudget(deploys, cap, now) {
+  return recentProduction(deploys, now).length < cap;
 }
 
 async function fetchDeploys() {
@@ -83,12 +87,8 @@ async function main() {
   const charged = deploys.filter(d => d.state !== 'error' && d.state !== 'skipped');
 
   const now     = new Date();
-  const cutoff  = now.getTime() - WINDOW_DAYS * MS_PER_DAY;
-  const count   = charged.filter(d =>
-    d.context === 'production' && new Date(d.created_at).getTime() >= cutoff
-  ).length;
-
-  const allowed = withinBudget(charged, CAP, now);
+  const count   = recentProduction(charged, now).length;
+  const allowed = count < CAP;
 
   console.log(`Production deploys in the last ${WINDOW_DAYS} days: ${count} of ${CAP} allowed.`);
   console.log(`Roughly ${count * 15} of 300 monthly credits spent on deploys.`);

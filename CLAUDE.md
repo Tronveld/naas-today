@@ -211,8 +211,7 @@ All scripts `require('./lib')`. Exports:
 | `createClient(url, key)` | Returns `{ get, post, isDuplicate, cacheInserted }` bound to the given Supabase URL/key. `isDuplicate` caches per-date DB queries for the lifetime of the instance; call `cacheInserted(title, date)` after each successful insert to keep the cache consistent within a run. |
 | `exitCode({ sourceErrors, eventErrors })` | Returns `1` if either count is above zero, else `0`. Both fetchers set `process.exitCode` from it so a dead source fails the run instead of passing quietly. Finding nothing is deliberately **not** an error — an all-duplicates run is what a healthy second pull of the day looks like. |
 | `sourceForUrl(url)` | Bare hostname for the `source` column (`www.` stripped, lowercased), or `null` if the URL will not parse. Never throws — the tag is diagnostic and must not cost the event. |
-| `setOutput(key, value)` | Appends `key=value` to `$GITHUB_OUTPUT`. No-op (returns `false`) when unset, i.e. everywhere but CI. |
-| `reportInserted(count)` | `setOutput('inserted', count)`. Both fetchers call it so the workflow can decide whether a rebuild is worth 15 Netlify credits. Reports `0` on a dry run — nothing was written, so anything else would misstate it. |
+| `setOutput(key, value)` | Appends `key=value` to `$GITHUB_OUTPUT`. No-op (returns `false`) when unset, i.e. everywhere but CI. Both fetchers call `setOutput('inserted', n)` so the workflow can decide whether a rebuild is worth 15 Netlify credits. They report `0` on a dry run — nothing was written, so anything else would misstate it. |
 
 #### Script files
 
@@ -225,8 +224,13 @@ All scripts `require('./lib')`. Exports:
 | `check-deploy-budget.js` | **Read-only.** Counts production deploys in the trailing 30 days via the Netlify API and emits `allowed=true\|false` for the workflow's rebuild step. Env: `NETLIFY_AUTH_TOKEN` (optional), `NETLIFY_SITE_ID`, `REBUILD_CAP` (default 15). Fails **open** — no token, or an API error, warns and allows, because the "only rebuild when events arrived" gate is the primary control and a silently disabled rebuild is harder to notice than a warning. |
 | `notify-pending.js` | Emails a reminder while any event is `status = 'pending'` (i.e. a human submission awaiting review). Sends nothing when the queue is empty. Exits non-zero if events are waiting but the mailer is unconfigured or the send fails — an undeliverable reminder must be loud. Flag: `--dry-run` (print the email instead of sending). Env: `RESEND_API_KEY`, `NOTIFY_EMAIL_TO`, optional `NOTIFY_EMAIL_FROM`. |
 | `audit-event-dates.js` | **Read-only.** Checks every row already in `events` against the *current* validators, importing them from the live function rather than reimplementing them. Answers what tests cannot: whether rows inserted while a validator was wrong are still bad. Never writes to Supabase. **The backstop for auto-approved scraper output** — nobody reads those rows before they publish, so run this after any scraper change. |
-| `fix-library-entities.js` | One-time migration: decodes HTML entities in existing Naas Library event records stored in Supabase. |
-| `fix-moat-times.js` | One-time migration: backfills start/end times on Moat Theatre rows stored without one, reading them from the Squarespace feed. Matches on normalised title + date and never overwrites an existing time. Flag: `--dry-run`. Ran 2026-08-06: 77 of 81 fixed, 4 unmatched because Moat had renamed the show. |
+
+Two one-off migrations lived here and were deleted on 2026-08-06 once they had
+run: `fix-library-entities.js` (decoded HTML entities in stored Naas Library
+rows) and `fix-moat-times.js` (backfilled Moat Theatre start/end times from the
+Squarespace feed — 77 of 81 fixed, 4 unmatched because Moat had renamed the
+show). Recover either from git if a similar backfill is ever needed. **Do not
+add new one-shot migrations to this table** — run them, then delete them.
 
 ## Scheduled fetching
 
@@ -258,7 +262,7 @@ Notes:
 
 A daily unconditional rebuild is 30 deploys — 450 credits — over budget before a single hand-pushed commit. So the rebuild step is gated twice:
 
-1. **Only when events actually arrived.** Both fetchers report their insert count via `reportInserted`, and the step requires one of them to be above zero. Historically only 2–7 days a month bring new events, so this is the control that does the real work.
+1. **Only when events actually arrived.** Both fetchers report their insert count via `setOutput('inserted', n)`, and the step requires one of them to be above zero. Historically only 2–7 days a month bring new events, so this is the control that does the real work.
 2. **A cap on total production deploys.** `check-deploy-budget.js` counts the trailing 30 days — including pushes to `main`, which cost the same 15 credits — and blocks past `REBUILD_CAP` (default 15, leaving headroom inside the 20).
 
 A trailing 30-day window is used rather than the billing month because the team's cycle starts on the 14th, not the 1st, and guessing that boundary optimistically is what pauses the site.
@@ -284,7 +288,7 @@ Analytics are provided by Umami Cloud (`https://cloud.umami.is`), which is allow
 
 ## Design authority
 
-Three files at the repo root own design and product decisions. **Read them before changing UI; they outrank this section and the specs in `docs/superpowers/specs/`.**
+Three files at the repo root own design and product decisions. **Read them before changing UI; they outrank this section.**
 
 | File | Owns |
 |---|---|
@@ -292,7 +296,10 @@ Three files at the repo root own design and product decisions. **Read them befor
 | `DESIGN.md` | The visual system — colour, type, layout, elevation, shape, and component tokens, with named rules. Frontmatter tokens are normative. |
 | `.impeccable/design.json` | Sidecar extending DESIGN.md: tonal ramps, shadow/motion tokens, breakpoints, and renderable component snippets. |
 
-The older specs in `docs/superpowers/specs/` are historical. The 2026-03-24 spec in particular describes a time-sidebar card layout and a brighter category palette that were **never shipped** — do not treat it as current.
+`docs/superpowers/specs/` was deleted on 2026-08-06. Those three specs described a
+time-sidebar card layout and a brighter category palette that were **never
+shipped**, so every reader had to be warned off them. The plans in
+`docs/superpowers/plans/` are kept: they record what was actually built.
 
 A design detector runs on edit and flags any font-size, radius, or colour absent from DESIGN.md's frontmatter. When it fires, first check whether DESIGN.md is incomplete rather than assuming the CSS is wrong.
 

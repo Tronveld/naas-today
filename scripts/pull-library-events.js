@@ -11,7 +11,7 @@
  * Usage: node scripts/pull-library-events.js
  */
 
-const { loadEnv, HTML_ENT, stripHtml, KIDS_RE, createClient, exitCode, reportInserted } = require('./lib');
+const { loadEnv, stripHtml, KIDS_RE, createClient, exitCode, setOutput } = require('./lib');
 
 loadEnv();
 
@@ -250,7 +250,7 @@ async function main() {
 
   // Tells the workflow whether a rebuild is worth 15 credits. Zero on a dry run
   // because nothing was written — see scrape-sources.js.
-  reportInserted(dryRun ? 0 : inserted);
+  setOutput('inserted', dryRun ? 0 : inserted);
 
   // A failed feed fetch already exits above. This catches the quieter case: the
   // feed read fine but every insert was rejected. That used to exit 0.

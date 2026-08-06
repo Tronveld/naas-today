@@ -545,13 +545,6 @@ const jsonLd = todayEvents.length > 0 ? {
         shareArrow.textContent = '↗';
         shareBtn.appendChild(shareArrow);
         shareBtn.setAttribute('aria-label', `Share ${event.title}`);
-        // Mirror the data-share-* attributes from the Astro component for DOM parity
-        shareBtn.dataset.shareTitle = event.title;
-        shareBtn.dataset.shareDate = event.date;
-        shareBtn.dataset.shareTime = event.time || '';
-        shareBtn.dataset.shareTimeEnd = event.timeEnd || '';
-        shareBtn.dataset.shareLocation = event.location;
-        shareBtn.dataset.shareAllday = event.isAllDay ? 'true' : 'false';
         shareBtn.addEventListener('click', () => shareEvent(event));
         footer.appendChild(shareBtn);
 

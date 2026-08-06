@@ -18,7 +18,7 @@
  *      which needs no domain verification).
  */
 
-const { loadEnv, createClient, exitCode } = require('./lib');
+const { loadEnv, createClient } = require('./lib');
 
 loadEnv();
 
@@ -166,7 +166,7 @@ async function main() {
       'ERROR: events are awaiting review but the mailer is not configured.\n' +
       '       Set RESEND_API_KEY and NOTIFY_EMAIL_TO.'
     );
-    process.exitCode = exitCode({ eventErrors: 1 });
+    process.exitCode = 1;
     return;
   }
 
@@ -175,7 +175,7 @@ async function main() {
     console.log(`Reminder sent to ${MAIL_TO}.`);
   } catch (err) {
     console.error(`ERROR: failed to send the reminder — ${err.message}`);
-    process.exitCode = exitCode({ eventErrors: 1 });
+    process.exitCode = 1;
   }
 }
 

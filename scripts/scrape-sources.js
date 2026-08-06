@@ -14,7 +14,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { loadEnv, stripHtml, KIDS_RE, createClient, exitCode, sourceForUrl, reportInserted } = require('./lib');
+const { loadEnv, stripHtml, KIDS_RE, createClient, exitCode, sourceForUrl, setOutput } = require('./lib');
 
 loadEnv();
 
@@ -632,7 +632,7 @@ async function main() {
   // Tells the workflow whether a rebuild is worth 15 credits. Zero on a dry run
   // because nothing was written — reporting the hypothetical count here would
   // make the output mean something other than what it says.
-  reportInserted(dryRun ? 0 : totalInserted);
+  setOutput('inserted', dryRun ? 0 : totalInserted);
 
   // process.exitCode rather than process.exit(): the summary above still has to
   // reach the log. process.exit() would truncate it mid-write.
@@ -655,11 +655,9 @@ if (require.main === module) {
   });
 }
 
-// Exported for tests — the CLI path above is what actually runs. The pure
-// mappers are what the tests exercise; fetchSquarespaceEvents is exported so the
-// one-time fix-moat-times.js migration can read the same feed rather than
-// duplicating the fetch.
+// Exported for tests — the CLI path above is what actually runs. Only the pure
+// mappers, so the tests never touch the network.
 module.exports = {
   extractJsonLd, isNaasEvent, squarespaceEventToLd, intoKildareToLd, detectFree,
-  jsonLdToEvent, fetchSquarespaceEvents,
+  jsonLdToEvent,
 };

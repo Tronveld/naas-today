@@ -51,8 +51,10 @@ Read through the Squarespace JSON adapter since 2026-08-06. It was scraped with
 `<time datetime="…">` for the date, and Squarespace puts the date in that
 attribute and the time in the element's text. 81 future rows had landed with
 `time = null` and `is_all_day = false` — the combination `EventCard` renders as
-"TBC". The times had been published all along. `scripts/fix-moat-times.js`
-backfilled 77 of them; see that script's header.
+"TBC". The times had been published all along. A one-off migration backfilled 77
+of them on 2026-08-06; the remaining 4 never matched, because Moat had renamed
+the show. The script was deleted once it had run — recover it from git if a
+similar backfill is ever needed.
 
 If another HTML source ever looks like it is missing times, check whether it is
 Squarespace first — `?format=json` on any events collection is worth a try

@@ -160,8 +160,8 @@ function sourceForUrl(url) {
   }
 }
 
-// Publishes how many rows a fetcher inserted, as a GitHub Actions step output,
-// so the workflow can decide whether a rebuild is worth its 15 credits. Most
+// Writes a GitHub Actions step output. Both fetchers report `inserted` this way,
+// so the workflow can decide whether a rebuild is worth its 15 credits — most
 // days the answer is zero and the rebuild is pure waste.
 // Returns whether it wrote anything — off CI there is no $GITHUB_OUTPUT and
 // this is a no-op, since the fetchers run locally far more often than in CI.
@@ -172,11 +172,7 @@ function setOutput(key, value) {
   return true;
 }
 
-function reportInserted(count) {
-  return setOutput('inserted', count);
-}
-
 module.exports = {
   loadEnv, HTML_ENT, stripHtml, KIDS_RE, normaliseTitle, createClient, exitCode, sourceForUrl,
-  reportInserted, setOutput,
+  setOutput,
 };
