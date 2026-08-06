@@ -804,9 +804,13 @@ const {
 
         /* Set while any modal is open, so the page behind the sheet cannot scroll.
            ponytail: overflow+overscroll-behavior, not the position:fixed body trick.
-           Ceiling — older iOS Safari can still rubber-band the page behind the sheet.
-           Upgrade path is fixing <body> and restoring scrollY on close, which costs a
-           scroll-position restore bug; take it only if the chaining proves worse. */
+           Ceiling — iOS still rubber-bands the sheet sideways. Confirmed on an
+           iPhone 2026-08-06: the page behind never moves and nothing is out there
+           to reach, it just springs back. Cosmetic, accepted.
+           Do not retry `overscroll-behavior: none` on this rule — tried, no effect.
+           The only thing left that works is fixing <body> and restoring scrollY on
+           close, which buys a cosmetic win for a scroll-position-restore bug. Not
+           worth it; revisit only if something real ends up behind the sheet. */
         body.modal-open {
             overflow: hidden;
         }

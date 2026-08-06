@@ -14,10 +14,13 @@ surrounding context to relocate it. Phase 1 and item 10 have since shipped (`17a
 `fc3d8ed`, `34101d9`), so the line numbers in the EventsGrid, empty-state and modal-dismiss
 items are already historical.
 
-**Progress: 16 of 75 done** — items 1–7, 9–12, 39–43. Item 8 is still open.
+**Progress: 18 of 77 done** — items 1–7, 9–12, 39–43, 76–77. Item 8 is still open.
 
 Phases 1–3 are complete, which was the stated "if you only do part of this list, do this part"
-threshold: both P1 findings `polish` refuses to touch are now closed.
+threshold: both P1 findings `polish` refuses to touch are now closed. **Everything shipped so
+far has been verified in a browser** — see the 2026-08-06 handoff. That pass found three bugs
+the reasoning missed (`ec528d0`, `dee5c09`, and item 77), which is the argument for doing it
+before phase 4 rather than after.
 
 ---
 
@@ -376,6 +379,20 @@ above lands here too. Four defects are present in *both* copies:
   at once.
   **Done when:** DESIGN.md's Layout section describes both orders and names the condition.
 
+- [x] **76. [P1] The submit sheet scrolled sideways on a phone.** `.checkbox-group` was a
+  non-wrapping flex row, and six category labels at `gap: 1.5rem` are far wider than a 375px
+  sheet. The whole modal scrolled left-right, with a blank gutter beside every other field.
+  `.time-mode-group` directly above it already carried `flex-wrap: wrap` — the three radios hit
+  the same wall first and nobody came back for the checkboxes. Fixed in `dee5c09`.
+  **Only reproduces on a narrow viewport**, which is why 22 desktop-width passes missed it.
+
+- [x] **77. [P3] iOS rubber-bands the sheet sideways. Won't fix — deliberate.** The page behind
+  never moves and there is nothing out there to reach; it slides and springs back. Tried
+  `overscroll-behavior: none` on `body.modal-open` — no effect, reverted rather than left in as
+  a property that does nothing. The only remaining lever is `position: fixed` on `<body>` with
+  a scrollY restore, which buys a cosmetic win at the price of a scroll-position bug. Recorded
+  as a `ponytail:` ceiling in `BaseLayout.astro` so the debt ledger carries it.
+
 ---
 
 ## `DESIGN.md` — claims that don't hold
@@ -438,14 +455,14 @@ rather than changes to make. Clear or confirm these before building on top.
   freely; only the merge to `main` spends. Recorded in CLAUDE.md's Deployment section, which
   is where a future session will look — do not re-raise this.
 
-- [ ] **Verify the three code paths that were never observed running.** No browser automation
-  was available in the session that wrote them, so they were reasoned through and checked
-  against built HTML, not watched. The empty-day path *was* verified against `dist/index.html`
-  and the live dev server; these three were not:
-  1. the filtered-empty branch (navigate to a day with events — Thu 6 Aug has the library
-     talk — then apply a filter that matches nothing);
-  2. the "Show all events" button clearing all six filters and the URL;
-  3. populated-day ordering, that cards → submit-area → Coming Up still reads correctly.
+- [x] **Verify the three code paths that were never observed running.**
+  **All three walked in a browser 2026-08-06 and confirmed working:**
+  1. the filtered-empty branch — correct copy, correct singular/plural agreement;
+  2. the "Show all events" button — clears all six chips *and* the URL;
+  3. populated-day ordering — cards → submit-area → Coming Up, no empty-state leakage.
+
+  One bug fell out of (1): the message read "There is 1 other event **on today**". Fixed in
+  `ec528d0`.
 
 - [ ] **Nothing from 2026-08-05 is live.** All of it is on `dev`. The empty-day rebuild reaches
   naastoday.com on the merge to `main`.
@@ -455,25 +472,45 @@ rather than changes to make. Clear or confirm these before building on top.
 
 ## Session handoff — 2026-08-06
 
-Same shape as the day before: still no browser automation, so CSS and DOM behaviour were
-reasoned through and checked against built output, not watched. What needs eyes:
+**All cleared the same day**, by walking each path in Firefox at 375px and on an iPhone over
+the LAN (`netlify dev` binds `*:8888`, so `http://<laptop-lan-ip>:8888` works from a phone on
+the same Wi-Fi — no tunnel, nothing exposed beyond the LAN).
 
-- [ ] **The sticky date bar (item 39).** Scroll a populated day on a narrow viewport: the
-  masthead should leave, the date bar should pin with its shadow, and nothing should overlap
-  the first card. The shadow trigger changed from `scrollY > 4` to
-  `getBoundingClientRect().top <= 0`, which is the part most likely to be subtly wrong.
-- [ ] **The draft round trip (items 11–12) in a real browser.** The unit test covers the field
-  shape; it does *not* cover the restore re-firing the dependent UI. Type an event with
-  "Recurring" ticked and a time *range*, reload, and check the recurring section is open, the
-  end-time input is visible, the occurrence hint is filled and the character counter is right.
-  Then check Cancel prompts, and that a successful submit leaves the next open clean.
-- [ ] **The bottom sheet on an actual iPhone (item 42).** `100dvh` and
-  `overscroll-behavior: contain` are the correct properties; whether the Submit/Cancel row
-  actually clears the Safari toolbar is a device question. If it still chains, the remaining
-  lever is the `position: fixed` body trick, which costs scroll position — take it only if the
-  chaining is genuinely worse.
+- [x] **The sticky date bar (item 39).** Masthead scrolls away, date bar pins, shadow appears
+  exactly on pin. The reworked trigger (`getBoundingClientRect().top <= 0`) is correct.
+  Tagline confirmed gone at a measured 375px (item 40).
+- [x] **The draft round trip (items 11–12).** Both halves. The restore *does* re-fire the
+  dependent UI — recurring section open, end-time visible, occurrence hint filled, counter
+  correct after a reload. Cancel prompts on a dirty form and not on a clean one.
+- [x] **The bottom sheet on an actual iPhone (item 42).** Submit/Cancel clear the Safari
+  toolbar — the `100vh` bug is gone. Scroll lock and containment both hold.
 
-**Shipped 2026-08-06:** `03c21d0` (items 39–41, 43), `ee9d332` (items 11, 12, 42).
+Two findings came out of the device pass — see items 76 and 77 below.
+
+### Testing notes worth keeping
+
+- **At 375px the submit sheet fills the viewport**, so there is no visible backdrop to drag
+  and you cannot test scroll-lock with it. Use the **About or Contact** modal instead (short
+  enough to leave a backdrop), or widen to ~800px where the submit modal centres.
+  `body.modal-open` is not width- or modal-scoped, so either proves the same rule.
+- **The Astro dev toolbar overlaps the sheet's Submit/Cancel row on mobile** when expanded.
+  Dev-server artifact, not in the production build. Do not chase it.
+
+**Shipped 2026-08-06:** `03c21d0` (items 39–41, 43), `ee9d332` (items 11, 12, 42), `78601ff`
+(ponytail ceiling), `0737d38` (Netlify answer), `ec528d0` ("on today"), `dee5c09` (item 76).
+
+### Still open after the verification pass
+
+- [ ] **A successful submit clearing the draft is untested.** Every other draft path was
+  walked; this one writes a real `pending` row to live Supabase that then needs deleting via
+  `/admin.html`, so it was left. The code path is the same `form.reset()` → `reset` listener →
+  `clearDraft()` that Cancel uses and that *was* verified, so the risk is low but not zero.
+
+- [ ] **Item 1's copy deviates from its own acceptance check, deliberately.** The check asked
+  for "No theatre events on Wednesday 6 August"; the code says "No matching events" and leaves
+  the category unnamed. Reasoning: the lit chip is on screen and item 39 made the date bar
+  sticky, so naming either in prose restates what the visitor can see. Recorded rather than
+  silently dropped — reopen if you disagree.
 
 ---
 
