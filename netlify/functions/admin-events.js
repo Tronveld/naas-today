@@ -7,6 +7,7 @@
 // DELETE /.netlify/functions/admin-events  body: { id }
 
 const crypto = require('crypto');
+const { validDate, validTime, json, DATE_RE } = require('./lib/validate');
 
 const ITERATIONS = 310_000;
 const KEYLEN     = 64;
@@ -21,33 +22,11 @@ const ALLOWED_PATCH_FIELDS = new Set([
 ]);
 
 const UUID_RE   = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DATE_RE   = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_RE   = /^\d{2}:\d{2}(:\d{2})?$/;
 const BOOL_FIELDS    = new Set(['is_all_day', 'is_free', 'is_for_kids', 'is_music', 'is_sport', 'is_market', 'is_theatre']);
 const DATE_FIELDS    = new Set(['date', 'end_date']);
 const TIME_FIELDS    = new Set(['time', 'time_end']);
 const STR_FIELDS     = new Set(['title', 'location', 'description', 'url', 'status']);
 const STR_MAX_LENGTHS = { title: 150, location: 150, description: 2000, url: 500, status: 10 };
-
-function validDate(s) {
-  if (!DATE_RE.test(s)) return false;
-  const parts = s.split('-').map(Number);
-  return parts[1] >= 1 && parts[1] <= 12 && parts[2] >= 1 && parts[2] <= 31;
-}
-
-function validTime(s) {
-  if (!TIME_RE.test(s)) return false;
-  const parts = s.split(':').map(Number);
-  return parts[0] <= 23 && parts[1] <= 59;
-}
-
-function json(statusCode, body) {
-  return {
-    statusCode,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  };
-}
 
 // ── Auth helper ──────────────────────────────────────────────────────────────
 // Secret keys (sb_secret_…) are not JWTs — use only the apikey header.
@@ -371,3 +350,5 @@ exports.handler = async function(event) {
 exports.validateBulkIds     = validateBulkIds;
 exports.MAX_BULK_IDS        = MAX_BULK_IDS;
 exports.stripBulkImmutable  = stripBulkImmutable;
+exports.validDate           = validDate;
+exports.validTime           = validTime;

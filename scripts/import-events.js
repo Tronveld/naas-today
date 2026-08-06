@@ -19,7 +19,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { loadEnv, createClient } = require('./lib');
+const { loadEnv, createClient, printSummary } = require('./lib');
 
 loadEnv();
 
@@ -30,11 +30,6 @@ const SECRET_KEY   = process.env.SUPABASE_SECRET_KEY;
 const args    = process.argv.slice(2);
 const dryRun  = args.includes('--dry-run');
 const csvPath = args.find(a => !a.startsWith('--'));
-
-// ── Normalise a string for duplicate detection ────────────────────────────────
-function normalise(s) {
-  return s.toLowerCase().replace(/[''`]/g, "'").replace(/\s+/g, ' ').trim();
-}
 
 // ── Parse a single CSV line, respecting quoted fields ────────────────────────
 function parseCsvLine(line) {
@@ -138,22 +133,13 @@ async function main() {
   const rows = parseCsv(text);
   console.log(`Read ${rows.length} data row(s) from ${path.basename(resolvedPath)}.\n`);
 
+  // Duplicate detection is the shared `isDuplicate`, which queries one date at a
+  // time and caches it. This used to pull every row in the table and compare on
+  // a local `normalise()` that only folded apostrophes — so a CSV row reading
+  // "Movicals – Sing-along" imported cleanly alongside the scraper's
+  // "Movicals - Sing-along". `normaliseTitle` folds the dash variants too, and
+  // matches on a title prefix rather than requiring equality.
   const sb = createClient(SUPABASE_URL, SECRET_KEY);
-
-  // ── Fetch existing events for duplicate detection ───────────────────────────
-  console.log('Fetching existing events from Supabase…');
-  let existing;
-  try {
-    existing = await sb.get('/events?select=title,date');
-  } catch (err) {
-    console.error('Failed to fetch existing events:', err.message);
-    process.exit(1);
-  }
-
-  const existingKeys = new Set(
-    existing.map(e => normalise(e.title) + '|' + e.date)
-  );
-  console.log(`Found ${existingKeys.size} existing event key(s) in DB.\n`);
 
   // ── Process rows ────────────────────────────────────────────────────────────
   let wouldInsert = 0, inserted = 0, skipDupe = 0, skipInvalid = 0;
@@ -179,23 +165,30 @@ async function main() {
       continue;
     }
 
-    // Duplicate check
-    const key = normalise(evt.title) + '|' + evt.date;
-    if (existingKeys.has(key)) {
+    let dupe;
+    try {
+      dupe = await sb.isDuplicate(evt.title, evt.date);
+    } catch (err) {
+      skipInvalid++;
+      log.push({ status: 'ERROR  ', date: evt.date, title: evt.title, note: err.message });
+      continue;
+    }
+    if (dupe) {
       skipDupe++;
       log.push({ status: 'SKIP   ', date: evt.date, title: evt.title, note: 'duplicate' });
       continue;
     }
 
     if (dryRun) {
+      // Cached so repeated rows within one CSV dedupe against each other too.
+      sb.cacheInserted(evt.title, evt.date);
       wouldInsert++;
       log.push({ status: 'DRY RUN', date: evt.date, title: evt.title });
     } else {
       try {
         await sb.post('/events', evt);
+        sb.cacheInserted(evt.title, evt.date);
         inserted++;
-        // Add key to set so later rows in same CSV don't duplicate each other
-        existingKeys.add(key);
         log.push({ status: 'NEW    ', date: evt.date, title: evt.title });
       } catch (err) {
         skipInvalid++;
@@ -205,29 +198,12 @@ async function main() {
   }
 
   // ── Summary ─────────────────────────────────────────────────────────────────
-  const bar = '─'.repeat(62);
-  const label = dryRun ? 'DRY RUN' : 'COMPLETE';
-  console.log(bar);
-  console.log(`CSV IMPORT — ${label}`);
-  console.log(bar);
-  if (dryRun) {
-    console.log(`  Would insert          : ${wouldInsert}`);
-  } else {
-    console.log(`  Inserted (pending)    : ${inserted}`);
-  }
-  console.log(`  Skipped (duplicate)   : ${skipDupe}`);
-  console.log(`  Skipped (invalid)     : ${skipInvalid}`);
+  printSummary(`CSV IMPORT — ${dryRun ? 'DRY RUN' : 'COMPLETE'}`, {
+    [dryRun ? 'Would insert' : 'Inserted (pending)']: dryRun ? wouldInsert : inserted,
+    'Skipped (duplicate)': skipDupe,
+    'Skipped (invalid)':   skipInvalid,
+  }, log);
 
-  if (log.length) {
-    console.log('');
-    console.log('Details:');
-    for (const r of log) {
-      const note = r.note ? ` — ${r.note}` : '';
-      console.log(`  [${r.status}] ${r.date}  ${r.title}${note}`);
-    }
-  }
-
-  console.log(bar);
   if (!dryRun && inserted > 0) {
     console.log(`\n✓ ${inserted} new event(s) added with status "pending".`);
     console.log('  Review and approve them in the admin panel (/admin.html).');

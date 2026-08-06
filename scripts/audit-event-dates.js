@@ -9,8 +9,8 @@
  * cannot: the test suite proves the validator is correct from now on, but says
  * nothing about rows inserted while the validator was wrong.
  *
- * The validators are imported from the live function rather than reimplemented,
- * so the audit cannot drift from what submissions are actually checked against.
+ * The validators are imported from the shared module the write paths use rather
+ * than reimplemented, so the audit cannot drift from what is actually enforced.
  *
  * Requires Node.js 18+ (built-in fetch).
  * Reads SUPABASE_URL and SUPABASE_SECRET_KEY from environment or .env file.
@@ -21,7 +21,7 @@
  */
 
 const { loadEnv, createClient } = require('./lib');
-const { validDate, validTime } = require('../netlify/functions/submit-event.js');
+const { validDate, validTime } = require('../netlify/functions/lib/validate.js');
 
 loadEnv();
 

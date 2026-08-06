@@ -3,6 +3,10 @@
 // Rate-limited at 5/IP/hour (separate counter from submit-event).
 
 const crypto = require('crypto');
+const { validDate, validTime, validUrl, json, err400, validateEventBody } = require('./lib/validate');
+
+const VALID_FREQUENCIES = ['weekly', 'fortnightly', 'monthly'];
+const MAX_OCCURRENCES = 104;
 
 // Simple in-memory rate limiter: max 5 submissions per IP per hour
 const rateLimitMap = new Map();
@@ -19,33 +23,6 @@ function isRateLimited(ip) {
   entry.count++;
   if (entry.count > RATE_LIMIT) return true;
   return false;
-}
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
-const VALID_FREQUENCIES = ['weekly', 'fortnightly', 'monthly'];
-const MAX_OCCURRENCES = 104;
-
-function validDate(s) {
-  if (!DATE_RE.test(s)) return false;
-  const parts = s.split('-').map(Number);
-  const m = parts[1], d = parts[2];
-  return m >= 1 && m <= 12 && d >= 1 && d <= 31;
-}
-
-function validTime(s) {
-  if (!TIME_RE.test(s)) return false;
-  const parts = s.split(':').map(Number);
-  return parts[0] <= 23 && parts[1] <= 59;
-}
-
-function validUrl(value) {
-  try {
-    const parsed = new URL(value);
-    return ['http:', 'https:'].includes(parsed.protocol);
-  } catch {
-    return false;
-  }
 }
 
 function generateDates(startDate, frequency, endDate) {
@@ -67,13 +44,10 @@ function generateDates(startDate, frequency, endDate) {
   return dates;
 }
 
-function err400(msg) {
-  return {
-    statusCode: 400,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ error: msg }),
-  };
-}
+// Re-exported for tests only — the Netlify runtime uses `handler` below.
+exports.validDate = validDate;
+exports.validTime = validTime;
+exports.validUrl = validUrl;
 
 exports.handler = async function(event) {
   const SUPABASE_URL     = process.env.SUPABASE_URL;
@@ -85,11 +59,7 @@ exports.handler = async function(event) {
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY env vars');
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Server not configured' }),
-    };
+    return json(500, { error: 'Server not configured' });
   }
 
   // Rate limiting
@@ -121,32 +91,8 @@ exports.handler = async function(event) {
     location, description, isFree, isForKids, isMusic, isSport, isMarket, isTheatre, url,
   } = baseEvent;
 
-  // Required presence
-  if (!title || !date || !location) return err400('Missing required fields: title, date, location');
-  if (!isAllDay && !time) return err400('Missing required field: time (or mark as all day)');
-
-  // Type checks
-  if (typeof title !== 'string' || typeof date !== 'string' || typeof location !== 'string') {
-    return err400('Invalid field types');
-  }
-  if (typeof isAllDay !== 'boolean' || typeof isFree !== 'boolean' || typeof isForKids !== 'boolean' ||
-      typeof isMusic !== 'boolean' || typeof isSport !== 'boolean' || typeof isMarket !== 'boolean' || typeof isTheatre !== 'boolean') {
-    return err400('Invalid boolean fields');
-  }
-  if (description !== undefined && typeof description !== 'string') return err400('Invalid field types');
-
-  // Length limits
-  if (title.length > 150)                         return err400('Title too long (max 150 characters)');
-  if (location.length > 150)                      return err400('Location too long (max 150 characters)');
-  if (description && description.length > 2000)   return err400('Description too long (max 2000 characters)');
-  if (url && url.length > 500)                    return err400('URL too long (max 500 characters)');
-
-  // Format validation
-  if (!validDate(date))                           return err400('Invalid date format');
-  if (endDate && !validDate(endDate))             return err400('Invalid end date format');
-  if (time && !validTime(time))                   return err400('Invalid time format');
-  if (timeEnd && !validTime(timeEnd))             return err400('Invalid end time format');
-  if (url && !validUrl(url))                      return err400('Invalid URL (must start with http:// or https://)');
+  const invalid = validateEventBody(baseEvent);
+  if (invalid) return err400(invalid);
 
   // Recurrence validation
   const { frequency, endDate: recEndDate } = recurrence;
@@ -206,17 +152,9 @@ exports.handler = async function(event) {
       throw new Error(errText);
     }
 
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ success: true, count: rows.length, recurring_group_id: groupId }),
-    };
+    return json(200, { success: true, count: rows.length, recurring_group_id: groupId });
   } catch (error) {
     console.error('Error submitting recurring events to Supabase:', error);
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Failed to submit events' }),
-    };
+    return json(500, { error: 'Failed to submit events' });
   }
 };
