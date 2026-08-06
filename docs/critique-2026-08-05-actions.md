@@ -31,7 +31,7 @@ work them in — each phase is a coherent chunk you can ship on its own.
 
 | Phase | Items | Count | Command | Why this order |
 |---|---|---|---|---|
-| ~~1. Empty day~~ **done** | 1–9 | 9 of 9 | `17a5423`, `fc3d8ed`, `2f0e0d1` | Item 8 was held back deliberately and decided on 2026-08-06 with the rebuilt screen in front of us. |
+| ~~1. Empty day~~ **done** | 1–9 | 9 of 9 | `17a5423`, `fc3d8ed`, `292f294` | Item 8 was held back deliberately and decided on 2026-08-06 with the rebuilt screen in front of us. |
 | ~~2. Mobile chrome~~ **done** | 39–41 | 3 of 3 | shipped in `03c21d0` | Also closed item 43, which the sticky move would otherwise have re-created under a new selector. |
 | ~~3. Form data loss~~ **done** | 10–12, 42 | 4 of 4 | `34101d9`, `ee9d332` | Item 12's `confirm()` is flagged for item 17 to re-decide, not to inherit. |
 | 4. Accessibility | 13–16, 24–38, ~~43~~, 44–49, 53–55, 57–58, 60–61 | 1 of 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. Item 38 needs a decision, not just an edit. |
