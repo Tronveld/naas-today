@@ -14,7 +14,10 @@ surrounding context to relocate it. Phase 1 and item 10 have since shipped (`17a
 `fc3d8ed`, `34101d9`), so the line numbers in the EventsGrid, empty-state and modal-dismiss
 items are already historical.
 
-**Progress: 13 of 75 done** — items 1–7, 9, 10, 39–41 and 43. Item 8 is still open.
+**Progress: 16 of 75 done** — items 1–7, 9–12, 39–43. Item 8 is still open.
+
+Phases 1–3 are complete, which was the stated "if you only do part of this list, do this part"
+threshold: both P1 findings `polish` refuses to touch are now closed.
 
 ---
 
@@ -27,7 +30,7 @@ work them in — each phase is a coherent chunk you can ship on its own.
 |---|---|---|---|---|
 | ~~1. Empty day~~ **done** | 1–7, 9 | 8 of 9 | shipped in `17a5423`, `fc3d8ed` | Item 8 deliberately left — decide it with the rebuilt screen in front of you. |
 | ~~2. Mobile chrome~~ **done** | 39–41 | 3 of 3 | shipped in `03c21d0` | Also closed item 43, which the sticky move would otherwise have re-created under a new selector. |
-| 3. Form data loss **started** | ~~10~~, 11–12, 42 | 1 of 4 | `/impeccable harden` | Item 10 shipped in `34101d9` and covers dismissal within a page load. A reload or closed tab still loses the draft — that is item 11. |
+| ~~3. Form data loss~~ **done** | 10–12, 42 | 4 of 4 | `34101d9`, `ee9d332` | Item 12's `confirm()` is flagged for item 17 to re-decide, not to inherit. |
 | 4. Accessibility | 13–16, 24–38, ~~43~~, 44–49, 53–55, 57–58, 60–61 | 1 of 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. Item 38 needs a decision, not just an edit. |
 | 5. Trust & consistency | 17–23, 50–52, 56, 59, 62–63 | 14 | `/impeccable polish` | Sweeps what's left; reads the critique snapshot as its own input. |
 | 6. Doc truth | 64–69 | 6 | manual | Fix DESIGN.md's overstated claims *after* the code moves, so it describes what shipped. |
@@ -46,6 +49,9 @@ only do part of this list, do those.
 2. **`npm test` is not triggered by anything here.** Nothing in this list touches
    `netlify/functions/`. If you end up changing a validator, CLAUDE.md's rule applies:
    failing test first, show it failing, then fix.
+   *Amended 2026-08-06:* item 11 added `tests/event-draft.test.mjs`, the first frontend test in
+   the suite. It covers `src/scripts/draft.js` only — pure field-shape logic, no DOM. The rest
+   of this list is still browser-verified or not verified at all.
 
 ---
 
@@ -109,12 +115,24 @@ this is the primary screen, not the fallback.
   no undo, on a form with a required description up to 2000 characters.
   **Done when:** typing into the form, pressing Escape, and reopening restores the text.
 
-- [ ] **11. [P1] Persist the form draft to `sessionStorage`** on input, restore on open, clear
+- [x] **11. [P1] Persist the form draft to `sessionStorage`** on input, restore on open, clear
   on successful submit.
   **Done when:** a submission survives a tab switch and return.
+  **Restored at load rather than at open** — same effect, one fewer place to get wrong, and it
+  covers the reload case directly. The shape moved to `src/scripts/draft.js` and is imported by
+  **both** copies of the modal system: a draft written on `/` is read by the copy on `/terms`,
+  so this is the one piece that must *not* be duplicated. Its `serialise`/`apply` pair is
+  covered by `tests/event-draft.test.mjs`.
+  **Knock-on:** `openSubmitModal` no longer overwrites the date with the day being viewed when
+  a draft exists — a date the visitor typed outranks the day they happen to be looking at.
 
-- [ ] **12. [P1] Confirm before discarding a dirty form**, and reset only on explicit Cancel or
+- [x] **12. [P1] Confirm before discarding a dirty form**, and reset only on explicit Cancel or
   success.
+  Uses a native `confirm()`. **Check this against item 17** when that sweep happens: 17 removes
+  eight `alert()` calls for being unstyled and iOS-ugly, and this is the same-looking box. The
+  argument for keeping it is that 17's are validation and success messaging, while this is a
+  destructive action — which is the one thing the platform dialog is actually for. Decide it
+  deliberately rather than letting a find-and-replace answer it.
 
 - [ ] **13. [P1] Make the events heading track the current date.** `:65` hardcodes
   `<h2 class="visually-hidden" id="events-list-heading">Today's events</h2>`. Navigate to
@@ -241,10 +259,16 @@ about one and a half events.
   (`:78`) while DESIGN.md's `date` token specifies `1.2` — ~13px of dead space in the region
   already over budget.
 
-- [ ] **42. [P1] Use `100dvh` for the mobile bottom sheet.** `:1041` sets
+- [x] **42. [P1] Use `100dvh` for the mobile bottom sheet.** `:1041` sets
   `max-height: 100vh`, which hides the Submit/Cancel row under the iOS Safari toolbar. Also
   lock `<body>` scroll while a modal is open — the page currently scroll-chains behind the
   sheet.
+  The desktop `max-height: 90vh` moved to `90dvh` in the same edit — identical on desktop,
+  correct on a phone in landscape. Scroll lock is `body.modal-open { overflow: hidden }`,
+  toggled in `openModal`/`closeModal` (**both copies**), plus `overscroll-behavior: contain`
+  on `.modal`, which is the property that actually stops the chaining. Deliberately *not* the
+  `position: fixed` body trick — that fixes iOS's last stubborn case at the cost of losing
+  scroll position, which is a worse bug than the one it solves here.
 
 ### `prefers-reduced-motion` — 7 selectors and 2 no-ops
 
@@ -427,6 +451,28 @@ rather than changes to make. Clear or confirm these before building on top.
 
 **Shipped 2026-08-05:** `eee3da8` (critique + this list), `17a5423` (item 9), `fc3d8ed`
 (items 1–7), `259a182` (items 74–75), `34101d9` (item 10), `63d91f1` + `74a2e7e` (tracker).
+
+## Session handoff — 2026-08-06
+
+Same shape as the day before: still no browser automation, so CSS and DOM behaviour were
+reasoned through and checked against built output, not watched. What needs eyes:
+
+- [ ] **The sticky date bar (item 39).** Scroll a populated day on a narrow viewport: the
+  masthead should leave, the date bar should pin with its shadow, and nothing should overlap
+  the first card. The shadow trigger changed from `scrollY > 4` to
+  `getBoundingClientRect().top <= 0`, which is the part most likely to be subtly wrong.
+- [ ] **The draft round trip (items 11–12) in a real browser.** The unit test covers the field
+  shape; it does *not* cover the restore re-firing the dependent UI. Type an event with
+  "Recurring" ticked and a time *range*, reload, and check the recurring section is open, the
+  end-time input is visible, the occurrence hint is filled and the character counter is right.
+  Then check Cancel prompts, and that a successful submit leaves the next open clean.
+- [ ] **The bottom sheet on an actual iPhone (item 42).** `100dvh` and
+  `overscroll-behavior: contain` are the correct properties; whether the Submit/Cancel row
+  actually clears the Safari toolbar is a device question. If it still chains, the remaining
+  lever is the `position: fixed` body trick, which costs scroll position — take it only if the
+  chaining is genuinely worse.
+
+**Shipped 2026-08-06:** `03c21d0` (items 39–41, 43), `ee9d332` (items 11, 12, 42).
 
 ---
 
