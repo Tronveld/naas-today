@@ -38,8 +38,7 @@ function readSources() {
 // ── URL type classification ───────────────────────────────────────────────────
 function classifyUrl(url) {
   if (url.includes('whatsontonight.ie')) return 'whatsontonight';
-  if (url.includes('moattheatre.com'))   return 'moattheatre';
-  return 'individual'; // Eventbrite, AllEvents.in, IntoKildare.ie, etc.
+  return 'individual'; // anything with JSON-LD, or served by a JSON_ADAPTERS entry
 }
 
 // ── Fetch HTML with browser-like headers ──────────────────────────────────────
@@ -259,14 +258,19 @@ function dublinLocal(ms) {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 
-// Kildare Heritage — Squarespace events collection, ?format=json → upcoming[].
+// Squarespace events collection, ?format=json → upcoming[]. Used by Kildare
+// Heritage and by the Moat Theatre, which runs the same platform — the feed
+// carries real start and end times, which no HTML parser here can extract.
+//
 // The venue name and its town live in separate fields; joined into one string so
 // that isNaasEvent can see the town and extractLocation can show the venue.
-function kildareHeritageToLd(item, sourceUrl) {
+function squarespaceEventToLd(item, sourceUrl) {
   const loc   = item.location || {};
-  // Trim each part, not just the join: the feed's addressTitle carries trailing
-  // whitespace, which would render as "Naas Racecourse , County Kildare".
-  const place = [loc.addressTitle, loc.addressLine2].map(s => (s || '').trim()).filter(Boolean).join(', ');
+  // Trim and de-punctuate each part, not just the join. Kildare Heritage's
+  // addressTitle carries trailing whitespace ("Naas Racecourse , County
+  // Kildare") and Moat's addressLine2 a trailing comma ("Naas, County Kildare,").
+  const clean = (s) => (s || '').trim().replace(/[,\s]+$/, '');
+  const place = [loc.addressTitle, loc.addressLine2].map(clean).filter(Boolean).join(', ');
 
   return {
     '@type':     'Event',
@@ -279,9 +283,9 @@ function kildareHeritageToLd(item, sourceUrl) {
   };
 }
 
-async function fetchKildareHeritage(url) {
+async function fetchSquarespaceEvents(url) {
   const data = await fetchJson(`${url}?format=json`);
-  return (data.upcoming || []).map(item => kildareHeritageToLd(item, url));
+  return (data.upcoming || []).map(item => squarespaceEventToLd(item, url));
 }
 
 // IntoKildare — The Events Calendar REST API. Timestamps arrive as
@@ -323,7 +327,8 @@ async function fetchIntoKildare(url) {
 
 // Keyed by bare hostname, matching what sourceForUrl returns.
 const JSON_ADAPTERS = {
-  'kildareheritage.com': fetchKildareHeritage,
+  'kildareheritage.com': fetchSquarespaceEvents,
+  'moattheatre.com':     fetchSquarespaceEvents,
   'intokildare.ie':      fetchIntoKildare,
 };
 
@@ -416,17 +421,6 @@ function parseWhatsonTonight(html, sourceUrl) {
   });
 }
 
-// ── Moat Theatre homepage parser ──────────────────────────────────────────────
-function parseMoatTheatre(html, sourceUrl) {
-  return parseListingPage(html, sourceUrl, {
-    blockClass:  'show|event|production|post',
-    headingTag:  'h[1-4]',
-    minTitleLen: 3,
-    location:    'Moat Theatre, Naas',
-    isAllDay:    false,
-  });
-}
-
 // ── Extract events from one URL ───────────────────────────────────────────────
 async function extractEvents(url) {
   const type    = classifyUrl(url);
@@ -451,8 +445,6 @@ async function extractEvents(url) {
     }
   } else if (type === 'whatsontonight') {
     events = parseWhatsonTonight(await fetchPage(url), url);
-  } else if (type === 'moattheatre') {
-    events = parseMoatTheatre(await fetchPage(url), url);
   }
 
   // Drop past events
@@ -615,5 +607,11 @@ if (require.main === module) {
   });
 }
 
-// Exported for tests only — the CLI path above is what actually runs.
-module.exports = { extractJsonLd, isNaasEvent, kildareHeritageToLd, intoKildareToLd, detectFree };
+// Exported for tests — the CLI path above is what actually runs. The pure
+// mappers are what the tests exercise; fetchSquarespaceEvents is exported so the
+// one-time fix-moat-times.js migration can read the same feed rather than
+// duplicating the fetch.
+module.exports = {
+  extractJsonLd, isNaasEvent, squarespaceEventToLd, intoKildareToLd, detectFree,
+  fetchSquarespaceEvents,
+};
