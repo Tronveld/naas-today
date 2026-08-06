@@ -14,7 +14,7 @@ surrounding context to relocate it. Phase 1 and item 10 have since shipped (`17a
 `fc3d8ed`, `34101d9`), so the line numbers in the EventsGrid, empty-state and modal-dismiss
 items are already historical.
 
-**Progress: 9 of 75 done** — items 1–7, 9 and 10. Item 8 is still open.
+**Progress: 13 of 75 done** — items 1–7, 9, 10, 39–41 and 43. Item 8 is still open.
 
 ---
 
@@ -26,9 +26,9 @@ work them in — each phase is a coherent chunk you can ship on its own.
 | Phase | Items | Count | Command | Why this order |
 |---|---|---|---|---|
 | ~~1. Empty day~~ **done** | 1–7, 9 | 8 of 9 | shipped in `17a5423`, `fc3d8ed` | Item 8 deliberately left — decide it with the rebuilt screen in front of you. |
-| 2. Mobile chrome | 39–41 | 3 | `/impeccable layout` | Structural. Do it right after phase 1 — item 31 changes the filter row's height, so settle the budget once. |
+| ~~2. Mobile chrome~~ **done** | 39–41 | 3 of 3 | shipped in `03c21d0` | Also closed item 43, which the sticky move would otherwise have re-created under a new selector. |
 | 3. Form data loss **started** | ~~10~~, 11–12, 42 | 1 of 4 | `/impeccable harden` | Item 10 shipped in `34101d9` and covers dismissal within a page load. A reload or closed tab still loses the draft — that is item 11. |
-| 4. Accessibility | 13–16, 24–38, 43–49, 53–55, 57–58, 60–61 | 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. Item 38 needs a decision, not just an edit. |
+| 4. Accessibility | 13–16, 24–38, ~~43~~, 44–49, 53–55, 57–58, 60–61 | 1 of 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. Item 38 needs a decision, not just an edit. |
 | 5. Trust & consistency | 17–23, 50–52, 56, 59, 62–63 | 14 | `/impeccable polish` | Sweeps what's left; reads the critique snapshot as its own input. |
 | 6. Doc truth | 64–69 | 6 | manual | Fix DESIGN.md's overstated claims *after* the code moves, so it describes what shipped. |
 | 7. Open questions | 70–73 | 4 | `/impeccable shape` | Genuine product decisions. Don't let a refactor make them by accident. |
@@ -223,15 +223,21 @@ item 40's chrome budget after.
 ~247px of a 375×667 viewport is consumed before the first card — roughly 44%, leaving room for
 about one and a half events.
 
-- [ ] **39. [P1] Invert the stickiness.** The masthead is pinned (`:88-96`, `z-index: 100`) and
+- [x] **39. [P1] Invert the stickiness.** The masthead is pinned (`:88-96`, `z-index: 100`) and
   the date scrolls away. Halfway down a busy Saturday there is no on-screen confirmation of
   which day you are reading. Pin the date instead — ideally with a compact active-filter
   summary — and let the masthead scroll away or collapse into the pinned bar.
+  **Shipped without the filter summary.** `position: sticky` moved from `header` to
+  `.date-section`; the `.scrolled` shadow and its JS moved with it, and now fire on
+  `getBoundingClientRect().top <= 0` rather than `scrollY > 4`, because the bar no longer
+  pins at scroll position zero. The compact active-filter summary is still open — it needs
+  the filter row to settle (item 31 changes its height) and is really a shape question, not
+  a layout one.
 
-- [ ] **40. [P1] Drop the tagline on mobile.** It restates the `<h1>` with no added information
+- [x] **40. [P1] Drop the tagline on mobile.** It restates the `<h1>` with no added information
   and costs vertical space on every visit.
 
-- [ ] **41. [P2] Set `line-height: 1.2` on `.current-date`.** It inherits `1.6` from `body`
+- [x] **41. [P2] Set `line-height: 1.2` on `.current-date`.** It inherits `1.6` from `body`
   (`:78`) while DESIGN.md's `date` token specifies `1.2` — ~13px of dead space in the region
   already over budget.
 
@@ -245,7 +251,9 @@ about one and a half events.
 DESIGN.md claims coverage is "explicit, control by control — not just the card entrance".
 The block at `:1054-1060` misses:
 
-- [ ] **43. [P2] `header`** `:96` — `transition: box-shadow 0.2s`.
+- [x] **43. [P2] `header`** `:96` — `transition: box-shadow 0.2s`. Covered by item 39: the
+  transition moved to `.date-section`, which was added to the reduced-motion override in the
+  same edit. Leaving it uncovered would have been the same debt under a new selector name.
 - [ ] **44. [P2] `.event-card` *transition*** `:283` — the override kills only `animation`, so
   the hover `translateY(-2px)` still animates.
 - [ ] **45. [P2] `.skeleton-line`** `:645` — `skeletonPulse 1.5s **infinite**`.
