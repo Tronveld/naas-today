@@ -149,7 +149,7 @@ Table: `events`
 | Writer | `source` | Lands as |
 |---|---|---|
 | `submit-event.js`, `submit-recurring.js` | `submission` | `pending` |
-| `scrape-sources.js` | the URL's hostname (`moattheatre.com`, `whatsontonight.ie`) | `approved` in CI |
+| `scrape-sources.js` | the URL's hostname (`moattheatre.com`, `whatsontonight.ie`, `kildareheritage.com`, `intokildare.ie`, `whatsgoingon.ie`) | `approved` in CI |
 | `pull-library-events.js` | `naas-library` | `approved` in CI |
 | `import-events.js` | `csv-import` | `pending` |
 
@@ -196,7 +196,7 @@ All scripts `require('./lib')`. Exports:
 | File | Purpose |
 |---|---|
 | `pull-library-events.js` | Fetches upcoming events from the Naas Library RSS feed and imports them into Supabase as `pending`. Skips duplicates via fuzzy title matching. Flags: `--auto-approve`, `--dry-run`. |
-| `scrape-sources.js` | Fetches and extracts events from the URLs listed in `event-sources.md` (currently Moat Theatre and WhatsonTonight.ie). Uses JSON-LD extraction for individual event pages and a shared `parseListingPage` helper for listing pages (configured per-site via options). Skips past events and duplicates. Exits non-zero if any source fails. Flags: `--auto-approve`, `--dry-run`. **Eventbrite was removed on 2026-08-05 — it blocks scrapers (`HTTP 405`) and its terms prohibit automated collection. Do not add it back;** see the "Removed sources" section of `event-sources.md`. |
+| `scrape-sources.js` | Fetches and extracts events from the URLs listed in `event-sources.md`. Three extraction paths: a shared `parseListingPage` helper for the HTML listing sites (Moat Theatre, WhatsonTonight, configured per-site via options); JSON-LD extraction for anything else; and `JSON_ADAPTERS` for sources serving structured JSON from a separate endpoint (Kildare Heritage, IntoKildare). Adapters map records into schema.org `Event` shapes so all three paths converge on the same `isNaasEvent` → `jsonLdToEvent` → duplicate-check → insert pipeline. Skips past events and duplicates. Exits non-zero if any source fails. Flags: `--auto-approve`, `--dry-run`. **Eventbrite was removed on 2026-08-05 — it blocks scrapers (`HTTP 405`) and its terms prohibit automated collection. Do not add it back;** see the "Removed sources" section of `event-sources.md`. See also the "Evaluated, not used" section there before researching new sources — 30+ candidates were probed on 2026-08-06. |
 | `weekly-post.js` | Generates a social media post for the upcoming week's approved events and copies it to the clipboard. Flags: `--list` (output raw JSON), `--select=id1,id2` (pin specific events). |
 | `import-events.js` | Bulk-imports events from a CSV file into Supabase as `pending`. Usage: `node scripts/import-events.js <file.csv> [--dry-run]`. CSV must have a header row; required columns: `title`, `date` (`YYYY-MM-DD`), `location`. |
 | `check-deploy-budget.js` | **Read-only.** Counts production deploys in the trailing 30 days via the Netlify API and emits `allowed=true\|false` for the workflow's rebuild step. Env: `NETLIFY_AUTH_TOKEN` (optional), `NETLIFY_SITE_ID`, `REBUILD_CAP` (default 15). Fails **open** — no token, or an API error, warns and allows, because the "only rebuild when events arrived" gate is the primary control and a silently disabled rebuild is harder to notice than a warning. |
@@ -245,7 +245,16 @@ Nothing here affects what visitors see. The rebuild only refreshes the pre-rende
 
 ## Deployment
 
-Pushing to the connected branch auto-deploys via Netlify. The `netlify.toml` sets the build command (`npm run build`), publish directory (`dist`), functions directory, `esbuild` as the bundler, and security response headers (CSP, HSTS, X-Frame-Options, etc.).
+Pushing auto-deploys via Netlify. The `netlify.toml` sets the build command (`npm run build`), publish directory (`dist`), functions directory, `esbuild` as the bundler, and security response headers (CSP, HSTS, X-Frame-Options, etc.).
+
+**`main` is the production branch; `dev` is not.** `netlify.toml` carries no branch config — it lives in the Netlify dashboard, so the repo cannot tell you. Recording it here because it is not otherwise discoverable and the answer decides whether a push costs anything:
+
+| Push to | Result | Credit cost |
+|---|---|---|
+| `main` | Production deploy → `naastoday.com` | 15 credits — counts against the ceiling below |
+| `dev` | Branch deploy → `dev--naas-today.netlify.app` | **None.** Push freely. |
+
+So day-to-day work on `dev` is free, and only the merge to `main` spends. That is what makes the `/merge-to-main` skill the moment to think about budget, not the individual commits.
 
 Analytics are provided by Umami Cloud (`https://cloud.umami.is`), which is allowed in the CSP.
 

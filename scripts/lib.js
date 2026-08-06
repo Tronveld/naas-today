@@ -70,10 +70,16 @@ function stripHtml(html) {
 const KIDS_RE = /\b(bab(y|ies)|toddler|children|child\b|kids?|\d+\s*-?\s*year\s*-?\s*olds?|junior|youth|playgroup|storytime for)\b/i;
 
 // ── Title normalisation for duplicate detection ───────────────────────────────
+// Dash and apostrophe variants are folded to one form before comparing. Listing
+// sites copy titles from each other by hand, so the same event reaches us as
+// "Movicals – ..." from one source and "Movicals - ..." from another. Without
+// this, isDuplicate says no and the event appears twice on the site.
 function normaliseTitle(t) {
   return t
     .toLowerCase()
-    .replace(/\s*([:\-–—\/|,;])\s*/g, '$1')
+    .replace(/[–—]/g, '-')   // en dash, em dash → hyphen
+    .replace(/[‘’]/g, "'")   // curly quotes → straight apostrophe
+    .replace(/\s*([:\-\/|,;])\s*/g, '$1')
     .replace(/\s+/g, ' ')
     .trim();
 }

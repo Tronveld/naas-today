@@ -36,6 +36,31 @@ const todayEvents = initialEvents.filter(e => {
   return e.date === todayStr;
 });
 
+// "Coming Up" is built client-side by renderUpcoming(), but the static HTML shipped a
+// heading over an empty <ul>. First paint, no-JS visitors and anything slow enough to
+// see the pre-rendered page got a promise with nothing under it — on the section that
+// most often holds the only answer, since most weekdays in Naas have no events at all.
+//
+// This mirrors renderUpcoming() rather than improving on it, because the client replaces
+// the list on load and any difference would show as a flicker. That means: compare on
+// `date` alone (a multi-day run that started before today is deliberately not "upcoming",
+// matching the client), take the first five, and lean on the query's date.asc,time.asc
+// ordering instead of re-sorting.
+const upcomingEvents = initialEvents.filter(e => e.date > todayStr).slice(0, 5);
+
+function upcomingDateLabel(dateStr: string): string {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-IE', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function upcomingTimeLabel(event: any): string {
+  if (event.is_all_day) return 'All day';
+  return event.time ? event.time.substring(0, 5) : '';
+}
+
 // Build JSON-LD for today's events
 const jsonLd = todayEvents.length > 0 ? {
   '@context': 'https://schema.org',
@@ -64,10 +89,36 @@ const jsonLd = todayEvents.length > 0 ? {
     <FilterControls />
     <h2 class="visually-hidden" id="events-list-heading">Today's events</h2>
     <EventsGrid events={initialEvents} todayStr={todayStr} />
-    <section id="upcomingSection" class="upcoming-section" aria-label="Coming up">
-      <h2 class="upcoming-heading">Coming Up</h2>
-      <ul id="upcomingList" class="upcoming-list"></ul>
+    <section
+      id="upcomingSection"
+      class="upcoming-section"
+      aria-label="Coming up"
+      style={upcomingEvents.length === 0 ? 'display:none' : undefined}
+    >
+      <h2 class="upcoming-heading" id="upcomingHeading">{todayEvents.length === 0 ? 'Next up' : 'Coming Up'}</h2>
+      {/* renderUpcoming() replaces these rows on load and adds the click/keyboard
+          handling. They ship without role="button"/tabindex on purpose: without JS
+          those attributes would announce a control that cannot do anything. */}
+      <ul id="upcomingList" class="upcoming-list">
+        {upcomingEvents.map(event => (
+          <li class="upcoming-item">
+            <span class="upcoming-date">{upcomingDateLabel(event.date)}</span>
+            <span class="upcoming-time">{upcomingTimeLabel(event)}</span>
+            <span class="upcoming-title">{event.title}</span>
+            <span class="upcoming-location">{event.location}</span>
+          </li>
+        ))}
+      </ul>
     </section>
+
+    <!-- The empty day's submit prompt, deliberately after the upcoming list.
+         DESIGN.md's page-order rule puts the CTA after the day's events so the
+         visitor's job comes first; on a day with no events that job is answered
+         by the list above, not by the empty grid, so the CTA follows it here. -->
+    <div class="empty-cta" id="emptyCta" hidden={todayEvents.length > 0}>
+      <p>Know of something happening? Add it to the noticeboard.</p>
+      <button class="submit-area-btn" id="emptySubmitBtn">Submit an event</button>
+    </div>
   </main>
   <Footer />
   <DatePickerModal />
@@ -81,6 +132,8 @@ const jsonLd = todayEvents.length > 0 ? {
   </script>
 
   <script>
+    import { apply as applyDraft, saveDraft, hasDraft, clearDraft, readDraft } from '../scripts/draft.js';
+
     // ── Utilities ──────────────────────────────────────────────────────
 
     // Decodes HTML entities (e.g. &eacute; → é) safely via a textarea element
@@ -148,6 +201,18 @@ const jsonLd = todayEvents.length > 0 ? {
     let filterTheatreActive = false;
     let isError = false;
 
+    // The six category chips, in row order. Only used for the count badges — the
+    // toggle handlers and URL state still name their own variables, because those
+    // are six separate `let`s and collapsing them is a bigger change than this.
+    const FILTER_CHIPS = [
+        { id: 'filterFree',    label: 'Free',     match: e => e.isFree },
+        { id: 'filterKids',    label: 'For kids', match: e => e.isForKids },
+        { id: 'filterMusic',   label: 'Music',    match: e => e.isMusic },
+        { id: 'filterSport',   label: 'Sport',    match: e => e.isSport },
+        { id: 'filterMarket',  label: 'Markets',  match: e => e.isMarket },
+        { id: 'filterTheatre', label: 'Theatre',  match: e => e.isTheatre },
+    ];
+
     function pushUrlState() {
         const params = new URLSearchParams();
         const todayStr = localDateStr(new Date());
@@ -185,22 +250,35 @@ const jsonLd = todayEvents.length > 0 ? {
             filterSportActive   = active.has('sport');
             filterMarketActive  = active.has('markets');
             filterTheatreActive = active.has('theatre');
-            // Sync button aria-pressed and active class
-            const map = [
-                ['filterFree',    filterFreeActive],
-                ['filterKids',    filterKidsActive],
-                ['filterMusic',   filterMusicActive],
-                ['filterSport',   filterSportActive],
-                ['filterMarket',  filterMarketActive],
-                ['filterTheatre', filterTheatreActive],
-            ];
-            map.forEach(([id, isActive]) => {
-                const btn = document.getElementById(id);
-                if (!btn) return;
-                btn.classList.toggle('active', isActive);
-                btn.setAttribute('aria-pressed', String(isActive));
-            });
+            syncFilterButtons();
         }
+    }
+
+    // Pushes the six filter flags back onto their buttons. Shared by readUrlState
+    // and the empty state's "Show all events" escape.
+    function syncFilterButtons() {
+        const map = [
+            ['filterFree',    filterFreeActive],
+            ['filterKids',    filterKidsActive],
+            ['filterMusic',   filterMusicActive],
+            ['filterSport',   filterSportActive],
+            ['filterMarket',  filterMarketActive],
+            ['filterTheatre', filterTheatreActive],
+        ];
+        map.forEach(([id, isActive]) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
+    function clearAllFilters() {
+        filterFreeActive = filterKidsActive = filterMusicActive = false;
+        filterSportActive = filterMarketActive = filterTheatreActive = false;
+        syncFilterButtons();
+        renderEvents();
+        pushUrlState();
     }
 
     // ── Loading State ───────────────────────────────────────────────────
@@ -495,8 +573,10 @@ const jsonLd = todayEvents.length > 0 ? {
             errorState.classList.add('visible');
             // The error state has its own Try again button below it.
             if (submitArea) submitArea.style.display = 'none';
+            setEmptyCtaHidden(true);
             updateJsonLd([]);
             renderUpcoming();
+            announce('Could not load events.');
             return;
         }
         errorState.classList.remove('visible');
@@ -508,30 +588,22 @@ const jsonLd = todayEvents.length > 0 ? {
             return event.date === dateStr;
         });
 
-        // Update filter button count badges
-        const freeCount = filteredEvents.filter(e => e.isFree).length;
-        document.querySelector('#filterFree span').textContent =
-            freeCount > 0 ? `Free (${freeCount})` : 'Free';
+        // Held before the category filters are applied, so an empty result can tell
+        // "nothing is on today" from "your filters hid everything". Only one of those
+        // is the visitor's to fix, and saying the wrong one reads as a broken site.
+        const dayEvents = filteredEvents;
 
-        const kidsCount = filteredEvents.filter(e => e.isForKids).length;
-        document.querySelector('#filterKids span').textContent =
-            kidsCount > 0 ? `For kids (${kidsCount})` : 'For kids';
-
-        const musicCount = filteredEvents.filter(e => e.isMusic).length;
-        document.querySelector('#filterMusic span').textContent =
-            musicCount > 0 ? `Music (${musicCount})` : 'Music';
-
-        const sportCount = filteredEvents.filter(e => e.isSport).length;
-        document.querySelector('#filterSport span').textContent =
-            sportCount > 0 ? `Sport (${sportCount})` : 'Sport';
-
-        const marketCount = filteredEvents.filter(e => e.isMarket).length;
-        document.querySelector('#filterMarket span').textContent =
-            marketCount > 0 ? `Markets (${marketCount})` : 'Markets';
-
-        const theatreCount = filteredEvents.filter(e => e.isTheatre).length;
-        document.querySelector('#filterTheatre span').textContent =
-            theatreCount > 0 ? `Theatre (${theatreCount})` : 'Theatre';
+        // Count badges. A zero-count chip is dimmed rather than left as a bare
+        // label — see the .is-empty rule in BaseLayout for why not disabled.
+        // Counts are taken before the category filters are applied, so they
+        // always mean "events today with this tag", not "…that also survive
+        // your other chips". A chip can therefore be both .active and .is-empty.
+        FILTER_CHIPS.forEach(({ id, label, match }) => {
+            const count = filteredEvents.filter(match).length;
+            const btn = document.getElementById(id);
+            btn.querySelector('span').textContent = count > 0 ? `${label} (${count})` : label;
+            btn.classList.toggle('is-empty', count === 0);
+        });
 
         if (filterFreeActive)    filteredEvents = filteredEvents.filter(e => e.isFree);
         if (filterKidsActive)    filteredEvents = filteredEvents.filter(e => e.isForKids);
@@ -543,8 +615,9 @@ const jsonLd = todayEvents.length > 0 ? {
         if (filteredEvents.length === 0) {
             grid.style.display = 'none';
             emptyState.classList.add('visible');
-            // The empty state carries its own submit button, so hide this one.
+            // The submit prompt for an empty day lives after the upcoming list.
             if (submitArea) submitArea.style.display = 'none';
+            setEmptyState(dayEvents.length);
             updateJsonLd([]);
             renderUpcoming();
             return;
@@ -553,12 +626,61 @@ const jsonLd = todayEvents.length > 0 ? {
         grid.style.display = 'grid';
         emptyState.classList.remove('visible');
         if (submitArea) submitArea.style.display = '';
+        setEmptyCtaHidden(true);
         filteredEvents.sort((a, b) => a.time.localeCompare(b.time));
         grid.innerHTML = '';
         filteredEvents.forEach(event => grid.appendChild(createEventCard(event)));
         initDescriptionToggles(grid);
         updateJsonLd(filteredEvents);
         renderUpcoming();
+        announce(`${filteredEvents.length} ${filteredEvents.length === 1 ? 'event' : 'events'}.`);
+    }
+
+    // Announces the outcome as a short count. The live region used to wrap the whole
+    // list, so every filter tap re-read each card in full, descriptions included.
+    function announce(text) {
+        const status = document.getElementById('eventsStatus');
+        if (status) status.textContent = text;
+    }
+
+    function setEmptyCtaHidden(hidden) {
+        const cta = document.getElementById('emptyCta');
+        if (cta) cta.hidden = hidden;
+    }
+
+    // An empty day has two causes and they need different words. Telling someone
+    // "nothing listed" when four events are sitting behind a filter they set is
+    // false, and the filter row is not sticky, so they cannot see what caused it.
+    function setEmptyState(dayCount) {
+        const heading  = document.getElementById('emptyHeading');
+        const message  = document.getElementById('emptyMessage');
+        const clearBtn = document.getElementById('clearFiltersBtn');
+        const filtersHidThem = dayCount > 0;
+        // "today" is only true on the day itself; the visitor can be three taps into
+        // next week. The date sits right above this message, so a wrong word here is
+        // the kind of small lie that makes the rest look unreliable.
+        const isToday = localDateStr(currentDate) === localDateStr(new Date());
+        const dayWord = isToday ? 'today' : 'this day';
+        // "today" already carries its own preposition — "on today" is not English,
+        // and reads as broken to exactly the older resident this is built for.
+        const dayPhrase = isToday ? 'today' : 'on this day';
+
+        if (filtersHidThem) {
+            heading.textContent = 'No matching events';
+            message.textContent = dayCount === 1
+                ? `There is 1 other event ${dayPhrase}.`
+                : `There are ${dayCount} other events ${dayPhrase}.`;
+            clearBtn.hidden = false;
+            // Not the moment to ask for a submission — the day is not empty.
+            setEmptyCtaHidden(true);
+            announce(`No matching events. ${dayCount} ${dayCount === 1 ? 'event' : 'events'} hidden by filters.`);
+        } else {
+            heading.textContent = 'Quiet day in Naas';
+            message.textContent = `Nothing listed for ${dayWord}.`;
+            clearBtn.hidden = true;
+            setEmptyCtaHidden(false);
+            announce('No events on this day.');
+        }
     }
 
     function renderUpcoming() {
@@ -573,6 +695,12 @@ const jsonLd = todayEvents.length > 0 ? {
 
         if (upcoming.length === 0) { section.style.display = 'none'; return; }
         section.style.display = '';
+
+        // On an empty day this list is the answer, not a sidebar, so it says so.
+        const heading = document.getElementById('upcomingHeading');
+        const dayIsEmpty = document.getElementById('emptyState').classList.contains('visible');
+        if (heading) heading.textContent = dayIsEmpty ? 'Next up' : 'Coming Up';
+
         list.innerHTML = '';
 
         upcoming.forEach(event => {
@@ -686,6 +814,7 @@ const jsonLd = todayEvents.length > 0 ? {
         previouslyFocused = document.activeElement;
         const modal = document.getElementById(id);
         modal.classList.add('active');
+        document.body.classList.add('modal-open');
         const firstFocusable = modal.querySelector('button, [href], input, select, textarea');
         if (firstFocusable) firstFocusable.focus();
         trapFocus(modal);
@@ -694,6 +823,7 @@ const jsonLd = todayEvents.length > 0 ? {
     function closeModal(id) {
         const modal = document.getElementById(id);
         modal.classList.remove('active');
+        document.body.classList.remove('modal-open');
         if (modal._trapHandler) {
             modal.removeEventListener('keydown', modal._trapHandler);
             delete modal._trapHandler;
@@ -818,10 +948,36 @@ const jsonLd = todayEvents.length > 0 ? {
         }, 0);
     });
 
+    // ── Draft persistence ────────────────────────────────────────────────
+    //
+    // Item 10 stopped a stray Escape wiping the form, but only within one page
+    // load. A reload, a crash, or a tab the phone evicted still lost everything.
+    // The draft is written on every keystroke and lives until the submission
+    // lands or the visitor explicitly cancels. Shape and storage live in
+    // src/scripts/draft.js, shared with AppModals.astro's copy of this form.
+    const draftFields = () => document.getElementById('eventForm').querySelectorAll('input, textarea, select');
+
+    function restoreDraft() {
+        const draft = readDraft();
+        if (!draft) return;
+        applyDraft(draftFields(), draft);
+        // Values alone leave the dependent UI wrong — the recurring section stays
+        // hidden, the end-time input stays collapsed, the counter reads 0. Re-fire
+        // the events those handlers already listen for rather than repeating them.
+        document.getElementById('isRecurring').dispatchEvent(new Event('change'));
+        document.querySelector('input[name="timeMode"]:checked').dispatchEvent(new Event('change'));
+        document.getElementById('eventDescription').dispatchEvent(new Event('input'));
+        updateRecurrenceHint();
+    }
+
+    document.getElementById('eventForm').addEventListener('input', () => saveDraft(draftFields()));
+    document.getElementById('eventForm').addEventListener('reset', clearDraft);
+
     // Every submit entry point opens the modal on the day currently being viewed,
-    // not on today.
+    // not on today — unless a draft is waiting, in which case the date the visitor
+    // typed outranks the day they happen to be looking at.
     function openSubmitModal() {
-        document.getElementById('eventDate').value = localDateStr(currentDate);
+        if (!hasDraft()) document.getElementById('eventDate').value = localDateStr(currentDate);
         openModal('submitModal');
     }
 
@@ -829,9 +985,17 @@ const jsonLd = todayEvents.length > 0 ? {
     document.getElementById('submitEventFooterBtn').addEventListener('click', openSubmitModal);
     document.getElementById('emptySubmitBtn')?.addEventListener('click', openSubmitModal);
     document.getElementById('retryBtn')?.addEventListener('click', () => fetchEvents());
+    document.getElementById('clearFiltersBtn')?.addEventListener('click', clearAllFilters);
 
     document.getElementById('closeSubmitModal').addEventListener('click', () => closeModal('submitModal'));
+
+    // Cancel is the one deliberate discard, so it is the one place that asks.
+    // A native confirm() rather than a styled panel: this is a destructive
+    // action, which is what the platform dialog is actually for. (The eight
+    // alert() calls item 17 removes are validation and success messaging —
+    // a different problem with the same-looking box.)
     document.getElementById('cancelSubmit').addEventListener('click', () => {
+        if (hasDraft() && !confirm('Discard this event? What you have typed will be lost.')) return;
         closeModal('submitModal');
         document.getElementById('eventForm').reset();
     });
@@ -970,22 +1134,22 @@ const jsonLd = todayEvents.length > 0 ? {
     document.getElementById('closeContactModal').addEventListener('click', () => closeModal('contactModal'));
 
     // Close modals on background click or Escape key
+    //
+    // Dismissing deliberately does NOT reset the form. A mistap outside the sheet
+    // or a stray Escape used to wipe a submission with no confirm and no undo, on
+    // a form that requires a description of up to 2000 characters. The modal only
+    // hides, so leaving the fields alone is what lets a half-written event survive
+    // an interruption. Cancel and a successful submit still reset it.
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeModal(modal.id);
-                if (modal.id === 'submitModal') document.getElementById('eventForm').reset();
-            }
+            if (e.target === modal) closeModal(modal.id);
         });
     });
 
     document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
         const activeModal = document.querySelector('.modal.active');
-        if (activeModal) {
-            closeModal(activeModal.id);
-            if (activeModal.id === 'submitModal') document.getElementById('eventForm').reset();
-        }
+        if (activeModal) closeModal(activeModal.id);
     });
 
     // ── Deep Link ────────────────────────────────────────────────────────
@@ -1012,6 +1176,7 @@ const jsonLd = todayEvents.length > 0 ? {
     readUrlState();
     updateDateDisplay();
     initDescriptionToggles(document.getElementById('eventsGrid'));
+    restoreDraft();   // last: it re-fires the change/input handlers registered above
     fetchEvents().then(handleDeepLink);
   </script>
 </BaseLayout>

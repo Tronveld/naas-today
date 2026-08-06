@@ -43,17 +43,25 @@ function classifyUrl(url) {
 }
 
 // ── Fetch HTML with browser-like headers ──────────────────────────────────────
+const BROWSER_HEADERS = {
+  'User-Agent':      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept':          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'en-IE,en;q=0.9',
+};
+
 async function fetchPage(url) {
+  const res = await fetch(url, { headers: BROWSER_HEADERS, redirect: 'follow' });
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+  return res.text();
+}
+
+async function fetchJson(url) {
   const res = await fetch(url, {
-    headers: {
-      'User-Agent':      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept':          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'en-IE,en;q=0.9',
-    },
+    headers: { ...BROWSER_HEADERS, Accept: 'application/json' },
     redirect: 'follow',
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-  return res.text();
+  return res.json();
 }
 
 // ── Extract all JSON-LD Event objects from HTML ───────────────────────────────
@@ -126,6 +134,23 @@ function extractLocation(loc) {
 }
 
 // ── Detect free admission from offers + text ─────────────────────────────────
+// A stated price of zero is authoritative. Everything else is prose, and prose
+// says "free" for reasons that have nothing to do with getting in: child
+// concessions, free parking, gluten-free catering. Taste of Kildare published
+// with a FREE badge on 2026-08-06 on the strength of "children under 10 enter
+// completely free of charge" — adults pay €15.
+//
+// So the text fallback asks for the word in an admission sense, and returns
+// false when it cannot tell. That direction is the cheap one to be wrong in: a
+// free event missing its badge is a missed filter hit, whereas a paid event
+// wearing one sends somebody out the door with no money.
+//
+// Note parseListingPage keeps its own looser /\bfree\b/ for the HTML sources.
+// Left alone deliberately — no defect has been observed there, and those
+// descriptions are short scraped blobs rather than full event copy.
+const FREE_ADMISSION =
+  /\bfree (admission|entry|entrance|event|to attend|and open)\b|\b(admission|entry|entrance|tickets?)\s*[:–-]?\s*free\b|\bevent is free\b|\bis free to\b/i;
+
 function detectFree(offers, title, description) {
   if (offers) {
     const arr = Array.isArray(offers) ? offers : [offers];
@@ -134,7 +159,7 @@ function detectFree(offers, title, description) {
       if (p === 0 || p === '0' || /^free$/i.test(String(p))) return true;
     }
   }
-  return /\bfree\b/i.test(`${title} ${description}`);
+  return FREE_ADMISSION.test(`${title} ${description}`);
 }
 
 // ── Convert a JSON-LD Event object to a Supabase row ─────────────────────────
@@ -143,6 +168,16 @@ function detectFree(offers, title, description) {
 // events next to the real ones. This site is Naas-specific, so county-level
 // content is filtered down rather than allowed to broaden it. An event with no
 // location at all is not Naas — that is how Eventbrite represents online events.
+//
+// Some venues genuinely in Naas do not carry the word in their name or address —
+// Mondello Park is in Donore, Naas, and Punchestown Racecourse has a Naas
+// address. Both were dropped by the \bnaas\b test alone. Grow this list as they
+// turn up rather than loosening the test: widening the radius to neighbouring
+// towns is a product decision (PRODUCT.md records "Naas-specific, not regional"),
+// and a wrong entry publishes an off-town event to the live site with nobody in
+// the loop, because these sources are auto-approved.
+const NAAS_VENUES = /\b(mondello park|punchestown)\b/i;
+
 function isNaasEvent(ldEvent) {
   const parts = [];
   const collect = (loc) => {
@@ -158,7 +193,8 @@ function isNaasEvent(ldEvent) {
     }
   };
   collect(ldEvent && ldEvent.location);
-  return /\bnaas\b/i.test(parts.join(' '));
+  const text = parts.join(' ');
+  return /\bnaas\b/i.test(text) || NAAS_VENUES.test(text);
 }
 
 function jsonLdToEvent(ldEvent, sourceUrl) {
@@ -195,6 +231,101 @@ function jsonLdToEvent(ldEvent, sourceUrl) {
     status:    null, // set by caller
   };
 }
+
+// ── JSON source adapters ─────────────────────────────────────────────────────
+// Two sources publish structured JSON rather than JSON-LD inside a page. Rather
+// than give each its own extraction, row-building and insert path, each adapter
+// maps its records into schema.org Event shapes and hands them to the same
+// isNaasEvent → jsonLdToEvent → isDuplicate pipeline the HTML sources use.
+//
+// Each is split into a fetch half and a pure mapper half. Only the mapper is
+// exported, so the tests never touch the network.
+
+// Squarespace timestamps are epoch milliseconds in true UTC, but the site renders
+// Dublin local time — verified 2026-08-06 against the live feed. Formatting via
+// toISOString() would show 11:00 for an event the organiser advertises at 12:00,
+// and would date a past-midnight event to the previous day. Same class of bug
+// CLAUDE.md warns about for localDateStr() on the frontend.
+const DUBLIN_FMT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/Dublin',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+});
+
+function dublinLocal(ms) {
+  if (!ms) return null;
+  const p = {};
+  for (const { type, value } of DUBLIN_FMT.formatToParts(new Date(ms))) p[type] = value;
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+}
+
+// Kildare Heritage — Squarespace events collection, ?format=json → upcoming[].
+// The venue name and its town live in separate fields; joined into one string so
+// that isNaasEvent can see the town and extractLocation can show the venue.
+function kildareHeritageToLd(item, sourceUrl) {
+  const loc   = item.location || {};
+  // Trim each part, not just the join: the feed's addressTitle carries trailing
+  // whitespace, which would render as "Naas Racecourse , County Kildare".
+  const place = [loc.addressTitle, loc.addressLine2].map(s => (s || '').trim()).filter(Boolean).join(', ');
+
+  return {
+    '@type':     'Event',
+    name:        item.title,
+    startDate:   dublinLocal(item.startDate),
+    endDate:     dublinLocal(item.endDate),
+    location:    place ? { '@type': 'Place', name: place } : null,
+    description: item.excerpt || item.body || '',
+    url:         item.fullUrl ? new URL(item.fullUrl, sourceUrl).href : sourceUrl,
+  };
+}
+
+async function fetchKildareHeritage(url) {
+  const data = await fetchJson(`${url}?format=json`);
+  return (data.upcoming || []).map(item => kildareHeritageToLd(item, url));
+}
+
+// IntoKildare — The Events Calendar REST API. Timestamps arrive as
+// "2026-08-15 19:30:00", already in site-local time, so they need only the
+// separator swapped. An all-day event, or one stored at midnight, is emitted as
+// a bare date: jsonLdToEvent derives is_all_day from the absence of a time, and
+// passing 00:00 through would render the card as "00:00" rather than "ALL DAY".
+function intoKildareToLd(e) {
+  const start = String(e.start_date || '').replace(' ', 'T');
+  const end   = String(e.end_date   || '').replace(' ', 'T');
+  const bare  = (s) => (e.all_day || s.endsWith('T00:00:00') ? s.slice(0, 10) : s) || null;
+
+  // venue is [] rather than {} when an event has none.
+  const v     = (e.venue && !Array.isArray(e.venue)) ? e.venue : {};
+  const place = [v.venue, v.city].filter(Boolean).join(', ').trim();
+
+  // An empty cost means "not stated", not "free" — claiming free would put a
+  // paid event behind the site's free filter. Left to detectFree()'s text check,
+  // which is what decides it for every other source.
+  const cost = String(e.cost || '').trim();
+
+  return {
+    '@type':     'Event',
+    name:        e.title,
+    startDate:   bare(start),
+    endDate:     bare(end),
+    location:    place ? { '@type': 'Place', name: place } : null,
+    description: e.excerpt || e.description || '',
+    offers:      /^(free|0|€\s*0)$/i.test(cost) ? { price: 0 } : undefined,
+    url:         e.website || e.url,
+  };
+}
+
+async function fetchIntoKildare(url) {
+  const api  = new URL('/wp-json/tribe/events/v1/events?per_page=50', url).href;
+  const data = await fetchJson(api);
+  return (data.events || []).map(intoKildareToLd);
+}
+
+// Keyed by bare hostname, matching what sourceForUrl returns.
+const JSON_ADAPTERS = {
+  'kildareheritage.com': fetchKildareHeritage,
+  'intokildare.ie':      fetchIntoKildare,
+};
 
 // ── Parse a date written as "15 April 2026" from plain text ──────────────────
 const MONTH_MAP = {
@@ -298,27 +429,30 @@ function parseMoatTheatre(html, sourceUrl) {
 
 // ── Extract events from one URL ───────────────────────────────────────────────
 async function extractEvents(url) {
-  const type = classifyUrl(url);
-  const html = await fetchPage(url);
+  const type    = classifyUrl(url);
+  const adapter = JSON_ADAPTERS[sourceForUrl(url)];
 
   let events  = [];
   let warning = null;
   let offTown = 0;   // JSON-LD events dropped as not Naas — reported, never silent
 
-  if (type === 'individual') {
-    const ldEvents = extractJsonLd(html);
+  // A JSON adapter produces the same schema.org Event shapes the JSON-LD path
+  // yields, so the two share everything downstream — the Naas filter, the
+  // off-town count and jsonLdToEvent.
+  if (adapter || type === 'individual') {
+    const ldEvents = adapter ? await adapter(url) : extractJsonLd(await fetchPage(url));
     if (ldEvents.length > 0) {
       const naasOnly = ldEvents.filter(isNaasEvent);
       offTown = ldEvents.length - naasOnly.length;
       events = naasOnly.map(e => jsonLdToEvent(e, url)).filter(e => e.title && e.date);
     }
     if (events.length === 0 && offTown === 0) {
-      warning = 'No JSON-LD Event found';
+      warning = adapter ? 'Feed returned no events' : 'No JSON-LD Event found';
     }
   } else if (type === 'whatsontonight') {
-    events = parseWhatsonTonight(html, url);
+    events = parseWhatsonTonight(await fetchPage(url), url);
   } else if (type === 'moattheatre') {
-    events = parseMoatTheatre(html, url);
+    events = parseMoatTheatre(await fetchPage(url), url);
   }
 
   // Drop past events
@@ -482,4 +616,4 @@ if (require.main === module) {
 }
 
 // Exported for tests only — the CLI path above is what actually runs.
-module.exports = { extractJsonLd, isNaasEvent };
+module.exports = { extractJsonLd, isNaasEvent, kildareHeritageToLd, intoKildareToLd, detectFree };
