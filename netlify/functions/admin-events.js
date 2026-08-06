@@ -118,6 +118,27 @@ function validateBulkIds(ids) {
   return [[...new Set(ids)], null];
 }
 
+// A date belongs to one occurrence, never to a set. Both bulk paths PATCH many
+// rows with one field object, so a date in it lands on every row and flattens
+// the series into a single day — which is exactly what happened to the Naas
+// Country Market series: 85 future Fridays collapsed onto 2026-08-07 and the
+// live site showed 85 copies of the same market on one date.
+//
+// Dropped rather than rejected. The admin edit form always includes `date`
+// (admin.html builds `date: editDate.value` and passes the same object to
+// apiPatchGroup), so a 400 would make it impossible to bulk-edit a time or a
+// flag. The response reports what was ignored instead of staying quiet about it.
+const BULK_IMMUTABLE = new Set(['date', 'end_date']);
+
+function stripBulkImmutable(fields) {
+  const safe = {}, ignored = [];
+  for (const [k, v] of Object.entries(fields)) {
+    if (BULK_IMMUTABLE.has(k)) ignored.push(k);
+    else safe[k] = v;
+  }
+  return [safe, ignored];
+}
+
 function validatePatchFields(fields) {
   // Returns an error string, or null if valid
   const safeFields = {};
@@ -178,8 +199,12 @@ async function handlePatch(event, supabaseUrl, secretKey) {
       return json(400, { error: 'Missing or empty fields' });
     }
 
-    const [safeFields, fieldErr] = validatePatchFields(fields);
+    const [validFields, fieldErr] = validatePatchFields(fields);
     if (fieldErr) return json(400, { error: fieldErr });
+    const [safeFields, ignored] = stripBulkImmutable(validFields);
+    if (Object.keys(safeFields).length === 0) {
+      return json(400, { error: `Nothing to update — ${ignored.join(', ')} cannot be set on multiple events` });
+    }
 
     const list = safeIds.map(encodeURIComponent).join(',');
     const res = await fetch(
@@ -197,7 +222,7 @@ async function handlePatch(event, supabaseUrl, secretKey) {
     if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
 
     const updated = await res.json();
-    return json(200, { success: true, count: updated.length });
+    return json(200, { success: true, count: updated.length, ignored });
   }
 
   // ── Bulk mode: update all future events in a recurring series ──
@@ -208,8 +233,12 @@ async function handlePatch(event, supabaseUrl, secretKey) {
       return json(400, { error: 'Missing or empty fields' });
     }
 
-    const [safeFields, fieldErr] = validatePatchFields(fields);
+    const [validFields, fieldErr] = validatePatchFields(fields);
     if (fieldErr) return json(400, { error: fieldErr });
+    const [safeFields, ignored] = stripBulkImmutable(validFields);
+    if (Object.keys(safeFields).length === 0) {
+      return json(400, { error: `Nothing to update — ${ignored.join(', ')} cannot be set across a series` });
+    }
 
     const res = await fetch(
       `${supabaseUrl}/rest/v1/events?recurring_group_id=eq.${encodeURIComponent(group_id)}&date=gte.${encodeURIComponent(from_date)}`,
@@ -226,7 +255,7 @@ async function handlePatch(event, supabaseUrl, secretKey) {
     if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
 
     const updated = await res.json();
-    return json(200, { success: true, count: updated.length });
+    return json(200, { success: true, count: updated.length, ignored });
   }
 
   // ── Single event mode ──
@@ -339,5 +368,6 @@ exports.handler = async function(event) {
 };
 
 // Exported for tests only — Netlify uses the handler above.
-exports.validateBulkIds = validateBulkIds;
-exports.MAX_BULK_IDS    = MAX_BULK_IDS;
+exports.validateBulkIds     = validateBulkIds;
+exports.MAX_BULK_IDS        = MAX_BULK_IDS;
+exports.stripBulkImmutable  = stripBulkImmutable;

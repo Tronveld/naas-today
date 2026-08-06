@@ -109,9 +109,13 @@ public/
 | `submit-event.js` | POST | Inserts a new event with `status = 'pending'`; rate-limited (5/IP/hour) |
 | `submit-recurring.js` | POST | Submits a recurring event series (weekly/fortnightly/monthly); each occurrence stored as a separate row sharing a `recurring_group_id`; rate-limited (5/IP/hour) |
 | `admin-auth.js` | POST | First-time setup + login. Actions: `check_setup`, `setup`, `login`. Rate-limited (10/IP/15 min) |
-| `admin-events.js` | GET / PATCH / DELETE | Protected event management. Requires `x-admin-password` header on every call. Supports bulk update/delete of recurring event groups from a given date forward |
+| `admin-events.js` | GET / PATCH / DELETE | Protected event management. Requires `x-admin-password` header on every call. Supports bulk update/delete of recurring event groups from a given date forward. **`date` and `end_date` are stripped from both bulk paths** (`stripBulkImmutable`) — see below |
 
 All functions use the Supabase REST API directly (`fetch` to `/rest/v1/`) — no Supabase client library.
+
+**Bulk edits never carry a date.** Both PATCH bulk paths (`ids` and `group_id`) apply one field object to many rows, so a `date` in it lands on every row and flattens a recurring series into a single day. That happened on the live site: editing one Naas Country Market occurrence with "this and all future events" collapsed 85 Friday occurrences onto 2026-08-07, and the site showed 85 copies of the same market on one date.
+
+`stripBulkImmutable` drops `date` and `end_date` in bulk modes and returns them in the response as `ignored`. Dropped rather than rejected because `public/admin.html` always builds `date: editDate.value` into its fields object and passes it straight to `apiPatchGroup` — a 400 would make it impossible to bulk-edit a time or a category flag. Single-event edits are unaffected and can still change a date.
 
 **Admin authentication**: passwords are hashed with PBKDF2-SHA256 (310,000 iterations, OWASP 2023 recommendation) and stored in the `admin_config` table. The password is re-verified on every `admin-events` request (stateless — no session tokens). Only whitelisted fields (`ALLOWED_PATCH_FIELDS`) can be updated via PATCH.
 
