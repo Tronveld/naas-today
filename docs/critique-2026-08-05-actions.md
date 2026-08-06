@@ -428,7 +428,14 @@ above lands here too. Four defects are present in *both* copies:
   Found by asking why the filter chips only show their category colour on hover. The answer
   is that DESIGN.md intends exactly that (`:346-347`), but hover does not exist on touch — so
   the documented three-state control is two-state for most visitors, *and* the third state was
-  leaking in as a stuck tint.
+  leaking in as a stuck tint. **Retested on the iPhone and confirmed fixed.**
+
+  **Settled while we were here — do not reopen:** the chips should *not* carry their category
+  colour at rest to match the card tags. It was considered and rejected on 2026-08-06 for three
+  reasons already written into DESIGN.md: colour *is* the selection signal (`:347`), the chip
+  row is deliberately one type step down so six chips do not compete with the events beneath
+  (`:275`), and `:407` forbids a category colour as a fill anywhere but an active chip. The
+  chip and the tag also carry the same *word*, so the colour would be redundant reinforcement.
 
 ---
 
@@ -501,8 +508,10 @@ rather than changes to make. Clear or confirm these before building on top.
   One bug fell out of (1): the message read "There is 1 other event **on today**". Fixed in
   `ec528d0`.
 
-- [ ] **Nothing from 2026-08-05 is live.** All of it is on `dev`. The empty-day rebuild reaches
-  naastoday.com on the merge to `main`.
+- [ ] **Nothing from 2026-08-05 *or* 2026-08-06 is live.** All of it is on `dev`, pushed and
+  green. It reaches naastoday.com on the merge to `main`, which costs 15 credits — so it is
+  worth batching rather than merging per phase. **This is the one thing still waiting on a
+  decision.**
 
 **Shipped 2026-08-05:** `eee3da8` (critique + this list), `17a5423` (item 9), `fc3d8ed`
 (items 1–7), `259a182` (items 74–75), `34101d9` (item 10), `63d91f1` + `74a2e7e` (tracker).
@@ -534,7 +543,27 @@ Two findings came out of the device pass — see items 76 and 77 below.
   Dev-server artifact, not in the production build. Do not chase it.
 
 **Shipped 2026-08-06:** `03c21d0` (items 39–41, 43), `ee9d332` (items 11, 12, 42), `78601ff`
-(ponytail ceiling), `0737d38` (Netlify answer), `ec528d0` ("on today"), `dee5c09` (item 76).
+(ponytail ceiling), `0737d38` (Netlify answer), `ec528d0` ("on today"), `dee5c09` (item 76),
+`292f294` (item 8, closing phase 1), `4c053b1` (item 78). Twelve commits, all on `dev`.
+
+### Picking this up next time
+
+Phases 1–3 are done and **verified on a real device**, which is the "if you only do part of
+this list" threshold the plan set. Phase 4 (accessibility, 31 items) is next and was
+deliberately not started on 2026-08-06.
+
+Two things to know before opening it:
+
+- **Item 38 needs a decision, not an edit** — whether to darken `--border` globally or add a
+  separate `--border-interactive`. It touches card and input hairlines where 1.33:1 is
+  deliberate, and it feeds item 69 (frontmatter + sidecar refresh). Decide it first; a lot of
+  the other CSS sits on top of it.
+- **Items 24–36 will change the filter row's height** (item 31 especially), which is the chrome
+  budget items 39–41 just settled. Re-check it after, not during.
+
+**The pattern that worked:** ship a phase, then walk every path it touched in a browser *and*
+on a phone before moving on. The 2026-08-06 device pass found four bugs — items 76, 77, 78 and
+the "on today" copy — that no amount of reading the diff had caught.
 
 ### Still open after the verification pass
 
