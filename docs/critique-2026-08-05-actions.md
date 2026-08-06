@@ -430,12 +430,13 @@ you let it; `/impeccable shape` is the command that answers them on purpose.
 Loose ends that are **not** numbered items above, because they are about the state of the work
 rather than changes to make. Clear or confirm these before building on top.
 
-- [ ] **Confirm the `dev` push did not spend Netlify credits.** `netlify.toml` carries no
-  branch config, so the production branch lives in the Netlify dashboard. `main` is almost
-  certainly it — it holds the "Merge branch 'dev'" commits and there is a `/merge-to-main`
-  skill — which would make a `dev` push a branch deploy or nothing. But `d1489de` exists
-  entirely to protect a 20-production-deploy monthly ceiling, past which Netlify pauses the
-  team and visitors get "Site not available". Worth one look at the deploys tab.
+- [x] **Confirm the `dev` push did not spend Netlify credits.** ~~`netlify.toml` carries no
+  branch config, so the production branch lives in the Netlify dashboard.~~
+  **Answered 2026-08-06: it did not.** `main` is the production branch — the live deploy
+  reports `branch: "main"`, `context: "production"`, serving `naastoday.com`. A push to `dev`
+  builds a branch deploy at `dev--naas-today.netlify.app` **at no credit cost**. Push to `dev`
+  freely; only the merge to `main` spends. Recorded in CLAUDE.md's Deployment section, which
+  is where a future session will look — do not re-raise this.
 
 - [ ] **Verify the three code paths that were never observed running.** No browser automation
   was available in the session that wrote them, so they were reasoned through and checked

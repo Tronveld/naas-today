@@ -245,7 +245,16 @@ Nothing here affects what visitors see. The rebuild only refreshes the pre-rende
 
 ## Deployment
 
-Pushing to the connected branch auto-deploys via Netlify. The `netlify.toml` sets the build command (`npm run build`), publish directory (`dist`), functions directory, `esbuild` as the bundler, and security response headers (CSP, HSTS, X-Frame-Options, etc.).
+Pushing auto-deploys via Netlify. The `netlify.toml` sets the build command (`npm run build`), publish directory (`dist`), functions directory, `esbuild` as the bundler, and security response headers (CSP, HSTS, X-Frame-Options, etc.).
+
+**`main` is the production branch; `dev` is not.** `netlify.toml` carries no branch config — it lives in the Netlify dashboard, so the repo cannot tell you. Recording it here because it is not otherwise discoverable and the answer decides whether a push costs anything:
+
+| Push to | Result | Credit cost |
+|---|---|---|
+| `main` | Production deploy → `naastoday.com` | 15 credits — counts against the ceiling below |
+| `dev` | Branch deploy → `dev--naas-today.netlify.app` | **None.** Push freely. |
+
+So day-to-day work on `dev` is free, and only the merge to `main` spends. That is what makes the `/merge-to-main` skill the moment to think about budget, not the individual commits.
 
 Analytics are provided by Umami Cloud (`https://cloud.umami.is`), which is allowed in the CSP.
 
