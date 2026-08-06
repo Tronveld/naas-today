@@ -160,9 +160,11 @@ const {
             justify-content: center;
         }
 
-        .date-nav-btn:hover {
-            border-color: var(--accent);
-            color: var(--accent);
+        @media (hover: hover) {
+            .date-nav-btn:hover {
+                border-color: var(--accent);
+                color: var(--accent);
+            }
         }
 
         #prevDay, #nextDay, #todayBtn, #changeDateBtn {
@@ -241,10 +243,12 @@ const {
         .filter-btn[data-cat="markets"] { --_cat: var(--cat-markets); --_cat-bg: var(--cat-markets-bg); }
         .filter-btn[data-cat="theatre"] { --_cat: var(--cat-theatre); --_cat-bg: var(--cat-theatre-bg); }
 
-        .filter-btn[data-cat]:hover {
-            border-color: var(--_cat);
-            color: var(--_cat);
-            background: var(--_cat-bg);
+        @media (hover: hover) {
+            .filter-btn[data-cat]:hover {
+                border-color: var(--_cat);
+                color: var(--_cat);
+                background: var(--_cat-bg);
+            }
         }
 
         .filter-btn[data-cat].active {
@@ -278,8 +282,10 @@ const {
             max-width: 320px;
         }
 
-        .submit-area-btn:hover {
-            background: var(--ink);
+        @media (hover: hover) {
+            .submit-area-btn:hover {
+                background: var(--ink);
+            }
         }
 
         .events-grid {
@@ -298,9 +304,11 @@ const {
             padding: 16px 20px;
         }
 
-        .event-card:hover {
-            box-shadow: var(--shadow-md);
-            transform: translateY(-2px);
+        @media (hover: hover) {
+            .event-card:hover {
+                box-shadow: var(--shadow-md);
+                transform: translateY(-2px);
+            }
         }
 
         .event-card:focus-visible {
@@ -383,9 +391,11 @@ const {
             color: var(--ink-mid);
         }
 
-        a.event-location:hover {
-            color: var(--accent);
-            text-decoration: underline;
+        @media (hover: hover) {
+            a.event-location:hover {
+                color: var(--accent);
+                text-decoration: underline;
+            }
         }
 
         .event-description {
@@ -417,8 +427,10 @@ const {
             cursor: pointer;
             text-align: left;
         }
-        .desc-toggle-btn:hover {
-            color: var(--ink);
+        @media (hover: hover) {
+            .desc-toggle-btn:hover {
+                color: var(--ink);
+            }
         }
 
         .event-url {
@@ -429,9 +441,11 @@ const {
             margin-bottom: 0.75rem;
         }
 
-        .event-url:hover {
-            color: var(--ink);
-            text-decoration: underline;
+        @media (hover: hover) {
+            .event-url:hover {
+                color: var(--ink);
+                text-decoration: underline;
+            }
         }
 
         .card-footer {
@@ -479,9 +493,11 @@ const {
             white-space: nowrap;
         }
 
-        .share-btn:hover {
-            border-color: var(--accent);
-            color: var(--accent);
+        @media (hover: hover) {
+            .share-btn:hover {
+                border-color: var(--accent);
+                color: var(--accent);
+            }
         }
 
         /* ── Upcoming Section ─────────────────────────────────────────── */
@@ -516,7 +532,15 @@ const {
             cursor: pointer;
             transition: background 0.12s;
         }
-        .upcoming-item:hover, .upcoming-item:focus-visible {
+        @media (hover: hover) {
+            .upcoming-item:hover {
+                background: var(--bg-muted);
+            }
+        }
+        /* Split from the hover rule above so it stays outside @media (hover: hover):
+           keyboard focus must survive on touch devices too. The `outline: none` here
+           is still the WCAG 2.4.7 failure item 37 is about — untouched on purpose. */
+        .upcoming-item:focus-visible {
             background: var(--bg-muted);
             outline: none;
         }
@@ -712,9 +736,11 @@ const {
             transition: border-color 0.15s, color 0.15s;
         }
 
-        .empty-clear-btn:hover {
-            border-color: var(--accent);
-            color: var(--accent);
+        @media (hover: hover) {
+            .empty-clear-btn:hover {
+                border-color: var(--accent);
+                color: var(--accent);
+            }
         }
 
         .empty-clear-btn[hidden] {
@@ -785,9 +811,11 @@ const {
             transition: color 0.2s;
         }
 
-        .footer-links a:hover,
-        .footer-links button:hover {
-            color: var(--accent);
+        @media (hover: hover) {
+            .footer-links a:hover,
+            .footer-links button:hover {
+                color: var(--accent);
+            }
         }
 
         .footer-dot {
@@ -884,8 +912,10 @@ const {
             transition: all 0.2s;
         }
 
-        .modal-close:hover {
-            color: var(--accent);
+        @media (hover: hover) {
+            .modal-close:hover {
+                color: var(--accent);
+            }
         }
 
         .modal-body {
@@ -991,8 +1021,10 @@ const {
             border-radius: 8px;
         }
 
-        .btn-primary:hover {
-            background: var(--ink);
+        @media (hover: hover) {
+            .btn-primary:hover {
+                background: var(--ink);
+            }
         }
 
         .btn-secondary {
@@ -1002,9 +1034,11 @@ const {
             border-radius: 8px;
         }
 
-        .btn-secondary:hover {
-            border-color: var(--accent);
-            color: var(--accent);
+        @media (hover: hover) {
+            .btn-secondary:hover {
+                border-color: var(--accent);
+                color: var(--accent);
+            }
         }
 
         .form-section-heading {

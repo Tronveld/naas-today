@@ -14,7 +14,7 @@ surrounding context to relocate it. Phase 1 and item 10 have since shipped (`17a
 `fc3d8ed`, `34101d9`), so the line numbers in the EventsGrid, empty-state and modal-dismiss
 items are already historical.
 
-**Progress: 19 of 77 done** — items 1–12, 39–43, 76–77. Phase 1 is now fully closed.
+**Progress: 20 of 78 done** — items 1–12, 39–43, 76–78. Phase 1 is now fully closed.
 
 Phases 1–3 are complete, which was the stated "if you only do part of this list, do this part"
 threshold: both P1 findings `polish` refuses to touch are now closed. **Everything shipped so
@@ -404,6 +404,31 @@ above lands here too. Four defects are present in *both* copies:
   a property that does nothing. The only remaining lever is `position: fixed` on `<body>` with
   a scrollY restore, which buys a cosmetic win at the price of a scroll-position bug. Recorded
   as a `ponytail:` ceiling in `BaseLayout.astro` so the debt ledger carries it.
+
+- [x] **78. [P1] Every hover style stuck on after a tap on iOS.** iOS Safari leaves `:hover`
+  applied to the last-tapped element until you tap elsewhere. Confirmed on an iPhone: switch a
+  filter chip **off** and it keeps its category tint, so a chip you just cleared still looks
+  half-selected. `.active` beats `:hover` at equal specificity by source order, so the *on*
+  state was always safe — it was the *off* state that lied.
+
+  **Fixed as a class, not an instance.** All 15 hover selectors in `BaseLayout.astro` had the
+  same defect; only the chip was visible enough to notice. Each is now wrapped in
+  `@media (hover: hover)`, which is the standard guard and changes nothing on desktop —
+  media queries do not affect specificity, and source order is preserved, so
+  `.is-empty` → `:hover` → `.active` still resolves as before.
+
+  **One deliberate exception:** `.upcoming-item:hover, .upcoming-item:focus-visible` was a
+  single rule. Wrapping it wholesale would have removed **keyboard focus styling on touch
+  devices**, so it was split — hover inside the media query, `:focus-visible` outside. The
+  `outline: none` in that rule is still item 37's WCAG 2.4.7 failure and was left alone.
+
+  **Knock-on:** the card hover lift is now desktop-only, which weakens item 52 (a click
+  affordance on a non-clickable element) — it never fires on the device where it misleads most.
+
+  Found by asking why the filter chips only show their category colour on hover. The answer
+  is that DESIGN.md intends exactly that (`:346-347`), but hover does not exist on touch — so
+  the documented three-state control is two-state for most visitors, *and* the third state was
+  leaking in as a stuck tint.
 
 ---
 
