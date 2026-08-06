@@ -965,37 +965,26 @@
     function trimTime(t) { return t ? t.slice(0, 5) : ''; } // 'HH:MM:SS' → 'HH:MM'
 
     // ── Auth API ─────────────────────────────────────────────────────────────
-    async function checkSetup() {
+    // `password` is omitted from the body when undefined, so check_setup sends
+    // exactly { action } as it always did.
+    async function authApi(action, password, failMsg) {
         const res = await fetch('/.netlify/functions/admin-auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'check_setup' }),
-        });
-        if (!res.ok) throw new Error('Server error during setup check');
-        return (await res.json()).configured;
-    }
-
-    async function apiLogin(pw) {
-        const res = await fetch('/.netlify/functions/admin-auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'login', password: pw }),
+            body: JSON.stringify({ action, password }),
         });
         if (res.status === 401) throw new Error('Invalid password');
-        if (!res.ok) throw new Error('Login failed — please try again');
-        return true;
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || failMsg);
+        return data;
     }
 
-    async function apiSetup(pw) {
-        const res = await fetch('/.netlify/functions/admin-auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'setup', password: pw }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Setup failed');
-        return true;
+    async function checkSetup() {
+        return (await authApi('check_setup', undefined, 'Server error during setup check')).configured;
     }
+
+    const apiLogin = (pw) => authApi('login', pw, 'Login failed — please try again');
+    const apiSetup = (pw) => authApi('setup', pw, 'Setup failed');
 
     // ── Events API ───────────────────────────────────────────────────────────
     async function apiFetchEvents(statusFilter) {
@@ -1022,82 +1011,32 @@
         }));
     }
 
-    async function apiPatch(id, fields) {
+    // One request shape for every mutation: same URL, same headers, same 401
+    // handling. The body is the only thing that differs, and it is what selects
+    // the mode server-side — { id } single, { ids } bulk, { group_id, from_date }
+    // series. Returns null on 401; every caller awaits and discards the value,
+    // so there is nothing to unwrap.
+    async function adminApi(method, body, failMsg) {
         const res = await fetch('/.netlify/functions/admin-events', {
-            method: 'PATCH',
+            method,
             headers: {
                 'Content-Type': 'application/json',
                 'x-admin-password': getPassword(),
             },
-            body: JSON.stringify({ id, fields }),
+            body: JSON.stringify(body),
         });
         if (res.status === 401) { handleUnauthorized(); return null; }
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Update failed');
-        return data.event;
-    }
-
-    async function apiDelete(id) {
-        const res = await fetch('/.netlify/functions/admin-events', {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-password': getPassword(),
-            },
-            body: JSON.stringify({ id }),
-        });
-        if (res.status === 401) { handleUnauthorized(); return; }
-        if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
-            throw new Error(data.error || 'Delete failed');
-        }
-    }
-
-    async function apiPatchBulk(ids, fields) {
-        const res = await fetch('/.netlify/functions/admin-events', {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-password': getPassword(),
-            },
-            body: JSON.stringify({ ids, fields }),
-        });
-        if (res.status === 401) { handleUnauthorized(); return null; }
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Bulk update failed');
+        // DELETE replies with an empty body, so the parse has to tolerate it.
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || failMsg);
         return data;
     }
 
-    async function apiPatchGroup(group_id, from_date, fields) {
-        const res = await fetch('/.netlify/functions/admin-events', {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-password': getPassword(),
-            },
-            body: JSON.stringify({ group_id, from_date, fields }),
-        });
-        if (res.status === 401) { handleUnauthorized(); return null; }
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Update failed');
-        return data;
-    }
-
-    async function apiDeleteGroup(group_id, from_date) {
-        const res = await fetch('/.netlify/functions/admin-events', {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-password': getPassword(),
-            },
-            body: JSON.stringify({ group_id, from_date }),
-        });
-        if (res.status === 401) { handleUnauthorized(); return; }
-        if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
-            throw new Error(data.error || 'Delete failed');
-        }
-    }
+    const apiPatch       = (id, fields)                  => adminApi('PATCH',  { id, fields },              'Update failed');
+    const apiDelete      = (id)                          => adminApi('DELETE', { id },                      'Delete failed');
+    const apiPatchBulk   = (ids, fields)                 => adminApi('PATCH',  { ids, fields },             'Bulk update failed');
+    const apiPatchGroup  = (group_id, from_date, fields) => adminApi('PATCH',  { group_id, from_date, fields }, 'Update failed');
+    const apiDeleteGroup = (group_id, from_date)         => adminApi('DELETE', { group_id, from_date },     'Delete failed');
 
     function handleUnauthorized() {
         clearPassword();
