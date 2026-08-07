@@ -577,9 +577,14 @@ const {
         /* Split from the hover rule above so it stays outside @media (hover: hover):
            keyboard focus must survive on touch devices too. The `outline: none` here
            is still the WCAG 2.4.7 failure item 37 is about — untouched on purpose. */
+        /* A ~1.05:1 background tint was the only focus signal here, with
+           `outline: none` removing the real one — a flat WCAG 2.4.7 failure on a
+           keyboard-operable control. The tint stays as reinforcement; the outline
+           is the system's standard 2px accent at 2px offset. */
         .upcoming-item:focus-visible {
             background: var(--bg-muted);
-            outline: none;
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
         }
         .upcoming-date {
             font-size: 0.8125rem;
@@ -639,10 +644,6 @@ const {
         .event-card:nth-child(11) { animation: cardFadeIn 0.3s ease-out both 400ms; }
         .event-card:nth-child(12) { animation: cardFadeIn 0.3s ease-out both 440ms; }
         .event-card:nth-child(n+13) { animation: cardFadeIn 0.3s ease-out both 440ms; }
-
-        @media (prefers-reduced-motion: reduce) {
-            .event-card { animation: none; }
-        }
 
         /* ── Time mode selector in submit form ── */
         .time-mode-group {
@@ -1226,14 +1227,22 @@ const {
             }
         }
 
-        /* Reduced motion */
+        /* Reduced motion.
+           Every animation and transition in the system, control by control — which
+           is what DESIGN.md claims. It used to miss seven selectors and name two
+           that animate nothing. .skeleton-line matters most of the three animations:
+           it is the only one that loops forever.
+           The two smooth scrolls are guarded in index.astro, where they live. */
         @media (prefers-reduced-motion: reduce) {
-            .event-card { animation: none !important; }
+            .event-card,
+            .skeleton-line,
+            .deep-link-highlight { animation: none !important; }
             .modal, .modal-content { transition: none !important; }
-            .date-section, .date-nav-btn, .filter-btn, .submit-area-btn,
-            .btn-primary, .btn-secondary, .share-btn, .desc-toggle-btn,
-            .event-url, .upcoming-item, .modal-close,
-            .empty-clear-btn { transition: none !important; }
+            .event-card, .date-section, .date-nav-btn, .filter-btn, .submit-area-btn,
+            .btn-primary, .btn-secondary, .share-btn, .upcoming-item, .modal-close,
+            .empty-clear-btn, .footer-links a, .footer-links button,
+            .form-group input, .form-group textarea,
+            .form-group select { transition: none !important; }
         }
     </style>
     <script defer src="https://cloud.umami.is/script.js" data-website-id="8066e0da-4cdf-41c7-9981-f59854563ab5"></script>

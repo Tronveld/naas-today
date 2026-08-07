@@ -14,7 +14,7 @@ surrounding context to relocate it. Phase 1 and item 10 have since shipped (`17a
 `fc3d8ed`, `34101d9`), so the line numbers in the EventsGrid, empty-state and modal-dismiss
 items are already historical.
 
-**Progress: 45 of 79 done** — items 1–16, 24–43, 53–55, 57–58, 69, 76–79. Phase 1 is now fully closed.
+**Progress: 56 of 79 done** — items 1–16, 22, 24–49, 53–55, 57–58, 60–62, 69, 76–79. Phase 1 is now fully closed.
 
 Phases 1–3 are complete, which was the stated "if you only do part of this list, do this part"
 threshold: both P1 findings `polish` refuses to touch are now closed. **Everything shipped so
@@ -34,8 +34,8 @@ work them in — each phase is a coherent chunk you can ship on its own.
 | ~~1. Empty day~~ **done** | 1–9 | 9 of 9 | `17a5423`, `fc3d8ed`, `292f294` | Item 8 was held back deliberately and decided on 2026-08-06 with the rebuilt screen in front of us. |
 | ~~2. Mobile chrome~~ **done** | 39–41 | 3 of 3 | shipped in `03c21d0` | Also closed item 43, which the sticky move would otherwise have re-created under a new selector. |
 | ~~3. Form data loss~~ **done** | 10–12, 42 | 4 of 4 | `34101d9`, `ee9d332` | Item 12's `confirm()` is flagged for item 17 to re-decide, not to inherit. |
-| 4. Accessibility | ~~13–16~~, ~~24–38~~, ~~43~~, 44–49, ~~53–55~~, ~~57–58~~, 60–61 | 24 of 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. **Item 38 is decided and shipped** — the token the rest of the CSS sits on is settled. |
-| 5. Trust & consistency | 17–23, 50–52, 56, 59, 62–63 | 14 | `/impeccable polish` | Sweeps what's left; reads the critique snapshot as its own input. Roughly half its work vanished with `45f3496` — see rule 1 below. |
+| ~~4. Accessibility~~ **done** | 13–16, 24–38, 43, 44–49, 53–55, 57–58, 60–61 | 32 of 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. **Item 38 is decided and shipped** — the token the rest of the CSS sits on is settled. |
+| 5. Trust & consistency | 17–21, ~~22~~, 23, 50–52, 56, 59, ~~62~~, 63 | 2 of 14 | `/impeccable polish` | Sweeps what's left; reads the critique snapshot as its own input. Roughly half its work vanished with `45f3496` — see rule 1 below. |
 | 6. Doc truth | 64–~~69~~ | 1 of 6 | manual | Fix DESIGN.md's overstated claims *after* the code moves, so it describes what shipped. 69 closed early because 38 created the token it was about. |
 | 7. Open questions | 70–73 | 4 | `/impeccable shape` | Genuine product decisions. Don't let a refactor make them by accident. |
 
@@ -207,9 +207,11 @@ this is the primary screen, not the fallback.
   and `handleDeepLink` (`:998`) returns silently on a miss, so a bad link survives every
   subsequent navigation.
 
-- [ ] **22. [P3] Guard the two smooth scrolls for reduced motion.** `:610`
+- [x] **22. [P3] Guard the two smooth scrolls for reduced motion.** `:610`
   (`window.scrollTo`) and `:1006` (`card.scrollIntoView`) both hardcode `behavior: 'smooth'`
-  with no `prefers-reduced-motion` check.
+  with no `prefers-reduced-motion` check. Pulled forward out of phase 5 because item 65's doc
+  claim depends on it and it is one helper: `scrollBehavior()` returns `'auto'` or `'smooth'`
+  and is read **per call**, since the OS setting can change while the tab is open.
 
 - [ ] **23. [P3] Give desktop Share a copy-link fallback.** `:322` opens a WhatsApp popup with
   no warning; popup blockers eat it silently.
@@ -295,7 +297,7 @@ twelve are all below the fold or inside the modal.
 
 ### Focus and contrast
 
-- [ ] **37. [P1] Restore a real focus indicator on `.upcoming-item`.** `:505-508` sets
+- [x] **37. [P1] Restore a real focus indicator on `.upcoming-item`.** `:505-508` sets
   `outline: none` and substitutes a ~1.05:1 background tint on a keyboard-operable control —
   a flat WCAG 2.4.7 failure.
 
@@ -385,14 +387,30 @@ The block at `:1054-1060` misses:
 - [x] **43. [P2] `header`** `:96` — `transition: box-shadow 0.2s`. Covered by item 39: the
   transition moved to `.date-section`, which was added to the reduced-motion override in the
   same edit. Leaving it uncovered would have been the same debt under a new selector name.
-- [ ] **44. [P2] `.event-card` *transition*** `:283` — the override kills only `animation`, so
+- [x] **44. [P2] `.event-card` *transition*** `:283` — the override kills only `animation`, so
   the hover `translateY(-2px)` still animates.
-- [ ] **45. [P2] `.skeleton-line`** `:645` — `skeletonPulse 1.5s **infinite**`.
-- [ ] **46. [P2] `.footer-links a` / `button`** `:729` — `transition: color 0.2s`.
-- [ ] **47. [P2] `.form-group input` / `textarea` / `select`** `:853`.
-- [ ] **48. [P2] `.deep-link-highlight`** `:1027` — `deep-link-pulse 0.8s ×2`.
-- [ ] **49. [P3] Remove the two no-op entries** at `:1058-1059`: `.desc-toggle-btn` and
+- [x] **45. [P2] `.skeleton-line`** `:645` — `skeletonPulse 1.5s **infinite**`.
+- [x] **46. [P2] `.footer-links a` / `button`** `:729` — `transition: color 0.2s`.
+- [x] **47. [P2] `.form-group input` / `textarea` / `select`** `:853`.
+- [x] **48. [P2] `.deep-link-highlight`** `:1027` — `deep-link-pulse 0.8s ×2`.
+- [x] **49. [P3] Remove the two no-op entries** at `:1058-1059`: `.desc-toggle-btn` and
   `.event-url` are named in the override but declare no transition anywhere.
+  Also deleted a second, redundant `@media (prefers-reduced-motion: reduce)` block next to the
+  card-entrance keyframes that repeated `.event-card { animation: none }` without the
+  `!important` the real block already carries.
+
+**Coverage checked by script, not by eye**, after the edits: every rule in the stylesheet that
+declares a `transition` or `animation` was diffed against the override's selector list. Two
+results worth recording:
+
+- **`.btn-primary` / `.btn-secondary` look like no-ops but are not.** Their transition is
+  declared on `.form-actions button`, not on the classes themselves, so a naive scan calls them
+  unused. The override reaches them anyway via `!important`. Do not delete them the way item 49
+  deleted the other two.
+- **One animation is genuinely uncovered: `.loading-spinner`'s `spin`.** Left alone deliberately
+  — it is the dead rule item 50 deletes, and it never reaches the DOM
+  (`EventsGrid.astro` renders the skeleton). It costs nothing today, but **item 65 cannot claim
+  full coverage until item 50 removes it.**
 
 ### Dead code
 
@@ -443,16 +461,18 @@ The block at `:1054-1060` misses:
 The two modal implementations are currently identical in behaviour. Every fix marked **[×2]**
 above lands here too. Four defects are present in *both* copies:
 
-- [ ] **60. [P2] The focusable NodeList includes hidden elements. [×2]**
+- [x] **60. [P2] The focusable NodeList includes hidden elements. [×2]**
   (`index.astro:670` / `AppModals.astro:21`) It is captured once at open and includes controls
   inside `display: none` containers — `#recurringSection`, `#timeRangeSep`, `#eventTimeEnd`.
   `last.focus()` on a hidden element silently fails, so Tab-wrap breaks in the Submit modal's
   default state.
-- [ ] **61. [P2] `openModal` focuses the ✕, not the first field. [×2]**
+- [x] **61. [P2] `openModal` focuses the ✕, not the first field. [×2]**
   (`index.astro:689` / `AppModals.astro:39`) The selector
   `button, [href], input, select, textarea` matches `.modal-close` first in all four modals.
-- [ ] **62. [P3] `trapFocus` stacks listeners. [×2]** Added on every open, removed only by
-  `closeModal`.
+- [x] **62. [P3] `trapFocus` stacks listeners. [×2]** Added on every open, removed only by
+  `closeModal`. Taken here rather than in phase 5 because it is two lines inside the function
+  items 60–61 were already rewriting: `trapFocus` now removes any existing handler before
+  attaching. `closeModal`'s single `removeEventListener` could never reach a second one.
 - [ ] **63. [P3] `.modal-header` isn't sticky** inside a scrolling sheet, so ✕ scrolls out of
   view on the long submit form.
 

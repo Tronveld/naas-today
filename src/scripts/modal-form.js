@@ -16,12 +16,27 @@ const CONTACT_EMAIL = 'naastoday.tile693@passinbox.com';
 // ── Focus trap ───────────────────────────────────────────────────────────────
 let previouslyFocused = null;
 
+const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+// Read at Tab time, not once at open. The submit sheet hides #recurringSection,
+// #timeRangeSep and #eventTimeEnd behind display:none and reveals them as the
+// visitor answers, so a list captured at open both includes controls that cannot
+// take focus — last.focus() on one silently fails and Tab-wrap breaks — and misses
+// the ones that appeared since. offsetParent is null for a display:none subtree.
+function focusableIn(modal) {
+  return [...modal.querySelectorAll(FOCUSABLE)].filter(el => el.offsetParent !== null && !el.disabled);
+}
+
 function trapFocus(modal) {
-  const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
+  // Remove first: openModal on an already-open modal would otherwise stack a
+  // second listener that closeModal's single remove can never reach.
+  if (modal._trapHandler) modal.removeEventListener('keydown', modal._trapHandler);
   modal._trapHandler = function (e) {
     if (e.key !== 'Tab') return;
+    const focusable = focusableIn(modal);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
     if (e.shiftKey) {
       if (document.activeElement === first) { e.preventDefault(); last.focus(); }
     } else {
@@ -36,8 +51,12 @@ export function openModal(id) {
   const modal = document.getElementById(id);
   modal.classList.add('active');
   document.body.classList.add('modal-open');
-  const firstFocusable = modal.querySelector('button, [href], input, select, textarea');
-  if (firstFocusable) firstFocusable.focus();
+  // Skip the ✕: it matches the selector first in all four modals, so opening the
+  // submit sheet used to land on Close rather than Event Title. About and Contact
+  // have nothing else, and correctly fall back to it.
+  const focusable = focusableIn(modal);
+  const target = focusable.find(el => !el.classList.contains('modal-close')) || focusable[0];
+  if (target) target.focus();
   trapFocus(modal);
 }
 
