@@ -14,7 +14,7 @@ surrounding context to relocate it. Phase 1 and item 10 have since shipped (`17a
 `fc3d8ed`, `34101d9`), so the line numbers in the EventsGrid, empty-state and modal-dismiss
 items are already historical.
 
-**Progress: 36 of 79 done** — items 1–12, 24–43, 69, 76–79. Phase 1 is now fully closed.
+**Progress: 45 of 79 done** — items 1–16, 24–43, 53–55, 57–58, 69, 76–79. Phase 1 is now fully closed.
 
 Phases 1–3 are complete, which was the stated "if you only do part of this list, do this part"
 threshold: both P1 findings `polish` refuses to touch are now closed. **Everything shipped so
@@ -34,7 +34,7 @@ work them in — each phase is a coherent chunk you can ship on its own.
 | ~~1. Empty day~~ **done** | 1–9 | 9 of 9 | `17a5423`, `fc3d8ed`, `292f294` | Item 8 was held back deliberately and decided on 2026-08-06 with the rebuilt screen in front of us. |
 | ~~2. Mobile chrome~~ **done** | 39–41 | 3 of 3 | shipped in `03c21d0` | Also closed item 43, which the sticky move would otherwise have re-created under a new selector. |
 | ~~3. Form data loss~~ **done** | 10–12, 42 | 4 of 4 | `34101d9`, `ee9d332` | Item 12's `confirm()` is flagged for item 17 to re-decide, not to inherit. |
-| 4. Accessibility | 13–16, ~~24–38~~, ~~43~~, 44–49, 53–55, 57–58, 60–61 | 15 of 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. **Item 38 is decided and shipped** — the token the rest of the CSS sits on is settled. |
+| 4. Accessibility | ~~13–16~~, ~~24–38~~, ~~43~~, 44–49, ~~53–55~~, ~~57–58~~, 60–61 | 24 of 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. **Item 38 is decided and shipped** — the token the rest of the CSS sits on is settled. |
 | 5. Trust & consistency | 17–23, 50–52, 56, 59, 62–63 | 14 | `/impeccable polish` | Sweeps what's left; reads the critique snapshot as its own input. Roughly half its work vanished with `45f3496` — see rule 1 below. |
 | 6. Doc truth | 64–~~69~~ | 1 of 6 | manual | Fix DESIGN.md's overstated claims *after* the code moves, so it describes what shipped. 69 closed early because 38 created the token it was about. |
 | 7. Open questions | 70–73 | 4 | `/impeccable shape` | Genuine product decisions. Don't let a refactor make them by accident. |
@@ -155,21 +155,26 @@ this is the primary screen, not the fallback.
   destructive action — which is the one thing the platform dialog is actually for. Decide it
   deliberately rather than letting a find-and-replace answer it.
 
-- [ ] **13. [P1] Make the events heading track the current date.** `:65` hardcodes
+- [x] **13. [P1] Make the events heading track the current date.** `:65` hardcodes
   `<h2 class="visually-hidden" id="events-list-heading">Today's events</h2>`. Navigate to
   14 August and heading navigation still announces "Today's events". The id is also referenced
   by nothing — `grep -rn "events-list-heading" src/` returns only the declaration.
   **Done when:** the heading text follows `currentDate`, or the element is deleted.
 
-- [ ] **14. [P1] Move `id="main-content"` above `<DateNav>`.** `:63` puts it on `<main>`, which
+- [x] **14. [P1] Move `id="main-content"` above `<DateNav>`.** `:63` puts it on `<main>`, which
   starts *after* the date controls, so the skip link skips past prev/today/pick-a-date/next and
   a keyboard user must shift-tab back.
 
-- [ ] **15. [P1] Replace `role="button"` on `<li>` with a real `<button>`.** `:581-582` sets
+- [x] **15. [P1] Replace `role="button"` on `<li>` with a real `<button>`.** `:581-582` sets
   `role="button"` and `tabindex="0"` on list items, which strips the `<ul>` of list semantics
   and produces accessible names like "Thu, 7 Aug 20:00 Trad Session The Storehouse".
+  `renderUpcoming()` now builds `<li><button type="button" class="upcoming-item">`, and the
+  hand-rolled Enter/Space `keydown` handler is gone — a real button gets both for free.
+  The **pre-rendered** rows stay plain `<li>`, which is the existing deliberate call: without
+  JS a button there would announce a control that does nothing. `.upcoming-item` carries the
+  button resets so it styles either.
 
-- [ ] **16. [P1] Add a group label to the filter row.** Six unlabelled toggle buttons follow the
+- [x] **16. [P1] Add a group label to the filter row.** Six unlabelled toggle buttons follow the
   date nav with nothing saying they filter anything.
   **Done when:** the row carries `role="group" aria-label="Filter events by category"`
   (in `src/components/FilterControls.astro`).
@@ -402,25 +407,32 @@ The block at `:1054-1060` misses:
 
 ## `src/components/modals/SubmitEventModal.astro`
 
-- [ ] **53. [P1] Label `#eventTimeStart` and `#eventTimeEnd`** (`:85`, `:87`). Both are
+- [x] **53. [P1] Label `#eventTimeStart` and `#eventTimeEnd`** (`:85`, `:87`). Both are
   unlabelled; `#eventTimeStart` is also `required`.
-- [ ] **54. [P1] Fix the orphan `<label>Time *</label>`** (`:69`). It has no `for` and wraps no
+- [x] **54. [P1] Fix the orphan `<label>Time *</label>`** (`:69`). It has no `for` and wraps no
   input, so it associates with nothing. Make it a `<legend>` inside a `<fieldset>` around the
   three radios, or point it at `#eventTimeStart`.
-- [ ] **55. [P2] Make "Repeat until" honestly required** (`:62-63`). The asterisk is
+- [x] **55. [P2] Make "Repeat until" honestly required** (`:62-63`). The asterisk is
   `aria-hidden="true"` and `#recurrenceEndDate` carries no `required` attribute — the
   requirement is conveyed to no assistive tech. JS applies it on toggle.
+  **Premise wrong — closed with no change.** "JS applies it on toggle" *is* the conveyance:
+  `modal-form.js:201` sets the `required` **property**, which lands in the accessibility tree
+  exactly like the attribute would, and `:227` clears it on reset. The field is only required
+  when the recurring section is open, so a static `required` would be wrong — it would block
+  submission on a field the visitor cannot see. `aria-hidden` on the asterisk is correct
+  alongside it; the alternative is a screen reader announcing "Repeat until star". Verified the
+  set/clear pair covers open, close, reset and draft-restore.
 - [ ] **56. [P3] Reword the character counter.** "0 / 2000" states a ceiling on an empty
   required field where an expectation would help ("a sentence or two is plenty").
 
 ## `src/components/modals/DatePickerModal.astro`
 
-- [ ] **57. [P1] Label `#dateInput`** (`:11`). The date picker's only field has no `<label>`
+- [x] **57. [P1] Label `#dateInput`** (`:11`). The date picker's only field has no `<label>`
   and no `aria-label`; `<h2 id="dateModalTitle">` labels the dialog, not the input.
 
 ## `src/components/Footer.astro`
 
-- [ ] **58. [P2] Hide the `·` separators from assistive tech** (`:8`, `:10`, `:12`). They are
+- [x] **58. [P2] Hide the `·` separators from assistive tech** (`:8`, `:10`, `:12`). They are
   announced between every footer link.
 - [ ] **59. [P2] Settle on one label for the submit action.** Three exist:
   "Submit an event" (`EventsGrid.astro:54`), "Submit Event" (`Footer.astro:13`), "Add an Event"

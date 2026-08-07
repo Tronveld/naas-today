@@ -550,12 +550,20 @@ const {
             flex-direction: column;
             gap: 0;
         }
+        /* Styles both the pre-rendered <li> and the <button> renderUpcoming() puts
+           inside one. The button resets below are inert on the <li>. */
         .upcoming-item {
             display: grid;
             grid-template-columns: 7rem 3.5rem 1fr auto;
             gap: 0.5rem;
             align-items: center;
             min-height: 44px;
+            width: 100%;
+            font: inherit;
+            color: inherit;
+            background: none;
+            border: none;
+            text-align: left;
             padding: 0.5rem 0.5rem;
             border-radius: 6px;
             cursor: pointer;
@@ -974,8 +982,19 @@ const {
             margin-bottom: 1.25rem;
         }
 
-        .form-group label {
+        /* The time question is a <fieldset class="form-group"> so its three radios
+           are grouped. Stripped back to look exactly like the <div> ones. */
+        fieldset.form-group {
+            border: none;
+            padding: 0;
+            margin-inline: 0;
+            min-inline-size: 0;
+        }
+
+        .form-group label,
+        .form-group legend {
             display: block;
+            padding: 0;
             margin-bottom: 0.5rem;
             color: var(--ink);
             font-weight: 500;

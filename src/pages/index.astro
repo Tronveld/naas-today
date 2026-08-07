@@ -86,10 +86,16 @@ const jsonLd = todayEvents.length > 0 ? {
 <BaseLayout jsonLd={jsonLd}>
   <a href="#main-content" class="skip-link">Skip to main content</a>
   <Header />
-  <DateNav />
-  <main id="main-content" role="main" class="container">
+  {/* DateNav is inside <main> so the skip link lands above it. With <main>
+      starting after the date controls, "skip to main content" skipped past
+      prev/today/pick-a-date/next and a keyboard user had to shift-tab back.
+      .container moved down a level so the date bar keeps its full-bleed
+      background. */}
+  <main id="main-content" role="main">
+    <DateNav />
+    <div class="container">
     <FilterControls />
-    <h2 class="visually-hidden" id="events-list-heading">Today's events</h2>
+    <h2 class="visually-hidden" id="eventsListHeading">Today's events</h2>
     <EventsGrid events={initialEvents} todayStr={todayStr} />
     <section
       id="upcomingSection"
@@ -98,9 +104,9 @@ const jsonLd = todayEvents.length > 0 ? {
       style={upcomingEvents.length === 0 ? 'display:none' : undefined}
     >
       <h2 class="upcoming-heading" id="upcomingHeading">{todayEvents.length === 0 ? 'Next up' : 'Coming Up'}</h2>
-      {/* renderUpcoming() replaces these rows on load and adds the click/keyboard
-          handling. They ship without role="button"/tabindex on purpose: without JS
-          those attributes would announce a control that cannot do anything. */}
+      {/* renderUpcoming() replaces these rows on load, wrapping each in a real
+          <button>. They ship as plain <li> on purpose: without JS a button here
+          would announce a control that cannot do anything. */}
       <ul id="upcomingList" class="upcoming-list">
         {upcomingEvents.map(event => (
           <li class="upcoming-item">
@@ -120,6 +126,7 @@ const jsonLd = todayEvents.length > 0 ? {
     <div class="empty-cta" id="emptyCta" hidden={todayEvents.length > 0}>
       <p>Know of something happening? Add it to the noticeboard.</p>
       <button class="submit-area-btn" id="emptySubmitBtn">Submit an event</button>
+    </div>
     </div>
   </main>
   <Footer />
@@ -655,10 +662,13 @@ const jsonLd = todayEvents.length > 0 ? {
         list.innerHTML = '';
 
         upcoming.forEach(event => {
+            // A real <button> inside the <li>, not role="button" on the <li> itself:
+            // that stripped the <ul> of its list semantics and produced accessible
+            // names like "Thu, 7 Aug 20:00 Trad Session The Storehouse".
             const li = document.createElement('li');
-            li.className = 'upcoming-item';
-            li.setAttribute('role', 'button');
-            li.setAttribute('tabindex', '0');
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'upcoming-item';
 
             const d = new Date(event.date + 'T00:00:00');
             const dateLabel = d.toLocaleDateString('en-IE', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -679,17 +689,17 @@ const jsonLd = todayEvents.length > 0 ? {
             locationEl.className = 'upcoming-location';
             locationEl.textContent = event.location;
 
-            li.append(dateEl, timeEl, titleEl, locationEl);
+            btn.append(dateEl, timeEl, titleEl, locationEl);
+            li.appendChild(btn);
 
-            const navigate = () => {
+            // No keydown handler any more — a real button gets Enter and Space free.
+            btn.addEventListener('click', () => {
                 currentDate = new Date(event.date + 'T00:00:00');
                 updateDateDisplay();
                 renderEvents();
                 pushUrlState();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
-            };
-            li.addEventListener('click', navigate);
-            li.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(); } });
+            });
 
             list.appendChild(li);
         });
@@ -727,6 +737,10 @@ const jsonLd = todayEvents.length > 0 ? {
     // ── Date Navigation ─────────────────────────────────────────────────
     function updateDateDisplay() {
         document.getElementById('currentDateDisplay').textContent = formatDateDisplay(currentDate);
+        // Built from the date rather than reusing formatDateDisplay, whose "Today – "
+        // prefix reads badly inside a heading ("Events on Today – Friday, 7 August").
+        document.getElementById('eventsListHeading').textContent =
+            'Events on ' + currentDate.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long' });
         const isToday = localDateStr(currentDate) === localDateStr(new Date());
         document.getElementById('todayBtn').style.display = isToday ? 'none' : '';
         document.getElementById('prevDay').style.display = isToday ? 'none' : '';
