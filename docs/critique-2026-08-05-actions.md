@@ -16,11 +16,16 @@ items are already historical.
 
 **Progress: 60 of 79 done** — items 1–16, 22, 24–50, 53–55, 57–58, 60–62, 64–66, 69, 76–79. Phase 1 is now fully closed.
 
-Phases 1–3 are complete, which was the stated "if you only do part of this list, do this part"
-threshold: both P1 findings `polish` refuses to touch are now closed. **Everything shipped so
-far has been verified in a browser** — see the 2026-08-06 handoff. That pass found three bugs
-the reasoning missed (`ec528d0`, `dee5c09`, and item 77), which is the argument for doing it
-before phase 4 rather than after.
+**Phases 1–4 are complete.** Phase 4 was the bulk of the list — 32 items — and closed on
+2026-08-07 along with items 22, 50, 62, 64–66 and 69 borrowed from phases 5 and 6.
+
+**What is left: 19 items.** Phase 5 has 11 (17–21, 23, 51–52, 56, 59, 63), phase 6 has 2
+decisions (67–68), phase 7 has the 4 open product questions (70–73), and items 74–75 are the
+two found later. Nothing left is a P1.
+
+Everything through phase 3 was verified in a browser and on a phone; the 2026-08-06 pass found
+three bugs the reasoning missed (`ec528d0`, `dee5c09`, item 77). **Phase 4 has been verified in
+headless Firefox only** — see the 2026-08-07 handoff for what that did and did not cover.
 
 ---
 
@@ -673,10 +678,15 @@ rather than changes to make. Clear or confirm these before building on top.
   One bug fell out of (1): the message read "There is 1 other event **on today**". Fixed in
   `ec528d0`.
 
-- [ ] **Nothing from 2026-08-05 *or* 2026-08-06 is live.** All of it is on `dev`, pushed and
+- [x] **Nothing from 2026-08-05 *or* 2026-08-06 is live.** All of it is on `dev`, pushed and
   green. It reaches naastoday.com on the merge to `main`, which costs 15 credits — so it is
-  worth batching rather than merging per phase. **This is the one thing still waiting on a
-  decision.**
+  worth batching rather than merging per phase. ~~**This is the one thing still waiting on a
+  decision.**~~
+  **Decided by the owner 2026-08-07: merge once, when the whole list is done.** Not per phase,
+  not per session. So `dev` keeps accumulating and no phase boundary is a release boundary —
+  stop treating it as one. **Do not re-raise this at the end of a phase.** The corollary is that
+  `dev--naas-today.netlify.app` is the only place any of this can be seen until then, which
+  makes the device pass more important, not less.
 
 **Shipped 2026-08-05:** `eee3da8` (critique + this list), `17a5423` (item 9), `fc3d8ed`
 (items 1–7), `259a182` (items 74–75), `34101d9` (item 10), `63d91f1` + `74a2e7e` (tracker).
@@ -742,8 +752,17 @@ the "on today" copy — that no amount of reading the diff had caught.
 
 ## Session handoff — 2026-08-07
 
-Bookkeeping and the two blockers that stood in front of phase 4. **No phase-4 CSS was written**
-beyond item 38 itself.
+**Phase 4 is closed — 32 of 32.** Plus items 22, 50 and 62 pulled forward out of phase 5, and
+64–66 and 69 out of phase 6. 23 items in one session, 36 → 60 of 79. Four commits:
+
+| Commit | Items |
+|---|---|
+| `0130f70` | 38, 69, 24–36 — the interactive border token, then the thirteen touch targets |
+| `8c6763f` | 13–16, 53–55, 57–58 — labels, the fieldset, the skip-link target, the real button |
+| `b447e0d` | 37, 44–49, 60–61, and 22 + 62 — focus, reduced motion, the focus trap |
+| `273b416` | 64–66, and 50 — DESIGN.md's claims, verified rather than edited |
+
+Started as bookkeeping and the two blockers in front of phase 4:
 
 - **The tracker had drifted.** Header said 20 of 78 with item 79 already ticked; now 23 of 79.
 - **The `[×2]` rule is dead** (`45f3496`, which landed after this file was last touched). One
@@ -755,17 +774,40 @@ beyond item 38 itself.
   touch-target section. The headline: only ~110px of the ~262px above the first card is
   actually pinned, and item 31 lands in the part that scrolls away.
 
-**Not verified in a browser yet.** Item 38 changes the resting appearance of every control on
-the page — six chips, four date-nav buttons, share, ten form fields, the secondary buttons. The
-build is clean and the maths is checked, but the question "does the page now look heavier than
-it should" is not one arithmetic answers. Per the pattern below: walk it at 375px and on the
-phone before building phase 4 on top.
+### What was checked, and how
 
-Specifically worth a look:
-- the chip row, where six 1.5px borders at 3.36:1 sit side by side — the densest concentration
-  of the new colour anywhere on the page;
-- a zero-count chip beside a populated one, since its border no longer dims (see item 38);
-- the submit form, where ten inputs went from a hairline to a visible edge.
+**Firefox headless is enough to catch layout regressions, and it earned its keep.** Screenshots
+at `--window-size=375,1400` against the running `netlify dev`, plus a before/after pair taken by
+swapping `BaseLayout.astro` back to `HEAD` between shots. That is how the +32/+50px per-card
+figure is a measurement rather than an estimate, and how the chip row was confirmed to still
+wrap to two rows *with* count badges.
+
+It also caught a regression invisible in the diff: `.desc-toggle-btn` and `.event-url` moved to
+`display: flex`, which discards the whitespace text node before a trailing glyph, so
+`facebook.com ↗` rendered as `facebook.com↗`. Nothing about `min-height: 44px` suggests that.
+
+The submit modal was rendered by copying `dist/index.html` to a scratch file, inlining the
+stylesheet and forcing `#submitModal` visible — the sheet is server-rendered and only hidden,
+so no JS is needed to see it. Fieldset legend, 20px boxes, 44px labels and the new field borders
+all confirmed there.
+
+### Still needs a real device
+
+Headless screenshots cannot answer these, and the 2026-08-06 pass is the precedent for how much
+they matter:
+
+- **Does the page read heavier now?** Item 38 changed the resting appearance of every control —
+  six chips, four date-nav buttons, share, ten form fields. It looks fine in a screenshot; that
+  is not the same as looking right.
+- **A zero-count chip beside a populated one.** Its border no longer dims (item 38), so the
+  recede is carried by fill alone. Worth confirming it still reads as "nothing here".
+- **The +15% card height.** Four cards fitted above the submit button before, about three and a
+  half now. Only scrolling a real busy day on a phone will say whether that is a real cost.
+- **Focus and tab order**, which a screenshot cannot show at all: Tab through the submit sheet
+  in each of the three time modes (items 60–61), and check the skip link now lands above the
+  date controls (item 14).
+- **The upcoming rows as real buttons** (item 15) — Enter and Space, and the focus outline that
+  replaced `outline: none` (item 37).
 
 ---
 
