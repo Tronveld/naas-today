@@ -163,6 +163,10 @@ function updateRecurrenceHint() {
   hint.textContent = count > 0 ? `~${count} occurrence${count !== 1 ? 's' : ''}` : '';
 }
 
+// The two time modes that actually carry a clock time. 'allday' and 'unknown'
+// both send none, and differ only in what the card shows: ALL DAY versus TBC.
+const HAS_TIME = new Set(['specific', 'range']);
+
 function readForm() {
   const val = (id) => document.getElementById(id).value;
   const checked = (id) => document.getElementById(id).checked;
@@ -173,7 +177,8 @@ function readForm() {
     date:        val('eventDate'),
     endDate:     val('eventEndDate') || null,
     isAllDay:    timeMode === 'allday',
-    time:        timeMode !== 'allday' ? val('eventTimeStart') : null,
+    // 'unknown' sends no time and is not all-day — the card renders that as TBC.
+    time:        HAS_TIME.has(timeMode) ? val('eventTimeStart') : null,
     timeEnd:     timeMode === 'range'  ? val('eventTimeEnd')   : null,
     location:    val('eventLocation').trim(),
     description: val('eventDescription').trim(),
@@ -272,12 +277,12 @@ export function initSubmitForm({ defaultDate }) {
   // ── Time mode ──────────────────────────────────────────────────────────────
   document.querySelectorAll('input[name="timeMode"]').forEach(radio => {
     radio.addEventListener('change', function () {
-      const isAllDay = this.value === 'allday';
-      const isRange  = this.value === 'range';
-      document.getElementById('timeInputs').style.display    = isAllDay ? 'none' : 'flex';
+      const needsTime = HAS_TIME.has(this.value);
+      const isRange   = this.value === 'range';
+      document.getElementById('timeInputs').style.display    = needsTime ? 'flex' : 'none';
       document.getElementById('eventTimeEnd').style.display  = isRange ? '' : 'none';
       document.getElementById('timeRangeSep').style.display  = isRange ? '' : 'none';
-      document.getElementById('eventTimeStart').required     = !isAllDay;
+      document.getElementById('eventTimeStart').required     = needsTime;
     });
   });
 

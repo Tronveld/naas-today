@@ -9,6 +9,7 @@ import DatePickerModal from '../components/modals/DatePickerModal.astro';
 import SubmitEventModal from '../components/modals/SubmitEventModal.astro';
 import AboutModal from '../components/modals/AboutModal.astro';
 import ContactModal from '../components/modals/ContactModal.astro';
+import { shortTimeLabel } from '../scripts/date.js';
 // Same query get-events.js serves at runtime — see that module for why it is shared.
 import { APPROVED_EVENTS_QUERY } from '../../netlify/functions/lib/events-query.js';
 
@@ -38,7 +39,7 @@ const todayEvents = initialEvents.filter(e => {
   return e.date === todayStr;
 });
 
-// "Coming Up" is built client-side by renderUpcoming(), but the static HTML shipped a
+// "Coming up" is built client-side by renderUpcoming(), but the static HTML shipped a
 // heading over an empty <ul>. First paint, no-JS visitors and anything slow enough to
 // see the pre-rendered page got a promise with nothing under it — on the section that
 // most often holds the only answer, since most weekdays in Naas have no events at all.
@@ -58,9 +59,12 @@ function upcomingDateLabel(dateStr: string): string {
   });
 }
 
+// Same 12-hour form as the card's Time Pill. This used to pass the stored value
+// straight through, so a 2pm event read "2:00 PM" on its card and "14:00" in the
+// list directly beneath it.
 function upcomingTimeLabel(event: any): string {
   if (event.is_all_day) return 'All day';
-  return event.time ? event.time.substring(0, 5) : '';
+  return event.time ? shortTimeLabel(event.time) : '';
 }
 
 // Build JSON-LD for today's events
@@ -103,7 +107,7 @@ const jsonLd = todayEvents.length > 0 ? {
       aria-label="Coming up"
       style={upcomingEvents.length === 0 ? 'display:none' : undefined}
     >
-      <h2 class="upcoming-heading" id="upcomingHeading">{todayEvents.length === 0 ? 'Next up' : 'Coming Up'}</h2>
+      <h2 class="upcoming-heading" id="upcomingHeading">{todayEvents.length === 0 ? 'Next up' : 'Coming up'}</h2>
       {/* renderUpcoming() replaces these rows on load, wrapping each in a real
           <button>. They ship as plain <li> on purpose: without JS a button here
           would announce a control that cannot do anything. */}
@@ -142,7 +146,7 @@ const jsonLd = todayEvents.length > 0 ? {
 
   <script>
     import { initModals, initSubmitForm, openModal, closeModal } from '../scripts/modal-form.js';
-    import { localDateStr } from '../scripts/date.js';
+    import { localDateStr, formatTimeShort, shortTimeLabel } from '../scripts/date.js';
 
     // ── Utilities ──────────────────────────────────────────────────────
 
@@ -220,7 +224,7 @@ const jsonLd = todayEvents.length > 0 ? {
         { id: 'filterTheatre', slug: 'theatre',  label: 'Theatre',  match: e => e.isTheatre,  active: false },
     ];
 
-    function pushUrlState() {
+    function writeUrlState({ replace = false } = {}) {
         const params = new URLSearchParams();
         const todayStr = localDateStr(new Date());
         const dateStr = localDateStr(currentDate);
@@ -233,7 +237,7 @@ const jsonLd = todayEvents.length > 0 ? {
         const eventParam = new URLSearchParams(location.search).get('event');
         if (eventParam) params.set('event', eventParam);
         const qs = params.toString();
-        history.pushState(null, '', qs ? '?' + qs : location.pathname);
+        history[replace ? 'replaceState' : 'pushState'](null, '', qs ? '?' + qs : location.pathname);
     }
 
     function readUrlState() {
@@ -266,7 +270,7 @@ const jsonLd = todayEvents.length > 0 ? {
         FILTER_CHIPS.forEach(c => { c.active = false; });
         syncFilterButtons();
         renderEvents();
-        pushUrlState();
+        writeUrlState({ replace: true });
     }
 
     // ── Loading State ───────────────────────────────────────────────────
@@ -346,16 +350,11 @@ const jsonLd = todayEvents.length > 0 ? {
         return date.toLocaleDateString('en-IE', { weekday: 'long', ...dateOpts });
     }
 
-    function formatTime(time) {
-        const { time: t, ampm } = formatTimeShort(time);
-        return `${t} ${ampm}`;
-    }
-
     function formatEventTime(event) {
         if (event.isAllDay) return 'All day';
         if (!event.time) return '';
-        const start = formatTime(event.time);
-        if (event.timeEnd) return start + ' – ' + formatTime(event.timeEnd);
+        const start = shortTimeLabel(event.time);
+        if (event.timeEnd) return start + ' – ' + shortTimeLabel(event.timeEnd);
         return start;
     }
 
@@ -396,14 +395,6 @@ const jsonLd = todayEvents.length > 0 ? {
             window.prompt('Copy this link:', payload);
         }
         if (btn) setTimeout(() => btn.replaceChildren(...original), 2000);
-    }
-
-    function formatTimeShort(time) {
-        const [hours, minutes] = time.split(':');
-        const hour = parseInt(hours);
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        const displayHour = hour % 12 || 12;
-        return { time: `${displayHour}:${minutes}`, ampm };
     }
 
     function formatDateShort(dateStr) {
@@ -657,10 +648,18 @@ const jsonLd = todayEvents.length > 0 ? {
         const dayPhrase = isToday ? 'today' : 'on this day';
 
         if (filtersHidThem) {
+            const activeCount = FILTER_CHIPS.filter(c => c.active).length;
             heading.textContent = 'No matching events';
-            message.textContent = dayCount === 1
+            // Filters AND together and nothing said so, which is why
+            // "Free + For kids" returning nothing read as "there is nothing on"
+            // rather than "no one event is both". Only worth saying with two or
+            // more lit: with one chip there is no combining to explain.
+            const andNote = activeCount > 1
+                ? ' An event has to match every filter you have on — try turning one off.'
+                : '';
+            message.textContent = (dayCount === 1
                 ? `There is 1 other event ${dayPhrase}.`
-                : `There are ${dayCount} other events ${dayPhrase}.`;
+                : `There are ${dayCount} other events ${dayPhrase}.`) + andNote;
             clearBtn.hidden = false;
             // Not the moment to ask for a submission — the day is not empty.
             setEmptyCtaHidden(true);
@@ -690,7 +689,7 @@ const jsonLd = todayEvents.length > 0 ? {
         // On an empty day this list is the answer, not a sidebar, so it says so.
         const heading = document.getElementById('upcomingHeading');
         const dayIsEmpty = document.getElementById('emptyState').classList.contains('visible');
-        if (heading) heading.textContent = dayIsEmpty ? 'Next up' : 'Coming Up';
+        if (heading) heading.textContent = dayIsEmpty ? 'Next up' : 'Coming up';
 
         list.innerHTML = '';
 
@@ -712,7 +711,10 @@ const jsonLd = todayEvents.length > 0 ? {
 
             const timeEl = document.createElement('span');
             timeEl.className = 'upcoming-time';
-            timeEl.textContent = event.isAllDay ? 'All day' : (event.time || '');
+            // The third of the three formatters item 74 had to reconcile: this one
+            // passed the stored HH:MM straight through and overwrote the server's
+            // 12-hour version on hydration.
+            timeEl.textContent = event.isAllDay ? 'All day' : (event.time ? shortTimeLabel(event.time) : '');
 
             const titleEl = document.createElement('span');
             titleEl.className = 'upcoming-title';
@@ -730,7 +732,7 @@ const jsonLd = todayEvents.length > 0 ? {
                 currentDate = new Date(event.date + 'T00:00:00');
                 updateDateDisplay();
                 renderEvents();
-                pushUrlState();
+                writeUrlState();
                 window.scrollTo({ top: 0, behavior: scrollBehavior() });
             });
 
@@ -786,7 +788,7 @@ const jsonLd = todayEvents.length > 0 ? {
         if (currentDate < today) currentDate = today;
         updateDateDisplay();
         renderEvents();
-        pushUrlState();
+        writeUrlState();
     }
 
     // ── Event Listeners ─────────────────────────────────────────────────
@@ -803,7 +805,7 @@ const jsonLd = todayEvents.length > 0 ? {
         currentDate = new Date();
         updateDateDisplay();
         renderEvents();
-        pushUrlState();
+        writeUrlState();
     });
 
     document.getElementById('changeDateBtn').addEventListener('click', () => {
@@ -819,7 +821,7 @@ const jsonLd = todayEvents.length > 0 ? {
         currentDate = new Date(e.target.value + 'T00:00:00');
         updateDateDisplay();
         renderEvents();
-        pushUrlState();
+        writeUrlState();
         closeModal('dateModal');
     });
 
@@ -829,7 +831,11 @@ const jsonLd = todayEvents.length > 0 ? {
             this.classList.toggle('active', chip.active);
             this.setAttribute('aria-pressed', String(chip.active));
             renderEvents();
-            pushUrlState();
+            // Replace, not push. Filtering is refining the current view, not
+            // navigating to a new one — three taps while browsing used to mean
+            // Back no longer left the site, which is not what Back is for.
+            // Date changes still push: those are navigation.
+            writeUrlState({ replace: true });
         });
     });
 

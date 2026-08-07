@@ -72,8 +72,13 @@ const MAX_LENGTHS = { title: 150, location: 150, description: 2000, url: 500 };
 function validateEventBody(e) {
   const { title, date, endDate, time, timeEnd, isAllDay, location, description, url } = e;
 
+  // Title, date and location are what make a row an event. Time is not:
+  // a missing time is a real state the whole stack already handles — the column
+  // is nullable, the card renders TBC, and the scrapers insert such rows daily.
+  // Requiring it here only ever blocked the human submitting "Saturday morning,
+  // the square", which is the submission this site most wants to receive
+  // (critique item 72). Format is still enforced below when a time IS supplied.
   if (!title || !date || !location) return 'Missing required fields: title, date, location';
-  if (!isAllDay && !time)            return 'Missing required field: time (or mark as all day)';
 
   if (typeof title !== 'string' || typeof date !== 'string' || typeof location !== 'string') {
     return 'Invalid field types';

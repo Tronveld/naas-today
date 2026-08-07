@@ -22,8 +22,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="eventDescription">Description *</label>
-                    <textarea id="eventDescription" required maxlength="2000"></textarea>
+                    <label for="eventDescription">Description <span class="form-hint">(optional)</span></label>
+                    <textarea id="eventDescription" maxlength="2000"></textarea>
                     <!-- Reads as guidance while empty and as a count once they
                          start. "0 / 2000" under a blank required field states a
                          ceiling nobody is near and sets no expectation at all. -->
@@ -91,6 +91,13 @@
                         <label class="radio-label">
                             <input type="radio" name="timeMode" value="allday">
                             All day
+                        </label>
+                        <!-- The whole point of item 72: "Saturday morning, the
+                             square" is a submission worth having. Shows as TBC,
+                             which the card has always been able to render. -->
+                        <label class="radio-label">
+                            <input type="radio" name="timeMode" value="unknown">
+                            Not sure yet
                         </label>
                     </div>
                     <div class="time-inputs" id="timeInputs">

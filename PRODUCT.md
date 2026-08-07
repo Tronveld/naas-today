@@ -51,7 +51,7 @@ Everything lands as `pending`. The operator approves or rejects via a password-p
 **Confirmed capabilities**
 - Browse approved events for a chosen date; move day by day or jump to a date.
 - Filter by all six categories — free, kids, music, sport, markets, theatre. Filters combine, persist to the URL as a `filters` parameter (so a filtered view is shareable), and each button shows a live count of matching events for the current day, dropping the count when none match.
-- Submit a single event, or a recurring series stored as separate occurrences sharing a `recurring_group_id`.
+- Submit a single event, or a recurring series stored as separate occurrences sharing a `recurring_group_id`. **Only title, date and location are required.** A description is optional, and the time can be left as "Not sure yet", which stores no time and renders as `TBC`. Decided 2026-08-07 (critique item 72): the form previously refused the neighbour who knows only *"Saturday morning, the square"*, while the column was already nullable, the card already rendered `TBC`, and the scrapers already produced such rows daily. The strictness was costing exactly the submissions the site most wants. Format is still validated whenever a value **is** supplied — see `tests/event-body.test.js`.
 - Operator moderation: list, approve, reject, edit, delete, including bulk operations across a recurring series from a given date forward.
 - Multi-day events (`end_date`), all-day events (`is_all_day`), optional end times, optional event URL.
 - A terms page.
@@ -62,6 +62,10 @@ Everything lands as `pending`. The operator approves or rejects via a password-p
 - Dependency list is deliberately three packages. Tests use Node's built-in runner; no test framework is to be added. **Restraint about dependencies is a standing project value**, not an accident, and follows from the low-maintenance goal.
 - A CSP is enforced via `netlify.toml`. Umami Cloud is the only allowed analytics origin.
 - Locale is `en_IE`. Dates are handled in local time, never UTC.
+
+**Known gaps, decided but not closed**
+- **There is no answer to "what's on this weekend?" beyond stepping day by day.** The Users section names it as one of the two defining questions, and the interface answers only the other one. Reviewed 2026-08-07 (critique item 70) and **deliberately left as it is**: the day-at-a-time shape is a real product decision, not an inheritance from the name, and the "Coming up" / "Next up" list already partly covers the gap by showing the next five events regardless of date. A second navigation mode is a feature that deserves its own design pass — it touches the URL model, the filters and the pre-render — and should not arrive as a side effect of a refactor. **Recorded here so the gap stays visible rather than being rediscovered as a bug.**
+- **Filters AND together.** Two lit chips means an event must match both. This is now stated on screen when a filtered day comes up empty with more than one chip active (critique item 71), rather than being left to inference. Whether OR would serve the "free things for the kids" case better is untested.
 
 **Explicitly undecided — do not assume either way**
 - **Monetisation.** No ads, sponsored placement, or paid promotion exist today, and none are planned, but the operator has not ruled them out as a permanent commitment. Do not design as though sponsored slots are coming, and do not state anywhere that the site will never carry them.

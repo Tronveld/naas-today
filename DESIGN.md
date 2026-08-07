@@ -250,7 +250,9 @@ Six flags, all pulled to the same weathered register. Each is a text colour pair
 
 ### Named Rules
 
-**The One Green Rule.** Hedgerow green is the only fully saturated voice on the page and appears as a *fill* at most once per viewport — the submit button, or the active Today chip, not both competing. Everywhere else it is a text or border colour. Its rarity is what makes the submit action findable without a single arrow or animation.
+**The One Green Rule.** Hedgerow green is the only fully saturated voice on the page and appears as a *fill* at most once per viewport **as a call to action** — the submit button, or the active Today chip, not both competing. Everywhere else it is a text or border colour. Its rarity is what makes the submit action findable without a single arrow or animation.
+
+The qualifier is load-bearing. **An active filter chip is exempt**, because its fill is a selection state rather than an invitation, and because the colour belongs to the *category*, not the brand — see Chips. Free's category colour happens to be the same value as the accent, so lighting the Free chip does put a second green fill on screen next to the submit button. That is a coincidence of the palette, not a second call to action, and it was accepted rather than designed around: recolouring Free to avoid it would break the Aged Family Rule for the sake of a rule about attention that a 13px chip does not compete for.
 
 **The Aged Family Rule.** All six category colours must read as the same weathered, sun-faded palette. No category may be brighter, more saturated, or louder than its siblings — a Markets tag and a Theatre tag have equal visual weight, always. Harmony outranks distinguishability here: these are labels on a noticeboard, not a wayfinding system. When adding a category, desaturate it until it sits inside the family, then check it still clears 4.5:1 on its own tint.
 
@@ -273,7 +275,7 @@ Six flags, all pulled to the same weathered register. Each is a text colour pair
 - **Document Title** (`{typography.document-title}`): The `<h1>` on a standalone document page such as Terms, underscored by a hairline rule. The only place an `<h1>` appears that isn't the masthead, and the only place the serif stack carries a `'Times New Roman'` fallback.
 - **Headline** (`{typography.headline}`): Georgia at its largest below the masthead — empty-state and error-state headings, where the page has nothing else to say.
 - **Subhead** (`{typography.subhead}`): Modal titles. Serif marks the overlay as a distinct place.
-- **Section** (`{typography.section}`): The smallest serif step — the "What's next" heading. Serif always marks a change of section; the body never uses it.
+- **Section** (`{typography.section}`): The smallest serif step — the "Coming up" / "Next up" heading. Serif always marks a change of section; the body never uses it.
 - **Date** (`{typography.date}`): The current-date display. Sans, not serif, because it changes constantly and must feel like state rather than a heading. Drops to 1.125rem below 480px.
 - **Title** (`{typography.title}`): Event titles. Sans and semibold, sized only 1.28× the body — a notice, not a headline. This restraint is what lets twelve cards scan as equals.
 - **Body** (`{typography.body}`): Event descriptions and interface prose. The 660px column keeps the measure near 70 characters without needing a `max-width` on the paragraph.
@@ -297,11 +299,18 @@ A **single 660px column**, centred, with 1.5rem side padding tightening to 1rem 
 
 The vertical rhythm is a coarse rem scale (0.25 / 0.5 / 0.75 / 1 / 1.5 / 2 / 3rem) with cards separated by exactly 12px — tight enough that a dozen events read as one list rather than a series of panels. Card padding is asymmetric (`16px 20px`), giving slightly more horizontal breathing room than vertical, which keeps titles off the border without lengthening the scroll.
 
-Page order is fixed and load-bearing: masthead → date section → category filters → event list → submit prompt → "What's next" → footer. The submit call-to-action lives **after** the day's events, never before them, because the visitor's job comes first.
+Page order is fixed and load-bearing, and it has **two orders, chosen by whether the day has any events**:
 
-**Sticky header.** The masthead sticks at `top: 0` (`z-index: 100`) and gains a shadow only once the page has scrolled past 4px. It is the one element allowed to acknowledge scroll position.
+- **A day with events:** masthead → date section → category filters → event list → submit prompt → "Coming up" → footer. The submit call-to-action lives **after** the day's events, never before them, because the visitor's job comes first.
+- **A day with none:** masthead → date section → category filters → empty message → **"Next up" → submit prompt** → footer. The last two swap.
 
-**Breakpoints.** Only two, both narrow: `520px` reflows the "What's next" rows from a four-column grid into a two-by-two block, and `480px` tightens the container, shrinks the date display, spreads the date nav to full width, and converts modals into bottom sheets. There is no tablet or desktop breakpoint — the design is the same object at 375px and 1920px.
+The empty-day order follows the rule's *reason* rather than its letter. On a day with nothing on, the visitor's job is not answered by an empty grid — it is answered by the next few events. Putting the request for unpaid work above that answer is the thing the rule exists to prevent. Most weekdays in Naas have nothing on, so this is the more-shown of the two orders, not an edge case.
+
+**The upcoming section is named for its job.** "Coming up" when it is a footnote to a full day; **"Next up"** when the day is empty and the list is the answer. One section, two headings, and the heading is the only thing that changes.
+
+**Sticky date bar.** The **date section** sticks at `top: 0` (`z-index: 100`) and gains a shadow once its own top edge reaches the viewport top (`getBoundingClientRect().top <= 0`). It is the one element allowed to acknowledge scroll position. The masthead scrolls away with the page: halfway down a busy Saturday, which day you are reading matters and the site's name does not.
+
+**Breakpoints.** Only two, both narrow: `520px` reflows the upcoming-list rows from a four-column grid into a two-by-two block, and `480px` tightens the container, shrinks the date display, spreads the date nav to full width, and converts modals into bottom sheets. There is no tablet or desktop breakpoint — the design is the same object at 375px and 1920px.
 
 ### Named Rules
 

@@ -14,27 +14,33 @@ surrounding context to relocate it. Phase 1 and item 10 have since shipped (`17a
 `fc3d8ed`, `34101d9`), so the line numbers in the EventsGrid, empty-state and modal-dismiss
 items are already historical.
 
-**Progress: 71 of 79 done** — items 1–66, 69, 76–79. Everything except 67–68, 70–75. Phase 1 is now fully closed.
+**Progress: 79 of 79 done.**
 
-**Phases 1–5 are complete** — every item the critique raised that has a single right answer.
+All seven phases are closed. **Nothing here is outstanding — but "closed" is not "verified",
+and the two are far apart for the later phases. Read the verification status below before
+treating this list as finished.**
 
-**What is left: 8 items, and every one of them is a decision rather than a fix.** 67–68 are
-DESIGN.md contradictions that need a call (the One Green Rule, and one name for the upcoming
-section). 70–73 are the open product questions. 74–75 are the two found later — 74 is a genuine
-inconsistency, 75 is the page-order clause, and it should be settled together with 68 because
-all three are about the same heading. Nothing left is a P1, and nothing left should be answered
-by a refactor in passing.
+| Phase | Verified how |
+|---|---|
+| 1–3 | Firefox at 375px **and on an iPhone** (2026-08-06). Found four bugs reading the diff had not. |
+| 4–5 | **Headless Firefox screenshots only.** No device, no keyboard, no real backend. |
+| 6–7 | Documents and decisions; nothing to verify beyond reading them. |
 
-Everything through phase 3 was verified in a browser and on a phone; the 2026-08-06 pass found
-three bugs the reasoning missed (`ec528d0`, `dee5c09`, item 77). **Phase 4 has been verified in
-headless Firefox only** — see the 2026-08-07 handoff for what that did and did not cover.
+The 2026-08-06 pass is the reason to take that gap seriously: walking phases 1–3 on a real
+phone found four defects that careful reasoning had missed entirely. Phases 4 and 5 have had no
+equivalent pass, and phase 5 in particular added a submission flow that has never run against
+the real backend. **See "Still needs a real device" in the 2026-08-07 handoff.**
+
+Six items were closed as **decided, not changed** — 8, 12, 52, 55, 67, 70. Each carries its
+reasoning inline. Do not reopen them without reading it; three of them are cases where the
+item's stated premise turned out to be wrong.
 
 ---
 
 ## How to work through this
 
-75 items, ticked as they land. The list below is grouped by file, but this is the order I'd
-work them in — each phase is a coherent chunk you can ship on its own.
+All 79 landed. The list below is grouped by file; the table is the order they were worked in,
+kept because the *why this order* column records decisions that outlived the work.
 
 | Phase | Items | Count | Command | Why this order |
 |---|---|---|---|---|
@@ -43,12 +49,10 @@ work them in — each phase is a coherent chunk you can ship on its own.
 | ~~3. Form data loss~~ **done** | 10–12, 42 | 4 of 4 | `34101d9`, `ee9d332` | Item 12's `confirm()` is flagged for item 17 to re-decide, not to inherit. |
 | ~~4. Accessibility~~ **done** | 13–16, 24–38, 43, 44–49, 53–55, 57–58, 60–61 | 32 of 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. **Item 38 is decided and shipped** — the token the rest of the CSS sits on is settled. |
 | ~~5. Trust & consistency~~ **done** | 17–23, 50–52, 56, 59, 62–63 | 14 of 14 | `/impeccable polish` | Sweeps what's left; reads the critique snapshot as its own input. Roughly half its work vanished with `45f3496` — see rule 1 below. |
-| 6. Doc truth | ~~64–66~~, **67–68**, ~~69~~ | 4 of 6 | manual | Fix DESIGN.md's overstated claims *after* the code moves, so it describes what shipped. 69 closed early because 38 created the token it was about. |
-| 7. Open questions | 70–73 | 4 | `/impeccable shape` | Genuine product decisions. Don't let a refactor make them by accident. |
+| ~~6. Doc truth~~ **done** | 64–69 | 6 of 6 | manual | Fix DESIGN.md's overstated claims *after* the code moves, so it describes what shipped. 69 closed early because 38 created the token it was about. |
+| ~~7. Open questions~~ **done** | 70–73 | 4 of 4 | owner decision | Genuine product decisions. Don't let a refactor make them by accident. |
 
-Phases 1–3 are ~16 items and cover both P1 findings that `polish` would refuse to touch (it
-classifies them as conceptual mismatches and is instructed to flag rather than fix). If you
-only do part of this list, do those.
+That "if you only do part of this list" threshold is now historical — the whole list is done.
 
 ### Two rules that apply throughout
 
@@ -517,7 +521,7 @@ above lands here too. Four defects are present in *both* copies:
 
 ## Found later — not in the original critique
 
-- [ ] **74. [P2] The same event shows two different time formats on one page.** The event card
+- [x] **74. [P2] The same event shows two different time formats on one page.** The event card
   renders 12-hour with a meridiem — `{sidebarTime.time} {sidebarTime.ampm}` →
   **"2:00 PM"** (`EventCard.astro:68`, via `formatTimeShort` at `:27-32`). The upcoming list
   passes the stored value straight through — **"14:00"** (`index.astro:593`, and the
@@ -533,7 +537,7 @@ above lands here too. Four defects are present in *both* copies:
   server's format on hydration and flicker.
   **Done when:** `grep -o 'class="upcoming-time">[^<]*' dist/index.html` shows meridiem times.
 
-- [ ] **75. [P2] DESIGN.md's page-order rule needs an empty-day clause.** The Layout section
+- [x] **75. [P2] DESIGN.md's page-order rule needs an empty-day clause.** The Layout section
   states the order is "fixed and load-bearing… masthead → date section → category filters →
   event list → submit prompt → 'What's next' → footer" and that "the submit call-to-action
   lives **after** the day's events, never before them, because the visitor's job comes first."
@@ -653,10 +657,10 @@ enough the claim was simply true. Each was checked rather than assumed:
 
 To re-check 65 after adding any transition, diff the rules declaring motion against the
 override's selectors; eyeballing the list is what let seven selectors drift in the first place.
-- [ ] **67.** The One Green Rule ("appears as a fill at most once per viewport") breaks on the
+- [x] **67.** The One Green Rule ("appears as a fill at most once per viewport") breaks on the
   first filter tap: active chip fill + submit button fill. Either restate the rule or restyle
   the active chip.
-- [ ] **68.** DESIGN.md calls the section "What's next"; the code renders "Coming Up". Pick one.
+- [x] **68.** DESIGN.md calls the section "What's next"; the code renders "Coming Up". Pick one.
 - [x] **69.** ~~If item 38 introduces `--border-interactive`, add it to the frontmatter and
   re-run the sidecar refresh so `.impeccable/design.json` stays in step.~~ It did, and both are
   updated. Done as part of item 38 rather than after it — see **38a**. The rest of 64–68 still
@@ -675,22 +679,22 @@ override's selectors; eyeballing the list is what let seven selectors drift in t
 These are product decisions the critique surfaced. A refactor will answer them by accident if
 you let it; `/impeccable shape` is the command that answers them on purpose.
 
-- [ ] **70.** **Is the single-day model right?** PRODUCT.md names *"what's on this weekend?"* as
+- [x] **70.** **Is the single-day model right?** PRODUCT.md names *"what's on this weekend?"* as
   one of the two defining questions, and the interface has no answer that isn't four taps of
   "Next →" (and four history entries). Is the day-at-a-time shape a product decision or an
   inheritance from the name?
 
-- [ ] **71.** **Should filters combine as AND or OR?** They currently AND, and nothing says so.
+- [x] **71.** **Should filters combine as AND or OR?** They currently AND, and nothing says so.
   "Free + For kids" yielding nothing shows "Quiet day in Naas" with no hint that dropping one
   chip would help — and that is PRODUCT.md's named recurring sub-case.
 
-- [ ] **72.** **Are the description and specific-time fields earning their required status?**
+- [x] **72.** **Are the description and specific-time fields earning their required status?**
   PRODUCT.md says growing community submissions is the central strategic goal and that
   submission *quality* matters as much as volume. The form currently refuses the neighbour who
   knows only "Saturday morning, the square" — while the card renderer can already display
   `TBC`.
 
-- [ ] **73.** **Should filter toggles push history?** Each one calls `pushState`
+- [x] **73.** **Should filter toggles push history?** Each one calls `pushState`
   (`index.astro:742, 750, 758`), so three taps while browsing means Back doesn't leave the site.
   `replaceState` for filters and `pushState` only for date changes may match intent better.
 
@@ -848,6 +852,52 @@ decisions. The three that were more than a one-liner:
 The `translateY(-2px)` is gone — rising toward the cursor is a click affordance and a card is
 not clickable — but the shadow stays, which DESIGN.md's Flat-At-Rest Rule explicitly sanctions.
 
+### Phases 6 and 7, same session — the last eight
+
+Two were owner decisions, taken via a direct question rather than assumed:
+
+- **70 — the weekend gap: recorded, not built.** The single-day model stays. The gap is real
+  (PRODUCT.md names "what's on this weekend?" as one of two defining questions and the interface
+  answers only the other), so it is written into PRODUCT.md under a new **"Known gaps, decided
+  but not closed"** heading rather than left to be rediscovered as a bug. A second navigation
+  mode touches the URL model, the filters and the pre-render, and deserves its own pass.
+- **72 — required fields dropped, both of them.** Description is optional and the time can be
+  "Not sure yet", which stores no time and renders `TBC`. **`description` turned out to be
+  optional server-side already** — only the client demanded it. The time needed a validator
+  change, so per CLAUDE.md: `tests/event-body.test.js` written first, shown failing on exactly
+  the missing-time case, then `validateEventBody` relaxed. Eleven tests, and four of them exist
+  to prove the *format* checks did not go soft at the same time.
+
+The rest:
+
+- **67 — the One Green Rule restated, not the chip restyled.** The rule now says the accent
+  appears as a fill at most once per viewport **as a call to action**, and an active filter chip
+  is exempt because its fill is a selection state and the colour belongs to the category. Free's
+  category colour is the same value as the accent, so a lit Free chip really does put a second
+  green fill on screen — that is a coincidence of the palette, and recolouring Free to dodge it
+  would break the Aged Family Rule for a 13px chip that competes for nothing.
+- **68 + 75 together, since they are the same heading.** Three names existed. The canonical one
+  is **"Coming up"**, sentence case like every other label on the site; **"Next up"** stays as
+  the empty-day variant because that was a deliberate phase-1 decision — when the day is empty
+  the list is the answer, not a footnote. DESIGN.md's Layout section now documents **both page
+  orders** and names the condition that picks between them, which is item 75.
+- **71 — the AND behaviour now says so.** When a filtered day comes up empty with two or more
+  chips lit, the message adds "An event has to match every filter you have on — try turning one
+  off." Only with two or more: with one chip there is no combining to explain.
+- **73 — filters replace, dates push.** Filtering refines the current view; changing the date is
+  navigation. `pushUrlState` became `writeUrlState({ replace })` so the distinction is visible
+  at each of the six call sites rather than implied.
+- **74 — three formatters, one module.** `formatTimeShort` and `shortTimeLabel` joined
+  `localDateStr` in `src/scripts/date.js`, and the card, the pre-render and the client re-render
+  all import them. Acceptance check passes: `grep -o 'class="upcoming-time">[^<]*' dist/index.html`
+  now returns meridiem times.
+
+**One stale claim fixed that no item had caught.** DESIGN.md still said "the masthead sticks at
+`top: 0` … and gains a shadow only once the page has scrolled past 4px". Item 39 moved that to
+`.date-section` and changed the trigger to `getBoundingClientRect().top <= 0` back on 2026-08-06.
+Found while editing the paragraph next to it, which is an argument for doing doc-truth passes
+adjacent to the code rather than from a list.
+
 ### Still needs a real device
 
 Headless screenshots cannot answer these, and the 2026-08-06 pass is the precedent for how much
@@ -878,6 +928,32 @@ the one that matters:
 - **Both field errors** — an end date before the start, and a recurring event with no repeat-until.
 - **Share on desktop** (item 23), which now copies instead of opening WhatsApp. The
   `prompt()` fallback needs a non-secure origin or a denied clipboard permission to see.
+- **A submission with no time** (item 72) — pick "Not sure yet", submit, and confirm the row
+  arrives with a null time and the card shows `TBC`. This is the one change that reaches the
+  database schema's edges, and the validator no longer stops a null time from any source.
+
+---
+
+## The list is finished. What that does and does not mean
+
+**Done:** all 79 items, across seven phases, from a critique that scored 22/40 with five P1s.
+
+**Not done:** any of it is live. Everything from 2026-08-05 onward is on `dev`, per the owner's
+decision to merge once at the end rather than per phase. That merge is now the outstanding
+action, and it costs 15 credits.
+
+**Before merging, the honest sequence is:**
+
+1. **Walk phases 4 and 5 on a phone**, using the two lists above. This is the step the
+   2026-08-06 pass proved is not optional — it found four bugs that reading the diff had not,
+   and phases 4 and 5 are twice the size of phases 1–3 combined.
+2. **Make one real submission** and delete it from `/admin.html`. Nothing else exercises the
+   success panel, the draft clearing, or the relaxed validator end to end.
+3. Then merge, and **re-run the critique** (see below) to see where 22/40 landed.
+
+**Do not treat a re-run critique as the finish line either.** It scores the same page against
+the same heuristics; a second pass will surface a second list. The point of this one was the
+five P1s, and those are closed.
 
 ---
 
