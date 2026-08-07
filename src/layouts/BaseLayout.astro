@@ -738,20 +738,6 @@ const {
             50% { opacity: 0.4; }
         }
 
-        .loading-spinner {
-            width: 32px;
-            height: 32px;
-            border: 3px solid var(--border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 1rem;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
         /* ── Empty State ── */
         /* Most weekdays in Naas have nothing on, so this is the page's most-shown
            state, not an error. It gets the padding of a normal screen and hands
@@ -1241,7 +1227,7 @@ const {
             .event-card, .date-section, .date-nav-btn, .filter-btn, .submit-area-btn,
             .btn-primary, .btn-secondary, .share-btn, .upcoming-item, .modal-close,
             .empty-clear-btn, .footer-links a, .footer-links button,
-            .form-group input, .form-group textarea,
+            .form-actions button, .form-group input, .form-group textarea,
             .form-group select { transition: none !important; }
         }
     </style>

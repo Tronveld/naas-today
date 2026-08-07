@@ -14,7 +14,7 @@ surrounding context to relocate it. Phase 1 and item 10 have since shipped (`17a
 `fc3d8ed`, `34101d9`), so the line numbers in the EventsGrid, empty-state and modal-dismiss
 items are already historical.
 
-**Progress: 56 of 79 done** — items 1–16, 22, 24–49, 53–55, 57–58, 60–62, 69, 76–79. Phase 1 is now fully closed.
+**Progress: 60 of 79 done** — items 1–16, 22, 24–50, 53–55, 57–58, 60–62, 64–66, 69, 76–79. Phase 1 is now fully closed.
 
 Phases 1–3 are complete, which was the stated "if you only do part of this list, do this part"
 threshold: both P1 findings `polish` refuses to touch are now closed. **Everything shipped so
@@ -35,8 +35,8 @@ work them in — each phase is a coherent chunk you can ship on its own.
 | ~~2. Mobile chrome~~ **done** | 39–41 | 3 of 3 | shipped in `03c21d0` | Also closed item 43, which the sticky move would otherwise have re-created under a new selector. |
 | ~~3. Form data loss~~ **done** | 10–12, 42 | 4 of 4 | `34101d9`, `ee9d332` | Item 12's `confirm()` is flagged for item 17 to re-decide, not to inherit. |
 | ~~4. Accessibility~~ **done** | 13–16, 24–38, 43, 44–49, 53–55, 57–58, 60–61 | 32 of 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. **Item 38 is decided and shipped** — the token the rest of the CSS sits on is settled. |
-| 5. Trust & consistency | 17–21, ~~22~~, 23, 50–52, 56, 59, ~~62~~, 63 | 2 of 14 | `/impeccable polish` | Sweeps what's left; reads the critique snapshot as its own input. Roughly half its work vanished with `45f3496` — see rule 1 below. |
-| 6. Doc truth | 64–~~69~~ | 1 of 6 | manual | Fix DESIGN.md's overstated claims *after* the code moves, so it describes what shipped. 69 closed early because 38 created the token it was about. |
+| 5. Trust & consistency | 17–21, ~~22~~, 23, ~~50~~, 51–52, 56, 59, ~~62~~, 63 | 3 of 14 | `/impeccable polish` | Sweeps what's left; reads the critique snapshot as its own input. Roughly half its work vanished with `45f3496` — see rule 1 below. |
+| 6. Doc truth | ~~64–66~~, 67–68, ~~69~~ | 4 of 6 | manual | Fix DESIGN.md's overstated claims *after* the code moves, so it describes what shipped. 69 closed early because 38 created the token it was about. |
 | 7. Open questions | 70–73 | 4 | `/impeccable shape` | Genuine product decisions. Don't let a refactor make them by accident. |
 
 Phases 1–3 are ~16 items and cover both P1 findings that `polish` would refuse to touch (it
@@ -414,7 +414,7 @@ results worth recording:
 
 ### Dead code
 
-- [ ] **50. [P3] Delete `.loading-spinner` and the `spin` keyframe** (`:658-670`). Never
+- [x] **50. [P3] Delete `.loading-spinner` and the `spin` keyframe** (`:658-670`). Never
   reaches the DOM — `EventsGrid.astro:57-62` renders the skeleton instead.
 - [ ] **51. [P3] Delete `.event-card:focus-visible`** (`:292-295`). Cards have no `tabindex`,
   so the rule can never match.
@@ -588,13 +588,32 @@ above lands here too. Four defects are present in *both* copies:
 DESIGN.md is the authority the design detector enforces against, so an aspiration recorded as
 a fact is load-bearing. Fix these **after** the code moves, so the file describes what shipped.
 
-- [ ] **64.** "44px minimum touch targets throughout" — currently 4 of 17. True after items
+- [x] **64.** "44px minimum touch targets throughout" — currently 4 of 17. True after items
   24–36.
-- [ ] **65.** "`prefers-reduced-motion` disables every animation and transition in the system
+- [x] **65.** "`prefers-reduced-motion` disables every animation and transition in the system
   explicitly, control by control" — 7 selectors and 2 JS calls uncovered. True after items
   22 and 43–49.
-- [ ] **66.** "Don't introduce photography, illustration, or decorative imagery" — the empty
+- [x] **66.** "Don't introduce photography, illustration, or decorative imagery" — the empty
   state ships a decorative SVG. True after item 5.
+
+**All three closed 2026-08-07 with no edit to DESIGN.md — the code caught up instead.** That is
+what this section asked for: fix the claims *after* the code moves, and if the code moved far
+enough the claim was simply true. Each was checked rather than assumed:
+
+- **64** — 17 `min-height: 44px` / `width: 44px` declarations in `BaseLayout.astro`, against
+  the 4 the critique counted.
+- **65** — checked by script: every rule declaring a `transition` or `animation` diffed against
+  the reduced-motion override's selector list, **uncovered: NONE**. Getting there needed two
+  things beyond items 44–49. **Item 50 was pulled forward** and the dead `.loading-spinner` and
+  its `spin` keyframe deleted, because a forever-looping animation on a rule that never reaches
+  the DOM is still a hole in the claim. And `.form-actions button` was named explicitly:
+  the override reached those buttons already through `.btn-primary` / `.btn-secondary` and
+  `!important`, but only by inference, and a claim this section exists to make literal should
+  not rest on one.
+- **66** — `grep -c "<svg"` returns 0 across `src/`.
+
+To re-check 65 after adding any transition, diff the rules declaring motion against the
+override's selectors; eyeballing the list is what let seven selectors drift in the first place.
 - [ ] **67.** The One Green Rule ("appears as a fill at most once per viewport") breaks on the
   first filter tap: active chip fill + submit button fill. Either restate the rule or restyle
   the active chip.
