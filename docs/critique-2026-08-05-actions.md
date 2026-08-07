@@ -14,14 +14,16 @@ surrounding context to relocate it. Phase 1 and item 10 have since shipped (`17a
 `fc3d8ed`, `34101d9`), so the line numbers in the EventsGrid, empty-state and modal-dismiss
 items are already historical.
 
-**Progress: 60 of 79 done** — items 1–16, 22, 24–50, 53–55, 57–58, 60–62, 64–66, 69, 76–79. Phase 1 is now fully closed.
+**Progress: 71 of 79 done** — items 1–66, 69, 76–79. Everything except 67–68, 70–75. Phase 1 is now fully closed.
 
-**Phases 1–4 are complete.** Phase 4 was the bulk of the list — 32 items — and closed on
-2026-08-07 along with items 22, 50, 62, 64–66 and 69 borrowed from phases 5 and 6.
+**Phases 1–5 are complete** — every item the critique raised that has a single right answer.
 
-**What is left: 19 items.** Phase 5 has 11 (17–21, 23, 51–52, 56, 59, 63), phase 6 has 2
-decisions (67–68), phase 7 has the 4 open product questions (70–73), and items 74–75 are the
-two found later. Nothing left is a P1.
+**What is left: 8 items, and every one of them is a decision rather than a fix.** 67–68 are
+DESIGN.md contradictions that need a call (the One Green Rule, and one name for the upcoming
+section). 70–73 are the open product questions. 74–75 are the two found later — 74 is a genuine
+inconsistency, 75 is the page-order clause, and it should be settled together with 68 because
+all three are about the same heading. Nothing left is a P1, and nothing left should be answered
+by a refactor in passing.
 
 Everything through phase 3 was verified in a browser and on a phone; the 2026-08-06 pass found
 three bugs the reasoning missed (`ec528d0`, `dee5c09`, item 77). **Phase 4 has been verified in
@@ -40,8 +42,8 @@ work them in — each phase is a coherent chunk you can ship on its own.
 | ~~2. Mobile chrome~~ **done** | 39–41 | 3 of 3 | shipped in `03c21d0` | Also closed item 43, which the sticky move would otherwise have re-created under a new selector. |
 | ~~3. Form data loss~~ **done** | 10–12, 42 | 4 of 4 | `34101d9`, `ee9d332` | Item 12's `confirm()` is flagged for item 17 to re-decide, not to inherit. |
 | ~~4. Accessibility~~ **done** | 13–16, 24–38, 43, 44–49, 53–55, 57–58, 60–61 | 32 of 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. **Item 38 is decided and shipped** — the token the rest of the CSS sits on is settled. |
-| 5. Trust & consistency | 17–21, ~~22~~, 23, ~~50~~, 51–52, 56, 59, ~~62~~, 63 | 3 of 14 | `/impeccable polish` | Sweeps what's left; reads the critique snapshot as its own input. Roughly half its work vanished with `45f3496` — see rule 1 below. |
-| 6. Doc truth | ~~64–66~~, 67–68, ~~69~~ | 4 of 6 | manual | Fix DESIGN.md's overstated claims *after* the code moves, so it describes what shipped. 69 closed early because 38 created the token it was about. |
+| ~~5. Trust & consistency~~ **done** | 17–23, 50–52, 56, 59, 62–63 | 14 of 14 | `/impeccable polish` | Sweeps what's left; reads the critique snapshot as its own input. Roughly half its work vanished with `45f3496` — see rule 1 below. |
+| 6. Doc truth | ~~64–66~~, **67–68**, ~~69~~ | 4 of 6 | manual | Fix DESIGN.md's overstated claims *after* the code moves, so it describes what shipped. 69 closed early because 38 created the token it was about. |
 | 7. Open questions | 70–73 | 4 | `/impeccable shape` | Genuine product decisions. Don't let a refactor make them by accident. |
 
 Phases 1–3 are ~16 items and cover both P1 findings that `polish` would refuse to touch (it
@@ -159,6 +161,12 @@ this is the primary screen, not the fallback.
   argument for keeping it is that 17's are validation and success messaging, while this is a
   destructive action — which is the one thing the platform dialog is actually for. Decide it
   deliberately rather than letting a find-and-replace answer it.
+  **Re-decided 2026-08-07 alongside item 17: kept.** The distinction held up under the rewrite.
+  Every alert 17 removed was the page *telling* the visitor something, which the page should do
+  in its own voice and next to the thing it concerns. This one *asks*, and blocks on the answer,
+  about an action that destroys up to 2000 characters of their typing. A styled panel would have
+  to reimplement modality inside a modal to do that safely. Now written into DESIGN.md's Don'ts
+  as the one sanctioned exception, so the next sweep does not have to re-derive it.
 
 - [x] **13. [P1] Make the events heading track the current date.** `:65` hardcodes
   `<h2 class="visually-hidden" id="events-list-heading">Today's events</h2>`. Navigate to
@@ -184,31 +192,57 @@ this is the primary screen, not the fallback.
   **Done when:** the row carries `role="group" aria-label="Filter events by category"`
   (in `src/components/FilterControls.astro`).
 
-- [ ] **17. [P2] Replace the eight `alert()` calls. [×2]** `index.astro:907, 920, 937, 940,
+- [x] **17. [P2] Replace the eight `alert()` calls. [×2]** `index.astro:907, 920, 937, 940,
   955, 958` plus `AppModals.astro:203, 206, 221, 224`. They are unstyled, render as
   "naastoday.com says" on iOS, and put validation errors nowhere near the offending field.
   **Done when:** inline validation sits next to each field and success shows an in-modal panel
   in the site's own voice.
 
-- [ ] **18. [P2] Fix the contact address. [×2]** All eight alerts quote
+  Four alerts, not eight (`45f3496`). They became three different things, because they were
+  never one kind of message:
+  - **Two field complaints** → `.field-error` under the offending input, with `aria-invalid`,
+    `aria-describedby` and focus moved to the field. Cleared the moment that field is edited.
+  - **The network failure** → `.form-error`, a tinted panel directly above the buttons that
+    caused it, naming the email as a fallback.
+  - **Success** → an in-modal panel that replaces the form. It no longer closes the modal first:
+    the confirmation used to arrive over a page that had already moved on.
+
+  **This forced a palette decision.** The system had no error colour — DESIGN.md never needed
+  one while every error was an OS dialog. Added `--danger`, **deliberately the same value as
+  `--cat-theatre`** (`#7B2D2D`, 9.31:1 on card white), so the palette gains a job without
+  gaining a hue. Recorded in DESIGN.md as **Fault Red**, in the sidecar, and as a new Don't
+  that also writes down the `alert()`/`confirm()` rule this item establishes.
+
+  **Two things the screenshot caught that the diff would not.** The intro copy
+  ("Spotted something happening in Naas?") sits outside `<form>`, so hiding the form alone left
+  it above the thank-you, still inviting the submission that had just been made — the panel now
+  toggles a wrapper. And the one `mailto:` in the modal rendered as default browser blue, the
+  only piece of browser chrome anywhere on the page.
+
+- [x] **18. [P2] Fix the contact address. [×2]** All eight alerts quote
   `naastoday.tile693@passinbox.com`. `ContactModal.astro:10` and `terms.astro:33` both say
   `hello@naastoday.com`, which is also PRODUCT.md's brand commitment. A machine-looking relay
   address in an OS dialog reads as a scam to exactly the older resident this is built for.
   **Done when:** `grep -rn "passinbox" src/` returns nothing.
 
-- [ ] **19. [P2] Fix the UTC date bug in `updateRecurrenceHint`.** `:849` uses
+- [x] **19. [P2] Fix the UTC date bug in `updateRecurrenceHint`.** `:849` uses
   `cur.toISOString().slice(0, 10)` — the exact bug CLAUDE.md warns against everywhere else.
   The occurrence count can be off by one across Irish summer time. Use `localDateStr(cur)`,
   which already exists in this file.
+  **It no longer existed in that file** — `45f3496` moved the function to `modal-form.js` and
+  left the helper behind in `index.astro`, which is *why* the copy here was the broken one.
+  Rather than paste a third copy, `localDateStr` moved to **`src/scripts/date.js`** and both
+  import it. This project has now been bitten by exactly this twice before (three `validDate`s,
+  two modal systems), and the third instance is a pattern.
 
-- [ ] **20. [P2] Surface stale data.** `:250-252` only sets `isError` when
+- [x] **20. [P2] Surface stale data.** `:250-252` only sets `isError` when
   `events.length === 0`, so a failed refresh over pre-rendered data serves silently. With
   rebuilds capped at 15 deploys/month, that data can be days old, and "nothing on today" is
   indistinguishable from "nobody has touched this in a week" — on a product positioned as
   *moderated, therefore trustworthy*.
   **Done when:** a failed refresh over stale data shows a quiet "showing saved listings" note.
 
-- [ ] **21. [P3] Drop invalid `?event=` params.** `:165-167` preserves the param unconditionally,
+- [x] **21. [P3] Drop invalid `?event=` params.** `:165-167` preserves the param unconditionally,
   and `handleDeepLink` (`:998`) returns silently on a miss, so a bad link survives every
   subsequent navigation.
 
@@ -218,7 +252,7 @@ this is the primary screen, not the fallback.
   claim depends on it and it is one helper: `scrollBehavior()` returns `'auto'` or `'smooth'`
   and is read **per call**, since the OS setting can change while the tab is open.
 
-- [ ] **23. [P3] Give desktop Share a copy-link fallback.** `:322` opens a WhatsApp popup with
+- [x] **23. [P3] Give desktop Share a copy-link fallback.** `:322` opens a WhatsApp popup with
   no warning; popup blockers eat it silently.
 
 ---
@@ -421,9 +455,9 @@ results worth recording:
 
 - [x] **50. [P3] Delete `.loading-spinner` and the `spin` keyframe** (`:658-670`). Never
   reaches the DOM — `EventsGrid.astro:57-62` renders the skeleton instead.
-- [ ] **51. [P3] Delete `.event-card:focus-visible`** (`:292-295`). Cards have no `tabindex`,
+- [x] **51. [P3] Delete `.event-card:focus-visible`** (`:292-295`). Cards have no `tabindex`,
   so the rule can never match.
-- [ ] **52. [P3] Reconsider the card hover lift** (`:287-290`). `translateY(-2px)` plus a
+- [x] **52. [P3] Reconsider the card hover lift** (`:287-290`). `translateY(-2px)` plus a
   shadow is a click affordance on an element that isn't clickable.
 
 ---
@@ -445,7 +479,7 @@ results worth recording:
   submission on a field the visitor cannot see. `aria-hidden` on the asterisk is correct
   alongside it; the alternative is a screen reader announcing "Repeat until star". Verified the
   set/clear pair covers open, close, reset and draft-restore.
-- [ ] **56. [P3] Reword the character counter.** "0 / 2000" states a ceiling on an empty
+- [x] **56. [P3] Reword the character counter.** "0 / 2000" states a ceiling on an empty
   required field where an expectation would help ("a sentence or two is plenty").
 
 ## `src/components/modals/DatePickerModal.astro`
@@ -457,7 +491,7 @@ results worth recording:
 
 - [x] **58. [P2] Hide the `·` separators from assistive tech** (`:8`, `:10`, `:12`). They are
   announced between every footer link.
-- [ ] **59. [P2] Settle on one label for the submit action.** Three exist:
+- [x] **59. [P2] Settle on one label for the submit action.** Three exist:
   "Submit an event" (`EventsGrid.astro:54`), "Submit Event" (`Footer.astro:13`), "Add an Event"
   (`SubmitEventModal.astro:6`).
 
@@ -478,7 +512,7 @@ above lands here too. Four defects are present in *both* copies:
   `closeModal`. Taken here rather than in phase 5 because it is two lines inside the function
   items 60–61 were already rewriting: `trapFocus` now removes any existing handler before
   attaching. `closeModal`'s single `removeEventListener` could never reach a second one.
-- [ ] **63. [P3] `.modal-header` isn't sticky** inside a scrolling sheet, so ✕ scrolls out of
+- [x] **63. [P3] `.modal-header` isn't sticky** inside a scrolling sheet, so ✕ scrolls out of
   view on the long submit form.
 
 ## Found later — not in the original critique
@@ -627,6 +661,12 @@ override's selectors; eyeballing the list is what let seven selectors drift in t
   re-run the sidecar refresh so `.impeccable/design.json` stays in step.~~ It did, and both are
   updated. Done as part of item 38 rather than after it — see **38a**. The rest of 64–68 still
   waits on the code, as this section says.
+  **Same again for `--danger` in phase 5** — token, ramp and a new Don't in both files.
+  **One gap left open on purpose:** the sidecar's `components` array does not describe the four
+  UI pieces phase 5 added (`.field-error`, `.form-error`, `.submit-success`, `.stale-note`).
+  Its snippets are hand-authored, and four half-written entries are worse than a known absence.
+  Re-run the documenter when convenient; the colour tokens, which are what the detector actually
+  validates against, are current.
 
 ---
 
@@ -791,6 +831,23 @@ stylesheet and forcing `#submitModal` visible — the sheet is server-rendered a
 so no JS is needed to see it. Fieldset legend, 20px boxes, 44px labels and the new field borders
 all confirmed there.
 
+### Phase 5, same session
+
+Eleven more items (`d5f2e21`-ish — see git log), closing the list down to the eight that are
+decisions. The three that were more than a one-liner:
+
+- **17** turned four alerts into three different kinds of message and forced the `--danger`
+  palette decision. Full note under the item.
+- **19** was not where the item said it was, and fixing it properly meant a third shared module,
+  `src/scripts/date.js`. The alternative was a third copy of `localDateStr`.
+- **23** replaced the silent WhatsApp popup with a clipboard copy that confirms in the button
+  itself, falling back to `prompt()` where the clipboard API is blocked. No toast system for
+  one message.
+
+**52 was a judgement call, not a deletion.** The item asks to reconsider the card hover lift.
+The `translateY(-2px)` is gone — rising toward the cursor is a click affordance and a card is
+not clickable — but the shadow stays, which DESIGN.md's Flat-At-Rest Rule explicitly sanctions.
+
 ### Still needs a real device
 
 Headless screenshots cannot answer these, and the 2026-08-06 pass is the precedent for how much
@@ -808,6 +865,19 @@ they matter:
   date controls (item 14).
 - **The upcoming rows as real buttons** (item 15) — Enter and Space, and the focus outline that
   replaced `outline: none` (item 37).
+
+Phase 5 adds four paths that have never run against the real backend, and the success one is
+the one that matters:
+
+- **A real submission.** The success panel, the draft clearing, and the modal *staying open*
+  are all new. The 2026-08-06 note declined to test this because it writes a live `pending` row —
+  that reasoning was sound when success was an `alert()`, and it is not any more. **Worth the
+  round trip now**: submit something, confirm the panel, then delete the row in `/admin.html`.
+- **A failed submission.** Offline in devtools, submit, and check the error panel appears above
+  the buttons rather than as a dialog.
+- **Both field errors** — an end date before the start, and a recurring event with no repeat-until.
+- **Share on desktop** (item 23), which now copies instead of opening WhatsApp. The
+  `prompt()` fallback needs a non-secure origin or a denied clipboard permission to see.
 
 ---
 

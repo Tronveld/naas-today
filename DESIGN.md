@@ -14,6 +14,7 @@ colors:
   border: "#e0e0d8"
   border-light: "#f0ece4"
   border-interactive: "#8a8a7e"
+  danger: "#7B2D2D"
   scrim: "rgba(26,58,26,0.45)"
   overlay-shadow: "rgba(0,0,0,0.12)"
   overlay-shadow-soft: "rgba(0,0,0,0.08)"
@@ -245,6 +246,7 @@ Six flags, all pulled to the same weathered register. Each is a text colour pair
 - **Hairline** (`{colors.border}`): The structural line. Cards, the time pill, skeletons, modal edges — every surface that is only a surface.
 - **Whisper Rule** (`{colors.border-light}`): Section dividers and the header underline, where a full hairline would be too assertive.
 - **Pressable Line** (`{colors.border-interactive}`): The same warm grey walked down until it clears 3:1. Every edge that *is* a control — filter chips, date-nav buttons, share, the empty state's clear button, form fields, secondary buttons. See the Pressable Line Rule.
+- **Fault Red** (`{colors.danger}`): Form validation only — a field's error line, and the panel above the submit buttons when a send fails. **Deliberately the identical value to Theatre**, so the palette gains a job without gaining a hue; the Aged Family Rule applies to reds that shout as much as to category tags. 9.31:1 on card white. Nothing outside a form message may use it, and it is never a fill except as the Theatre tint behind its own text.
 
 ### Named Rules
 
@@ -410,6 +412,7 @@ The design detector reflects that: the `design-system-*` rules and `overused-fon
 ### Don't:
 - **Don't** use pure `#FFFFFF` as a page background or neutral grey (`#666`, `#888`) for any text. Every neutral in this system carries green or brown.
 - **Don't** add a second accent colour. Hedgerow green is the only brand voice, and it appears as a fill roughly once per viewport.
+- **Don't** use Fault Red (`{colors.danger}`) for anything but form validation, and don't reach for a browser dialog instead. `alert()` and `confirm()` render as "naastoday.com says" — a different product's voice, in a box that lands nowhere near the field that caused it. The one sanctioned exception is `confirm()` on a genuinely destructive action, which is what the platform dialog is for.
 - **Don't** use elevation to signal importance. Shadows respond to interaction; they never rank content.
 - **Don't** use a category colour as a background fill anywhere except an active filter chip.
 - **Don't** make an event title more than ~1.3× body size, or promote any single event with size, colour, or imagery. Every notice is equal.

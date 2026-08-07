@@ -10,8 +10,13 @@
 // `/` is read on `/terms`. This is the rest of it.
 
 import { apply as applyDraft, saveDraft, hasDraft, clearDraft, readDraft } from './draft.js';
+import { localDateStr } from './date.js';
 
-const CONTACT_EMAIL = 'naastoday.tile693@passinbox.com';
+// The address the site actually commits to, in ContactModal, /terms and
+// PRODUCT.md. The relay address that used to be quoted here read like a scam
+// to exactly the older resident this is built for — and it was only ever seen
+// inside an OS dialog that said "naastoday.com says".
+const CONTACT_EMAIL = 'hello@naastoday.com';
 
 // ── Focus trap ───────────────────────────────────────────────────────────────
 let previouslyFocused = null;
@@ -101,6 +106,42 @@ export function initModals() {
 
 // ── Submit form ──────────────────────────────────────────────────────────────
 
+// Validation messaging.
+//
+// This replaced four alert() calls. They rendered as "naastoday.com says" on
+// iOS, in a voice that is not the site's, and — worse for a form this long —
+// they put the complaint in a box in the middle of the screen rather than next
+// to the field that caused it. You dismissed the box and were left to find the
+// offending input yourself.
+//
+// Each guarded field owns a <p class="field-error" id="<inputId>Error">.
+function setFieldError(inputId, message) {
+  const input = document.getElementById(inputId);
+  const slot  = document.getElementById(inputId + 'Error');
+  if (!input || !slot) return;
+  slot.textContent = message || '';
+  slot.hidden = !message;
+  input.setAttribute('aria-invalid', message ? 'true' : 'false');
+  if (message) input.focus();
+}
+
+function clearErrors(form) {
+  form.querySelectorAll('.field-error').forEach(slot => {
+    slot.textContent = '';
+    slot.hidden = true;
+  });
+  form.querySelectorAll('[aria-invalid="true"]').forEach(el => el.setAttribute('aria-invalid', 'false'));
+  const formError = document.getElementById('formError');
+  if (formError) { formError.textContent = ''; formError.hidden = true; }
+}
+
+function setFormError(message) {
+  const slot = document.getElementById('formError');
+  if (!slot) return;
+  slot.textContent = message || '';
+  slot.hidden = !message;
+}
+
 function updateRecurrenceHint() {
   const startDate = document.getElementById('eventDate').value;
   const endDate   = document.getElementById('recurrenceEndDate').value;
@@ -109,7 +150,10 @@ function updateRecurrenceHint() {
   if (!startDate || !endDate || endDate <= startDate) { hint.textContent = ''; return; }
   let count = 0, cur = new Date(startDate + 'T00:00:00');
   while (count < 104) {
-    const s = cur.toISOString().slice(0, 10);
+    // localDateStr, not toISOString: cur is local midnight, so UTC conversion
+    // hands back the previous day west of Greenwich and the count comes out one
+    // short across the Irish summer-time boundary.
+    const s = localDateStr(cur);
     if (s > endDate) break;
     count++;
     if (freq === 'weekly')           cur.setDate(cur.getDate() + 7);
@@ -175,13 +219,36 @@ export function initSubmitForm({ defaultDate }) {
     updateRecurrenceHint();
   }
 
-  form.addEventListener('input', () => saveDraft(draftFields()));
+  form.addEventListener('input', (e) => {
+    saveDraft(draftFields());
+    // A complaint about a field stops being true the moment they edit it.
+    if (e.target.getAttribute('aria-invalid') === 'true') setFieldError(e.target.id, '');
+  });
   form.addEventListener('reset', clearDraft);
+
+  // ── Success panel ──────────────────────────────────────────────────────────
+  const successPanel = document.getElementById('submitSuccess');
+  // The wrapper, not the form: the intro copy above it has to go too, or the
+  // thank-you sits under an invitation to submit the thing just submitted.
+  const formPanel = document.getElementById('submitFormPanel');
+
+  function showSuccess(on) {
+    if (!successPanel || !formPanel) return;
+    successPanel.hidden = !on;
+    formPanel.hidden = on;
+    if (on) successPanel.querySelector('button')?.focus();
+  }
+
+  document.getElementById('submitSuccessDone')?.addEventListener('click', () => closeModal('submitModal'));
 
   // ── Opening ────────────────────────────────────────────────────────────────
   // Every entry point opens on the default day — unless a draft is waiting, in
   // which case the date the visitor typed outranks it.
   function openSubmitModal() {
+    // Always open on the form, never on last time's confirmation — covers the ✕
+    // and Escape paths out of the success panel as well as the Done button.
+    showSuccess(false);
+    clearErrors(form);
     if (!hasDraft()) document.getElementById('eventDate').value = defaultDate();
     openModal('submitModal');
   }
@@ -229,7 +296,8 @@ export function initSubmitForm({ defaultDate }) {
   const charCounter  = document.getElementById('descCharCounter');
   if (descTextarea && charCounter) {
     descTextarea.addEventListener('input', () => {
-      charCounter.textContent = `${descTextarea.value.length} / 2000`;
+      const n = descTextarea.value.length;
+      charCounter.textContent = n === 0 ? 'A sentence or two is plenty' : `${n} / 2000`;
     });
   }
 
@@ -254,10 +322,11 @@ export function initSubmitForm({ defaultDate }) {
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
 
+    clearErrors(form);
     const baseEvent = readForm();
 
     if (baseEvent.endDate && baseEvent.endDate < baseEvent.date) {
-      alert('The end date must be on or after the start date.');
+      setFieldError('eventEndDate', 'This is before the start date.');
       return;
     }
 
@@ -266,7 +335,9 @@ export function initSubmitForm({ defaultDate }) {
     const frequency   = document.getElementById('recurrenceFrequency').value;
 
     if (isRecurring && (!recEndDate || recEndDate <= baseEvent.date)) {
-      alert('Please set a "Repeat until" date that is after the event start date.');
+      setFieldError('recurrenceEndDate', recEndDate
+        ? 'This needs to be after the first date.'
+        : 'Pick a date to repeat until.');
       return;
     }
 
@@ -287,14 +358,17 @@ export function initSubmitForm({ defaultDate }) {
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || `Submit failed: ${response.status}`);
 
-      closeModal('submitModal');
+      // The modal stays open and swaps to a panel rather than closing behind an
+      // OS dialog. Closing first meant the confirmation arrived over a page that
+      // had already moved on, with no sign the event had gone anywhere.
       form.reset();
-      alert(isRecurring
-        ? `Events Submitted!\n\nThanks for your help! Your ${result.count} events have been submitted. They'll appear once approved.\n\nQuestions? Email me at ${CONTACT_EMAIL}`
-        : `Event Submitted! 🎉\n\nThanks for your help! I'll review your submission and it should appear on the site within a day or two.\n\nQuestions? Email me at ${CONTACT_EMAIL}`);
+      document.getElementById('submitSuccessBody').textContent = isRecurring
+        ? `All ${result.count} dates are in. I'll read them and they should be on the site within a day or two.`
+        : `I'll read it and it should be on the site within a day or two.`;
+      showSuccess(true);
     } catch (error) {
       console.error(`Error submitting to ${endpoint}:`, error);
-      alert(`Sorry, something went wrong. Please try again or email ${CONTACT_EMAIL}.`);
+      setFormError(`That didn't send — the connection may have dropped. Try again, or email ${CONTACT_EMAIL} and I'll add it by hand.`);
     } finally {
       submitBtn.textContent = originalText;
       submitBtn.disabled = false;

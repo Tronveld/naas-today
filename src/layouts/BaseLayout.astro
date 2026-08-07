@@ -60,6 +60,10 @@ const {
                control. In a system with almost no fills, that boundary is all a chip or a
                secondary button has. 3.36:1 on the page, 3.49:1 on card white. */
             --border-interactive: #8a8a7e;
+            /* Deliberately the same value as --cat-theatre: the Aged Family Rule
+               says no new hue, and the palette had no error colour at all until
+               the alert() boxes went inline. 9.31:1 on card white. */
+            --danger:       #7B2D2D;
             --shadow-sm:    0 1px 3px rgba(26,42,26,0.05);
             --shadow-md:    0 4px 16px rgba(26,42,26,0.08);
             --shadow-overlay: rgba(26,58,26,0.45);
@@ -316,15 +320,14 @@ const {
         }
 
         @media (hover: hover) {
+            /* The 2px lift is gone: rising toward the cursor is a click
+               affordance, and a card is not clickable — its title, location, URL
+               and Share button are. The shadow stays, which DESIGN.md's
+               Flat-At-Rest Rule sanctions as "the user is doing something", and
+               which reads as attention rather than as an invitation to press. */
             .event-card:hover {
                 box-shadow: var(--shadow-md);
-                transform: translateY(-2px);
             }
-        }
-
-        .event-card:focus-visible {
-            outline: 2px solid var(--accent);
-            outline-offset: 3px;
         }
 
         a:focus-visible,
@@ -916,7 +919,13 @@ const {
             transform: scale(1);
         }
 
+        /* Sticky so ✕ survives the scroll. The submit form is long enough that
+           the close button used to leave the viewport entirely, and on a phone
+           the sheet fills the screen so there is no backdrop left to tap either. */
         .modal-header {
+            position: sticky;
+            top: 0;
+            z-index: 1;
             padding: 1.25rem 1.5rem;
             border-bottom: 1px solid var(--border-light);
             background: var(--bg-muted);
@@ -1116,6 +1125,76 @@ const {
             font-size: 0.75rem;
             color: var(--ink-light);
             margin-top: 0.25rem;
+        }
+
+        /* A quiet note, not an error state: the listings on screen are real, they
+           are just possibly a few days old. Linen rather than the danger tint,
+           because nothing is broken from the visitor's side. */
+        .stale-note {
+            margin: 0 0 0.75rem;
+            padding: 0.625rem 0.875rem;
+            border-radius: 8px;
+            background: var(--bg-muted);
+            color: var(--ink-light);
+            font-size: 0.8125rem;
+            line-height: 1.45;
+        }
+
+        /* ── Form messaging ── */
+        /* Replaces four alert() calls. A field's complaint sits under that field;
+           a submit failure sits above the buttons that caused it. */
+        .field-error {
+            margin-top: 0.25rem;
+            color: var(--danger);
+            font-size: 0.8125rem;
+            font-weight: 500;
+        }
+
+        .form-error {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            background: var(--cat-theatre-bg);
+            color: var(--danger);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .submit-success {
+            padding: 0.5rem 0 0.5rem;
+        }
+
+        .submit-success h3 {
+            font-family: Georgia, serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin-bottom: 0.75rem;
+        }
+
+        .submit-success p {
+            color: var(--ink-mid);
+            font-size: 0.875rem;
+            line-height: 1.55;
+            margin-bottom: 0.75rem;
+        }
+
+        .submit-success-contact {
+            margin-bottom: 1.5rem;
+        }
+
+        /* The one link in the modal body. Left to the UA it rendered as default
+           blue-and-underlined, which is the only browser-chrome colour anywhere
+           on the page. */
+        .submit-success a {
+            color: var(--accent);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .submit-success .btn-primary {
+            min-height: 44px;
+            padding: 0.75rem 2rem;
         }
 
         /* ── Date / Time inputs ── */

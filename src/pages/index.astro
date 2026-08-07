@@ -142,6 +142,7 @@ const jsonLd = todayEvents.length > 0 ? {
 
   <script>
     import { initModals, initSubmitForm, openModal, closeModal } from '../scripts/modal-form.js';
+    import { localDateStr } from '../scripts/date.js';
 
     // ── Utilities ──────────────────────────────────────────────────────
 
@@ -157,15 +158,6 @@ const jsonLd = todayEvents.length > 0 ? {
         const t = document.createElement('textarea');
         t.innerHTML = str;
         return t.value;
-    }
-
-    // Returns the local date as YYYY-MM-DD (avoids UTC offset issues with toISOString)
-    function localDateStr(date) {
-        const d = date instanceof Date ? date : new Date(date);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`;
     }
 
     const DESC_THRESHOLD = 220;
@@ -214,6 +206,7 @@ const jsonLd = todayEvents.length > 0 ? {
     let events = (window.__INITIAL_EVENTS__ || []).map(toEvent);
     let currentDate = new Date();
     let isError = false;
+    let isStale = false;
 
     // The six category chips, in row order. `active` lives here rather than in
     // six separate `let`s, so the count badges, the toggle handlers, the URL
@@ -234,7 +227,9 @@ const jsonLd = todayEvents.length > 0 ? {
         if (dateStr !== todayStr) params.set('date', dateStr);
         const activeFilters = FILTER_CHIPS.filter(c => c.active).map(c => c.slug);
         if (activeFilters.length) params.set('filters', activeFilters.join(','));
-        // Preserve ?event= deep link param if present
+        // Preserve ?event= only while it still points at something. handleDeepLink
+        // clears it on a miss, so a link to a deleted or rejected event stops
+        // riding along on every subsequent date change and filter tap.
         const eventParam = new URLSearchParams(location.search).get('event');
         if (eventParam) params.set('event', eventParam);
         const qs = params.toString();
@@ -292,6 +287,7 @@ const jsonLd = todayEvents.length > 0 ? {
         // Only show loading spinner if no pre-rendered content is visible
         if (events.length === 0) showLoading();
         isError = false;
+        isStale = false;
         try {
             const response = await fetch('/.netlify/functions/get-events');
             if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
@@ -304,6 +300,13 @@ const jsonLd = todayEvents.length > 0 ? {
             // Only show error state if we have no pre-rendered events
             if (events.length === 0) {
                 isError = true;
+            } else {
+                // We have pre-rendered events, so the page still works — but they
+                // came from the last build, and rebuilds are capped at 15/month.
+                // "Nothing on today" and "nobody has touched this in a week" look
+                // identical otherwise, on a product whose pitch is that it is
+                // moderated and therefore current.
+                isStale = true;
             }
         }
         populateLocationSuggestions();
@@ -361,7 +364,7 @@ const jsonLd = todayEvents.length > 0 ? {
         return d.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long' });
     }
 
-    function shareEvent(event) {
+    function shareEvent(event, btn) {
         const timeStr = formatEventTime(event);
         const dateDisplay = formatDateForShare(event.date);
         const when = timeStr ? `${dateDisplay} · ${timeStr}` : dateDisplay;
@@ -369,9 +372,30 @@ const jsonLd = todayEvents.length > 0 ? {
         const url = `${location.origin}${location.pathname}?event=${event.id}`;
         if (navigator.share) {
             navigator.share({ title: event.title, text, url }).catch(() => {});
-        } else {
-            window.open(`https://wa.me/?text=${encodeURIComponent(text + '\n\n' + url)}`, '_blank');
+            return;
         }
+        // Desktop has no share sheet. It used to get a WhatsApp popup with no
+        // warning, which a popup blocker eats silently — the button then did
+        // nothing at all, with nothing on screen to say so. Copy the link
+        // instead: it is what a desktop visitor was going to do anyway.
+        copyLink(btn, `${text}\n\n${url}`);
+    }
+
+    // Confirms in the button itself. A toast would need a whole toast system for
+    // one message, and the button is where the visitor is already looking.
+    // Child nodes are stashed and put back rather than round-tripping innerHTML —
+    // this label carries an element, and the file's rule is textContent only.
+    async function copyLink(btn, payload) {
+        const original = btn ? [...btn.childNodes] : null;
+        try {
+            await navigator.clipboard.writeText(payload);
+            if (btn) btn.replaceChildren('Copied');
+            announce('Link copied.');
+        } catch {
+            // Denied clipboard permission, or a non-secure origin.
+            window.prompt('Copy this link:', payload);
+        }
+        if (btn) setTimeout(() => btn.replaceChildren(...original), 2000);
     }
 
     function formatTimeShort(time) {
@@ -518,7 +542,7 @@ const jsonLd = todayEvents.length > 0 ? {
         shareArrow.textContent = '↗';
         shareBtn.appendChild(shareArrow);
         shareBtn.setAttribute('aria-label', `Share ${event.title}`);
-        shareBtn.addEventListener('click', () => shareEvent(event));
+        shareBtn.addEventListener('click', () => shareEvent(event, shareBtn));
         footer.appendChild(shareBtn);
 
         card.appendChild(footer);
@@ -546,6 +570,9 @@ const jsonLd = todayEvents.length > 0 ? {
             return;
         }
         errorState.classList.remove('visible');
+
+        const staleNote = document.getElementById('staleNote');
+        if (staleNote) staleNote.hidden = !isStale;
 
         let filteredEvents = events.filter(event => {
             if (event.endDate) {
@@ -810,13 +837,24 @@ const jsonLd = todayEvents.length > 0 ? {
     document.getElementById('clearFiltersBtn')?.addEventListener('click', clearAllFilters);
 
     // ── Deep Link ────────────────────────────────────────────────────────
+    // Drops ?event= when it resolves to nothing, so a stale link does not survive
+    // every later navigation. Uses replaceState: the visitor did not navigate,
+    // and a bad param should not cost them a Back press to escape.
+    function dropEventParam() {
+        const params = new URLSearchParams(location.search);
+        if (!params.has('event')) return;
+        params.delete('event');
+        const qs = params.toString();
+        history.replaceState(null, '', qs ? '?' + qs : location.pathname);
+    }
+
     function handleDeepLink() {
         const params = new URLSearchParams(location.search);
         const eventId = params.get('event');
         if (!eventId) return;
 
         const target = events.find(e => String(e.id) === String(eventId));
-        if (!target) return;
+        if (!target) { dropEventParam(); return; }
 
         currentDate = new Date(target.date + 'T00:00:00');
         updateDateDisplay();

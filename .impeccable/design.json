@@ -169,6 +169,21 @@
           "#F2EEE6"
         ]
       },
+      "danger": {
+        "role": "neutral",
+        "displayName": "Fault Red",
+        "canonical": "oklch(41.1% 0.109 23.2)",
+        "tonalRamp": [
+          "#2A0000",
+          "#4D0008",
+          "#702324",
+          "#964543",
+          "#BB6663",
+          "#E28985",
+          "#FFADA8",
+          "#FFD2CC"
+        ]
+      },
       "border-interactive": {
         "role": "neutral",
         "displayName": "Pressable Line",
@@ -665,6 +680,7 @@
     "donts": [
       "Don't use pure #FFFFFF as a page background or neutral grey (#666, #888) for any text. Every neutral in this system carries green or brown.",
       "Don't add a second accent colour. Hedgerow green is the only brand voice, and it appears as a fill roughly once per viewport.",
+      "Don't use Fault Red (--danger) for anything but form validation, and don't reach for a browser dialog instead. alert() and confirm() render as \"naastoday.com says\" - a different product's voice, in a box that lands nowhere near the field that caused it. The one sanctioned exception is confirm() on a genuinely destructive action, which is what the platform dialog is for.",
       "Don't use elevation to signal importance. Shadows respond to interaction; they never rank content.",
       "Don't use a category colour as a background fill anywhere except an active filter chip.",
       "Don't make an event title more than ~1.3x body size, or promote any single event with size, colour, or imagery. Every notice is equal.",
