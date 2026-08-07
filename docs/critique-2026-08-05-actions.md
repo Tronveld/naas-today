@@ -14,7 +14,7 @@ surrounding context to relocate it. Phase 1 and item 10 have since shipped (`17a
 `fc3d8ed`, `34101d9`), so the line numbers in the EventsGrid, empty-state and modal-dismiss
 items are already historical.
 
-**Progress: 20 of 78 done** — items 1–12, 39–43, 76–78. Phase 1 is now fully closed.
+**Progress: 36 of 79 done** — items 1–12, 24–43, 69, 76–79. Phase 1 is now fully closed.
 
 Phases 1–3 are complete, which was the stated "if you only do part of this list, do this part"
 threshold: both P1 findings `polish` refuses to touch are now closed. **Everything shipped so
@@ -34,9 +34,9 @@ work them in — each phase is a coherent chunk you can ship on its own.
 | ~~1. Empty day~~ **done** | 1–9 | 9 of 9 | `17a5423`, `fc3d8ed`, `292f294` | Item 8 was held back deliberately and decided on 2026-08-06 with the rebuilt screen in front of us. |
 | ~~2. Mobile chrome~~ **done** | 39–41 | 3 of 3 | shipped in `03c21d0` | Also closed item 43, which the sticky move would otherwise have re-created under a new selector. |
 | ~~3. Form data loss~~ **done** | 10–12, 42 | 4 of 4 | `34101d9`, `ee9d332` | Item 12's `confirm()` is flagged for item 17 to re-decide, not to inherit. |
-| 4. Accessibility | 13–16, 24–38, ~~43~~, 44–49, 53–55, 57–58, 60–61 | 1 of 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. Item 38 needs a decision, not just an edit. |
-| 5. Trust & consistency | 17–23, 50–52, 56, 59, 62–63 | 14 | `/impeccable polish` | Sweeps what's left; reads the critique snapshot as its own input. |
-| 6. Doc truth | 64–69 | 6 | manual | Fix DESIGN.md's overstated claims *after* the code moves, so it describes what shipped. |
+| 4. Accessibility | 13–16, ~~24–38~~, ~~43~~, 44–49, 53–55, 57–58, 60–61 | 15 of 32 | `/impeccable audit` | The bulk of the list, but mostly one-line CSS. **Item 38 is decided and shipped** — the token the rest of the CSS sits on is settled. |
+| 5. Trust & consistency | 17–23, 50–52, 56, 59, 62–63 | 14 | `/impeccable polish` | Sweeps what's left; reads the critique snapshot as its own input. Roughly half its work vanished with `45f3496` — see rule 1 below. |
+| 6. Doc truth | 64–~~69~~ | 1 of 6 | manual | Fix DESIGN.md's overstated claims *after* the code moves, so it describes what shipped. 69 closed early because 38 created the token it was about. |
 | 7. Open questions | 70–73 | 4 | `/impeccable shape` | Genuine product decisions. Don't let a refactor make them by accident. |
 
 Phases 1–3 are ~16 items and cover both P1 findings that `polish` would refuse to touch (it
@@ -45,10 +45,16 @@ only do part of this list, do those.
 
 ### Two rules that apply throughout
 
-1. **Modal fixes must be applied twice.** `src/pages/index.astro` and
-   `src/components/AppModals.astro` carry independent copies of the modal system and the
-   submit handler. They are currently line-for-line identical in behaviour — a fix to one
-   silently diverges `/` from `/terms`. Items affected are marked **[×2]**.
+1. ~~**Modal fixes must be applied twice.**~~ **Obsolete as of `45f3496`** — the two copies of
+   the modal system and the submit handler were merged into `src/scripts/modal-form.js`, which
+   both `index.astro` and `AppModals.astro` import. **Every **[×2]** marking below is now void:
+   fix it once.** The item text is left as written so the line numbers still relocate, but the
+   affected items have moved and shrunk:
+   - **17** — 4 `alert()` calls in `modal-form.js`, not 8 across two files.
+   - **18** — one `CONTACT_EMAIL` constant (`modal-form.js:14`), not eight string literals.
+   - **19** — the `toISOString()` bug is now `modal-form.js:93`.
+   - **60–63** — one focus trap (`modal-form.js:19-21`), one `openModal`. The section heading
+     "`AppModals.astro` — the second copy" no longer describes anything.
 2. **`npm test` is not triggered by anything here.** Nothing in this list touches
    `netlify/functions/`. If you end up changing a validator, CLAUDE.md's rule applies:
    failing test first, show it failing, then fix.
@@ -213,26 +219,74 @@ DESIGN.md claims "44px minimum touch targets throughout, for an audience that sk
 and PRODUCT.md makes usability for older residents a *confirmed constraint*. Only
 `.date-nav-btn`, `.modal-close`, `.skip-link` and the textarea currently meet it.
 
-- [ ] **24. [P1] `.desc-toggle-btn` — ~14px** (`:393-405`, `padding: 0`). Worst in the file, and
+- [x] **24. [P1] `.desc-toggle-btn` — ~14px** (`:393-405`, `padding: 0`). Worst in the file, and
   it is the **only** route to a clamped description.
-- [ ] **25. [P1] `.footer-links a` / `button` — ~15–21px** (`:720-730`, `padding: 0`).
-- [ ] **26. [P1] `a.event-location` — ~19px** (`:357-370`, no padding, 12px text).
-- [ ] **27. [P1] `.event-url` — ~19px** (`:410-416`).
-- [ ] **28. [P1] `input[type=checkbox]` / `[type=radio]` — native ~13px** (`:892-895`, `:590-593`).
-- [ ] **29. [P1] `.radio-label` — ~26px** (`:581-588`, no padding).
-- [ ] **30. [P1] `.checkbox-group label` — ~26px** (`:884-890`).
-- [ ] **31. [P1] `.filter-btn` — ~32px** (`:206-220`). Six of these are the page's primary
+- [x] **25. [P1] `.footer-links a` / `button` — ~15–21px** (`:720-730`, `padding: 0`).
+- [x] **26. [P1] `a.event-location` — ~19px** (`:357-370`, no padding, 12px text).
+- [x] **27. [P1] `.event-url` — ~19px** (`:410-416`).
+- [x] **28. [P1] `input[type=checkbox]` / `[type=radio]` — native ~13px** (`:892-895`, `:590-593`).
+  **Fixed on the label, not the box.** Every one of these is wrapped in its own `<label>`, so
+  the label *is* the target — sizing it to 44px (items 29–30) is what gives the 13px box a 44px
+  hit area. The boxes went to 20px as well, because they still have to be *seen*. Both needed
+  `min-height: 0` to escape the 44px that item 34 put on `.form-group input`.
+- [x] **29. [P1] `.radio-label` — ~26px** (`:581-588`, no padding).
+- [x] **30. [P1] `.checkbox-group label` — ~26px** (`:884-890`).
+- [x] **31. [P1] `.filter-btn` — ~32px** (`:206-220`). Six of these are the page's primary
   decision point.
-- [ ] **32. [P1] `.share-btn` — 32px** (`:454-466`). The only one where a sub-44 value is
+- [x] **32. [P1] `.share-btn` — 32px** (`:454-466`). The only one where a sub-44 value is
   written explicitly: `min-height: 32px`.
-- [ ] **33. [P1] `.upcoming-item` — ~37px** (`:495-504`).
-- [ ] **34. [P1] `.form-group input` / `select` — ~39px** (`:843-854`), 10 controls.
-- [ ] **35. [P1] `.submit-area-btn` — ~41px** (`:253-265`).
-- [ ] **36. [P1] `.form-actions button` — ~41px** (`:903-911`).
+- [x] **33. [P1] `.upcoming-item` — ~37px** (`:495-504`).
+- [x] **34. [P1] `.form-group input` / `select` — ~39px** (`:843-854`), 10 controls.
+- [x] **35. [P1] `.submit-area-btn` — ~41px** (`:253-265`).
+- [x] **36. [P1] `.form-actions button` — ~41px** (`:903-911`).
 
 **Done when:** every interactive class declares a `min-height`/`min-width` of 44px, or padding
-that reaches it. Note that raising `.filter-btn` will change the filter row's height — check
-item 40's chrome budget after.
+that reaches it.
+
+**All thirteen shipped 2026-08-07.** Plain `min-height: 44px` in every case — no negative-margin
+hit-area tricks. One was considered for the card's inline links and rejected: `.event-url` can
+sit directly under `.desc-toggle-btn` with 12px between them, and two 44px targets that close
+together *overlap*, so a tap meant for one lands on the other. Adjacent targets may touch; they
+may not overlap. The two toggles' own margins were trimmed to pay for part of the added height.
+
+**What it cost, measured at 375px** (Firefox headless, same page, stylesheet swapped):
+**+32 to +50px per card**, roughly +15%. Four cards fitted above the submit button before;
+about three and a half do now. That is a real trade against DESIGN.md's mobile-first scanning
+principle, made knowingly in favour of its 44px claim and PRODUCT.md's confirmed
+older-resident constraint. If it needs pulling back later, `.event-location` is the one to
+revisit first — it is a whole 44px line for a link most visitors never tap.
+
+**One regression, caught in the screenshot and fixed in the same commit.** `.desc-toggle-btn`
+and `.event-url` went from `block`/`inline-block` to `flex`, and flex discards the whitespace
+text node between the label and its trailing glyph — `facebook.com ↗` rendered as
+`facebook.com↗`. Both now carry `gap: 0.25rem`. `.event-url` also got `width: fit-content`,
+because `flex` had silently widened it from content-width to full-width and tapping the blank
+half of that line should not open an external site. Neither was visible in the diff.
+
+**Chrome budget re-measured 2026-08-07, before starting these** — the "check it after" note
+that used to sit here was answered up front because item 79 changed the sums.
+
+The original 247px figure predates both the sticky inversion (item 39) and the chip wrap
+(item 79). At 375px the space above the first card is now **~262px**, but the important change
+is that it is no longer one number:
+
+| Band | Height | Behaviour |
+|---|---|---|
+| Masthead | ~54px | scrolls away (item 39) |
+| Date section | ~110px | **pinned** — 44px nav buttons + 31px date + 24px padding + 1px rule |
+| Filter row | ~98px | scrolls away — 26px padding + two 32px chip rows + 8px row gap |
+
+**Only ~110px is permanent.** `.filter-btn` at 44px costs +12px per row, so item 31 is
+**+24px on the two-row mobile layout** and lands entirely in the band that scrolls away — it
+does not touch the pinned chrome the item-39 work settled. That makes item 31 cheaper than
+this list has been assuming, and it should not be held back for budget reasons.
+
+~~**One caveat to check on device:** the row count assumes chips without their count badges.~~
+**Checked and clear.** A populated day at 375px renders `Free (4)` / `For kids (2)` /
+`Markets (1)` and still wraps to **two** rows, so item 31 cost the predicted +24px, not +36px.
+
+`.date-nav-btn` is already 44px, so of items 24–36 only item 31 affects any of this. The other
+twelve are all below the fold or inside the modal.
 
 ### Focus and contrast
 
@@ -240,16 +294,49 @@ item 40's chrome budget after.
   `outline: none` and substitutes a ~1.05:1 background tint on a keyboard-operable control —
   a flat WCAG 2.4.7 failure.
 
-- [ ] **38. [P1] Raise `--border` to clear 3:1 on interactive controls.** `#e0e0d8` on
+- [x] **38. [P1] Raise `--border` to clear 3:1 on interactive controls.** `#e0e0d8` on
   `--bg-card` is **1.33:1** and on `--bg` is **1.28:1**, against WCAG 1.4.11's 3:1 for UI
   component boundaries. That border is the *sole* visual definition of `.filter-btn`,
   `.share-btn`, `.date-nav-btn` and `.btn-secondary` — in a system with almost no fills, the
   control outlines are effectively invisible even though their text passes at 7:1.
-  **Careful:** the same token also draws card and input edges, where 1.33:1 is a deliberate
-  hairline. Consider a separate `--border-interactive` rather than darkening globally, and add
-  it to DESIGN.md's frontmatter if you do.
   **Note:** all *text* contrast passes — every pair measured sits between 5.29:1 and 12.62:1,
   and DESIGN.md's claimed floor reproduces exactly. This is a non-text finding only.
+
+  **Decided 2026-08-07: a separate `--border-interactive: #8a8a7e`, not a global darkening.**
+  3.36:1 on `--bg`, 3.49:1 on `--bg-card`, 3.08:1 on `--bg-muted` — clears 1.4.11 on every
+  surface a bordered control can land on. Same hue as `#e0e0d8` walked down in lightness, so
+  it stays inside the warm-grey family rather than reading as a new colour.
+
+  **Six selectors take it:** `.date-nav-btn`, `.filter-btn`, `.share-btn`, `.empty-clear-btn`,
+  `.form-group input/textarea/select`, `.btn-secondary`. **Six keep `--border`** and stay at
+  1.33:1 deliberately: `.event-card`, `.ev-time`, `.ev-allday`, `.skeleton-card`,
+  `.loading-spinner` (dead — item 50), `.modal-content`, plus `terms.astro`'s `h1` rule. The
+  split is one question: does the line separate something, or can you press it? All hover and
+  focus states already went to `--accent`, so none needed touching.
+
+  **Knock-on decided at the same time:** `.filter-btn.is-empty:not(.active)` had
+  `border-color: var(--border-light)` (**1.13:1**) from item 8. A zero-count chip is still a
+  live control, so the override is gone — the chip now recedes by page-background fill alone,
+  which item 8 already listed as the primary signal. This is a small walk-back of item 8's
+  dimming, taken knowingly.
+
+  Text-only controls (`.desc-toggle-btn`, `.event-url`, `.modal-close`) have no boundary to
+  raise and pass on their glyph/text contrast; 1.4.11 does not apply.
+
+- [x] **38a. Doc truth for the above — this is item 69, closed here.** `border-interactive` is
+  in DESIGN.md's frontmatter and named **Pressable Line**; a new **Pressable Line Rule** in
+  Named Rules states the 3:1 requirement and the separator-vs-control test. Three component
+  descriptions that said "hairline" of a control (filter chips, form fields, date nav) and the
+  Secondary button entry now say Pressable Line, and a matching `Do` was added.
+  `.impeccable/design.json` carries the token (with `canonical` and `tonalRamp` computed the
+  same way as the existing ones — the generator reproduces `border`'s recorded
+  `oklch(90.4% 0.011 106.6)` exactly, so the new values are consistent, not invented), the rule,
+  the `Do`, and the five updated component CSS snippets.
+
+  **One wrinkle worth knowing:** weight and colour are now separate axes and they disagree.
+  DESIGN.md's Shape section says 1px = structure, 1.5px = interactive, but a form input is 1px
+  *and* takes the interactive colour. Both files now say so explicitly rather than leaving the
+  next reader to spot the contradiction.
 
 ### Mobile chrome budget
 
@@ -480,8 +567,10 @@ a fact is load-bearing. Fix these **after** the code moves, so the file describe
   first filter tap: active chip fill + submit button fill. Either restate the rule or restyle
   the active chip.
 - [ ] **68.** DESIGN.md calls the section "What's next"; the code renders "Coming Up". Pick one.
-- [ ] **69.** If item 38 introduces `--border-interactive`, add it to the frontmatter and
-  re-run the sidecar refresh so `.impeccable/design.json` stays in step.
+- [x] **69.** ~~If item 38 introduces `--border-interactive`, add it to the frontmatter and
+  re-run the sidecar refresh so `.impeccable/design.json` stays in step.~~ It did, and both are
+  updated. Done as part of item 38 rather than after it — see **38a**. The rest of 64–68 still
+  waits on the code, as this section says.
 
 ---
 
@@ -577,14 +666,10 @@ Phases 1–3 are done and **verified on a real device**, which is the "if you on
 this list" threshold the plan set. Phase 4 (accessibility, 31 items) is next and was
 deliberately not started on 2026-08-06.
 
-Two things to know before opening it:
-
-- **Item 38 needs a decision, not an edit** — whether to darken `--border` globally or add a
-  separate `--border-interactive`. It touches card and input hairlines where 1.33:1 is
-  deliberate, and it feeds item 69 (frontmatter + sidecar refresh). Decide it first; a lot of
-  the other CSS sits on top of it.
-- **Items 24–36 will change the filter row's height** (item 31 especially), which is the chrome
-  budget items 39–41 just settled. Re-check it after, not during.
+Two things to know before opening it: ~~item 38 needs a decision~~ and ~~re-check the chrome
+budget~~. **Both were cleared on 2026-08-07** — see the 2026-08-07 handoff below. Item 38 is
+shipped, and the budget was measured before rather than after, because item 79 had changed the
+sums underneath it.
 
 **The pattern that worked:** ship a phase, then walk every path it touched in a browser *and*
 on a phone before moving on. The 2026-08-06 device pass found four bugs — items 76, 77, 78 and
@@ -603,6 +688,33 @@ the "on today" copy — that no amount of reading the diff had caught.
   the category unnamed, because the lit chip is on screen and item 39 made the date bar sticky,
   so naming either in prose restates what the visitor can see. Reviewed and accepted
   2026-08-06. The acceptance line above is now historical — the code is correct as shipped.
+
+## Session handoff — 2026-08-07
+
+Bookkeeping and the two blockers that stood in front of phase 4. **No phase-4 CSS was written**
+beyond item 38 itself.
+
+- **The tracker had drifted.** Header said 20 of 78 with item 79 already ticked; now 23 of 79.
+- **The `[×2]` rule is dead** (`45f3496`, which landed after this file was last touched). One
+  modal system in `src/scripts/modal-form.js`. Items 17, 18, 19 and 60–63 all shrank — see the
+  amended rule 1 at the top. Nobody re-derived that; it is written down now so nobody has to.
+- **Item 38 decided and shipped**, with item 69's doc work folded in. `--border-interactive`.
+  Full reasoning under the item.
+- **Chrome budget re-measured** and moved from "check after items 24–36" to a table under the
+  touch-target section. The headline: only ~110px of the ~262px above the first card is
+  actually pinned, and item 31 lands in the part that scrolls away.
+
+**Not verified in a browser yet.** Item 38 changes the resting appearance of every control on
+the page — six chips, four date-nav buttons, share, ten form fields, the secondary buttons. The
+build is clean and the maths is checked, but the question "does the page now look heavier than
+it should" is not one arithmetic answers. Per the pattern below: walk it at 375px and on the
+phone before building phase 4 on top.
+
+Specifically worth a look:
+- the chip row, where six 1.5px borders at 3.36:1 sit side by side — the densest concentration
+  of the new colour anywhere on the page;
+- a zero-count chip beside a populated one, since its border no longer dims (see item 38);
+- the submit form, where ten inputs went from a hairline to a visible edge.
 
 ---
 

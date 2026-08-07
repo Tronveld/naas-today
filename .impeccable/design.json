@@ -169,6 +169,21 @@
           "#F2EEE6"
         ]
       },
+      "border-interactive": {
+        "role": "neutral",
+        "displayName": "Pressable Line",
+        "canonical": "oklch(63.0% 0.018 106.9)",
+        "tonalRamp": [
+          "#0C0B04",
+          "#26261C",
+          "#424238",
+          "#626257",
+          "#838378",
+          "#A6A69A",
+          "#CACABE",
+          "#EFEFE2"
+        ]
+      },
       "scrim": {
         "role": "neutral",
         "displayName": "Scrim Green",
@@ -515,7 +530,7 @@
       "refersTo": "filter-chip",
       "description": "Category filter row. Wraps rather than scrolling, so all six are visible without interaction. Each chip carries a live count; hover previews the category, active inverts to a full category fill, and a zero-count chip dims its container only.",
       "html": "<div class=\"ds-filter-group\"><button class=\"ds-filter-chip\"><span>Free (3)</span></button><button class=\"ds-filter-chip ds-filter-chip-active\"><span>Music (2)</span></button><button class=\"ds-filter-chip ds-filter-chip-empty\"><span>Sport</span></button></div>",
-      "css": ".ds-filter-group{display:flex;gap:.5rem;flex-wrap:wrap}.ds-filter-chip{display:flex;align-items:center;gap:.5rem;padding:.4375rem 1rem;border:1.5px solid var(--border,#e0e0d8);background:var(--bg-card,#fff);color:var(--ink-mid,#4d5b4d);font-family:inherit;font-size:.8125rem;font-weight:500;border-radius:6px;cursor:pointer;transition:all .15s;white-space:nowrap}.ds-filter-chip:hover{border-color:var(--cat-music,#5C3D1E);color:var(--cat-music,#5C3D1E);background:var(--cat-music-bg,#F0E8DE)}.ds-filter-chip:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}.ds-filter-chip-empty{background:var(--bg,#FAFBF6);border-color:var(--border-light,#f0ece4)}.ds-filter-chip-active{background:var(--cat-music,#5C3D1E);color:#fff;border-color:var(--cat-music,#5C3D1E)}"
+      "css": ".ds-filter-group{display:flex;gap:.5rem;flex-wrap:wrap}.ds-filter-chip{display:flex;align-items:center;gap:.5rem;padding:.4375rem 1rem;border:1.5px solid var(--border-interactive,#8a8a7e);background:var(--bg-card,#fff);color:var(--ink-mid,#4d5b4d);font-family:inherit;font-size:.8125rem;font-weight:500;border-radius:6px;cursor:pointer;transition:all .15s;white-space:nowrap}.ds-filter-chip:hover{border-color:var(--cat-music,#5C3D1E);color:var(--cat-music,#5C3D1E);background:var(--cat-music-bg,#F0E8DE)}.ds-filter-chip:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}.ds-filter-chip-empty{background:var(--bg,#FAFBF6)}.ds-filter-chip-active{background:var(--cat-music,#5C3D1E);color:#fff;border-color:var(--cat-music,#5C3D1E)}"
     },
     {
       "name": "Primary Button",
@@ -531,7 +546,7 @@
       "refersTo": "button-secondary",
       "description": "Transparent with a hairline. Border and text both take the accent on hover; never fills.",
       "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
-      "css": ".ds-btn-secondary{background:transparent;border:1px solid var(--border,#e0e0d8);color:var(--ink-mid,#4d5b4d);border-radius:8px;padding:.75rem 2rem;font-family:inherit;font-size:.9375rem;font-weight:500;cursor:pointer;transition:all .2s}.ds-btn-secondary:hover{border-color:var(--accent,#2d5a2d);color:var(--accent,#2d5a2d)}.ds-btn-secondary:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}"
+      "css": ".ds-btn-secondary{background:transparent;border:1px solid var(--border-interactive,#8a8a7e);color:var(--ink-mid,#4d5b4d);border-radius:8px;padding:.75rem 2rem;font-family:inherit;font-size:.9375rem;font-weight:500;cursor:pointer;transition:all .2s}.ds-btn-secondary:hover{border-color:var(--accent,#2d5a2d);color:var(--accent,#2d5a2d)}.ds-btn-secondary:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}"
     },
     {
       "name": "Date Nav Button",
@@ -539,23 +554,23 @@
       "refersTo": "date-nav-button",
       "description": "44px minimum target. The Today variant is the only tinted control on the row.",
       "html": "<nav class=\"ds-date-nav\"><button class=\"ds-date-btn\">← Previous</button><button class=\"ds-date-btn ds-date-btn-today\">Today</button><button class=\"ds-date-btn\">Pick a date</button><button class=\"ds-date-btn\">Next →</button></nav>",
-      "css": ".ds-date-nav{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.ds-date-btn{background:transparent;border:1.5px solid var(--border,#e0e0d8);color:var(--ink-mid,#4d5b4d);cursor:pointer;transition:all .15s;min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;padding:.375rem .875rem;border-radius:6px;font-family:inherit;font-size:.8125rem;font-weight:500}.ds-date-btn:hover{border-color:var(--accent,#2d5a2d);color:var(--accent,#2d5a2d)}.ds-date-btn:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}.ds-date-btn-today{background:var(--accent-light,#E8F0E4);border-color:var(--accent,#2d5a2d);color:var(--accent,#2d5a2d);font-weight:600}"
+      "css": ".ds-date-nav{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.ds-date-btn{background:transparent;border:1.5px solid var(--border-interactive,#8a8a7e);color:var(--ink-mid,#4d5b4d);cursor:pointer;transition:all .15s;min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;padding:.375rem .875rem;border-radius:6px;font-family:inherit;font-size:.8125rem;font-weight:500}.ds-date-btn:hover{border-color:var(--accent,#2d5a2d);color:var(--accent,#2d5a2d)}.ds-date-btn:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}.ds-date-btn-today{background:var(--accent-light,#E8F0E4);border-color:var(--accent,#2d5a2d);color:var(--accent,#2d5a2d);font-weight:600}"
     },
     {
       "name": "Text Input",
       "kind": "input",
       "refersTo": "input",
-      "description": "Hairline field with a visible label above. Focus shifts the border to accent and adds a 3px meadow halo.",
+      "description": "Pressable Line field with a visible label above. 1px like a card, but the darker control colour, because it is a control. Focus shifts the border to accent and adds a 3px meadow halo.",
       "html": "<div class=\"ds-field\"><label class=\"ds-label\" for=\"ds-i1\">Event title</label><input class=\"ds-input\" id=\"ds-i1\" type=\"text\" placeholder=\"Trad Session\"></div>",
-      "css": ".ds-field{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}.ds-label{display:block;margin-bottom:.5rem;color:var(--ink,#1a3a1a);font-weight:500;font-size:.875rem}.ds-input{width:100%;padding:10px 12px;border:1px solid var(--border,#e0e0d8);border-radius:8px;font-size:.9375rem;font-family:inherit;background:var(--bg-card,#fff);color:var(--ink,#1a3a1a);transition:border-color .2s,box-shadow .2s}.ds-input:focus{outline:none;border-color:var(--accent,#2d5a2d);box-shadow:0 0 0 3px var(--accent-light,#E8F0E4)}"
+      "css": ".ds-field{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}.ds-label{display:block;margin-bottom:.5rem;color:var(--ink,#1a3a1a);font-weight:500;font-size:.875rem}.ds-input{width:100%;padding:10px 12px;border:1px solid var(--border-interactive,#8a8a7e);border-radius:8px;font-size:.9375rem;font-family:inherit;background:var(--bg-card,#fff);color:var(--ink,#1a3a1a);transition:border-color .2s,box-shadow .2s}.ds-input:focus{outline:none;border-color:var(--accent,#2d5a2d);box-shadow:0 0 0 3px var(--accent-light,#E8F0E4)}"
     },
     {
       "name": "Share Button",
       "kind": "button",
       "refersTo": "share-btn",
-      "description": "Compact card-footer action. 1.5px border marks it as pressable in a system with almost no fills.",
+      "description": "Compact card-footer action. A 1.5px Pressable Line marks it as pressable in a system with almost no fills.",
       "html": "<button class=\"ds-share-btn\">Share <span aria-hidden=\"true\">↗</span></button>",
-      "css": ".ds-share-btn{background:none;border:1.5px solid var(--border,#e0e0d8);color:var(--ink-mid,#4d5b4d);font-family:inherit;font-size:.75rem;font-weight:500;cursor:pointer;padding:.25rem .625rem;min-height:32px;border-radius:6px;transition:all .15s;white-space:nowrap}.ds-share-btn:hover{border-color:var(--accent,#2d5a2d);color:var(--accent,#2d5a2d)}.ds-share-btn:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}"
+      "css": ".ds-share-btn{background:none;border:1.5px solid var(--border-interactive,#8a8a7e);color:var(--ink-mid,#4d5b4d);font-family:inherit;font-size:.75rem;font-weight:500;cursor:pointer;padding:.25rem .625rem;min-height:32px;border-radius:6px;transition:all .15s;white-space:nowrap}.ds-share-btn:hover{border-color:var(--accent,#2d5a2d);color:var(--accent,#2d5a2d)}.ds-share-btn:focus-visible{outline:2px solid var(--accent,#2d5a2d);outline-offset:2px}"
     },
     {
       "name": "Modal",
@@ -599,6 +614,11 @@
         "section": "colors"
       },
       {
+        "name": "The Pressable Line Rule",
+        "body": "A border that is a control's only definition owes 3:1 (WCAG 1.4.11), the same as any other non-text affordance. This system is flat and nearly fill-free, so that describes most of its controls - which is exactly why Hairline at 1.33:1 was not enough on its own. Hence two border colours, chosen on one question: does this line separate something, or can you press it? Separators keep Hairline; controls take Pressable Line (--border-interactive, 3.36:1 on the page, 3.49:1 on card white, 3.08:1 on linen). This is a colour axis and cuts across the weight axis in Shape - a form input is 1px like a card but takes the pressable colour, because it is a control. A zero-count filter chip takes it too: it recedes by dropping to the page fill, and a dimmed boundary on a live control was buying the recede with the thing the rule protects.",
+        "section": "colors"
+      },
+      {
         "name": "The Serif-Is-Structure Rule",
         "body": "Georgia marks a boundary - the masthead, a section heading, a modal title. It never appears inside a card. If serif starts showing up in event content, the hierarchy has collapsed.",
         "section": "typography"
@@ -632,6 +652,7 @@
     "scope": "This system describes the public site (src/). It does not describe public/admin.html, which is an internal operator tool running its own visual language deliberately (Inter and Libre Baskerville, an orange accent, its own radius steps). The owner has confirmed this divergence is intentional and does not want it reconciled. The design-system-* rules and overused-font are switched off for that file alone; contrast, clipping and broken-image checks still apply there.",
     "dos": [
       "Do define every surface with the 1px hairline (--border). It is the system's structural element, and removing it in favour of shadow or spacing breaks the noticeboard.",
+      "Do draw every pressable edge with Pressable Line (--border-interactive) instead, and measure any replacement at 3:1 against white, the page, and linen. Hairline is a whisper and a control cannot afford one.",
       "Do keep the events list one column wide at every breakpoint.",
       "Do tint shadows with rgba(26,42,26,...), never pure black - the modal overlay, which falls on the scrim rather than the page, is the sole documented exception.",
       "Do reserve DM Mono for times, dates, and tag stamps.",

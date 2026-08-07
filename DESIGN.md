@@ -13,6 +13,7 @@ colors:
   warm: "#775F43"
   border: "#e0e0d8"
   border-light: "#f0ece4"
+  border-interactive: "#8a8a7e"
   scrim: "rgba(26,58,26,0.45)"
   overlay-shadow: "rgba(0,0,0,0.12)"
   overlay-shadow-soft: "rgba(0,0,0,0.08)"
@@ -241,8 +242,9 @@ Six flags, all pulled to the same weathered register. Each is a text colour pair
 - **Deep Forest Ink** (`{colors.ink}`): All primary text and headings. A near-black carrying the same green as the brand, so nothing on the page is neutral grey.
 - **Sage Ink** (`{colors.ink-mid}`): Secondary text — locations, footer, button labels at rest, form hints.
 - **Bark Ink** (`{colors.ink-light}`): Tertiary text — event descriptions, character counters, empty-state copy. Warm rather than cool, which is why descriptions feel like prose and not metadata.
-- **Hairline** (`{colors.border}`): The structural line. Every card, input, and control edge.
+- **Hairline** (`{colors.border}`): The structural line. Cards, the time pill, skeletons, modal edges — every surface that is only a surface.
 - **Whisper Rule** (`{colors.border-light}`): Section dividers and the header underline, where a full hairline would be too assertive.
+- **Pressable Line** (`{colors.border-interactive}`): The same warm grey walked down until it clears 3:1. Every edge that *is* a control — filter chips, date-nav buttons, share, the empty state's clear button, form fields, secondary buttons. See the Pressable Line Rule.
 
 ### Named Rules
 
@@ -253,6 +255,8 @@ Six flags, all pulled to the same weathered register. Each is a text colour pair
 **The Warm Text Rule.** Text never uses a neutral grey. Every ink carries either the page's green or the palette's brown. `#666` and its relatives are banned outright; they are the single fastest way to make this page look like a template.
 
 **The Contrast Floor Rule.** Every text colour clears WCAG AA (4.5:1) against every background it is placed on. The audience skews older and this is a product constraint, not a preference. The palette currently has **no violations**: the tightest pair is Weathered Leather on Linen (the time pill, 13px) at **5.29:1**, and every other text pair sits between 5.96:1 and 12.6:1. Weathered Leather was deepened from `#8B7355` (3.95:1, failing) to reach this floor. When adding or adjusting any text colour, measure it against every surface it can land on — for this palette that means white, the page, and linen.
+
+**The Pressable Line Rule.** A border that is a control's *only* definition owes 3:1 (WCAG 1.4.11), the same as any other non-text affordance. This system is flat and nearly fill-free, so that describes most of its controls — which is exactly why Hairline at 1.33:1 was not enough on its own. Hence two border colours, chosen on one question: **does this line separate something, or can you press it?** Separators keep Hairline; controls take Pressable Line (`{colors.border-interactive}`, **3.36:1** on the page, **3.49:1** on card white, **3.08:1** on linen). Note this is a *colour* axis and cuts across the *weight* axis in Shape — a form input is 1px like a card but takes the pressable colour, because it is a control. A zero-count filter chip takes it too: it recedes by dropping to the page fill, and a dimmed boundary on a live control was buying the recede with the thing the rule protects.
 
 ## Typography
 
@@ -327,6 +331,8 @@ Corners are **gently curved, never soft**, and the radius encodes scale: the big
 
 Borders are the primary form-giver, and their weight carries meaning: **1px for structure** (cards, inputs, dividers) and **1.5px for interactive controls** (filter chips, date-nav buttons, share buttons, secondary buttons). The heavier line is how a control announces that it can be pressed, in a system with almost no fills.
 
+Weight and colour are separate axes and do not always agree. Inputs and secondary buttons are 1px like a card but take Pressable Line, because the Pressable Line Rule asks whether a thing can be pressed and this one asks how structural it is. When they disagree, colour wins on accessibility grounds and weight wins on look.
+
 **No icons.** The system uses no icon library. Directional and semantic marks are text glyphs (`←` `→` `↗` `↓` `✕`) or a single emoji pin (`📍`) for locations, always `aria-hidden` with a real text label beside it. Every arrow in a link ships as a character, not an SVG.
 
 ### Named Rules
@@ -338,12 +344,12 @@ Borders are the primary form-giver, and their weight carries meaning: **1px for 
 ### Buttons
 - **Shape:** Gently curved (8px), full-width up to a 320px cap for the primary submit action.
 - **Primary:** Solid hedgerow green with white text (12px 32px), semibold at 0.9375rem. Hovers to **deep forest ink**, not to a lighter or darker green — the darkening-toward-black move is deliberate and gives the press a sense of weight.
-- **Secondary:** Transparent with a 1px hairline and sage-ink text; on hover the border and text both take the accent. No fill ever appears.
+- **Secondary:** Transparent with a 1px Pressable Line and sage-ink text; on hover the border and text both take the accent. No fill ever appears.
 - **Hover / Focus:** All transitions are 0.15–0.2s. Focus-visible draws a 2px accent outline at 2px offset, on every focusable element without exception.
 - **Character:** *Plain and sturdy.* Nothing precious — honest borders, generous targets, obvious affordances. Built to be used confidently by a seventy-year-old on a bus.
 
 ### Chips
-- **Filter chips:** White fill, 1.5px hairline, sage-ink label at 0.8125rem, 6px radius. Each carries a `data-cat` attribute that binds it to its own category colour pair.
+- **Filter chips:** White fill, 1.5px Pressable Line, sage-ink label at 0.8125rem, 6px radius. Each carries a `data-cat` attribute that binds it to its own category colour pair.
 - **State:** On hover, the chip previews its category — border, text, and background all shift to that category's colours. When active, it inverts fully: category colour as the fill, white text. **A filter chip is the only element permitted to use a category colour as a background fill.**
 - **Overflow:** The chip row **wraps** rather than scrolling — one line on desktop, two on a phone. Every filter must be visible without interaction; a horizontally-scrolling row clipped at the viewport edge hid half the categories from anyone who did not think to swipe. Height is the cheaper thing to spend.
 
@@ -357,13 +363,13 @@ Borders are the primary form-giver, and their weight carries meaning: **1px for 
 - **Long descriptions:** Clamped to three lines past 220 characters, with a "Read more ↓" toggle in accent text.
 
 ### Inputs / Fields
-- **Style:** White fill, 1px hairline, 8px radius, 10px 12px padding at 0.9375rem — comfortably above the 16px iOS zoom threshold in practice.
+- **Style:** White fill, 1px Pressable Line, 8px radius, 10px 12px padding at 0.9375rem — comfortably above the 16px iOS zoom threshold in practice.
 - **Focus:** Border shifts to accent and a 3px meadow-tint halo appears (`box-shadow: 0 0 0 3px`). Soft, not a glow.
 - **Selects:** Native chrome removed and replaced with an inline SVG chevron as a data-URI, right-aligned at 0.75rem. No dependency, no icon font.
 - **Labels:** Always visible above the field, sage-ink, 0.875rem, medium weight. Placeholder text is never a substitute for a label.
 
 ### Navigation
-- **Date nav:** Four text buttons — Previous, Today, Pick a date, Next — each a minimum 44×44px with 1.5px hairline borders and 6px radius. Prev and Today are hidden when not applicable rather than disabled. Today, when shown, is the sole tinted control on the row (meadow tint, accent border and text).
+- **Date nav:** Four text buttons — Previous, Today, Pick a date, Next — each a minimum 44×44px with 1.5px Pressable Line borders and 6px radius. Prev and Today are hidden when not applicable rather than disabled. Today, when shown, is the sole tinted control on the row (meadow tint, accent border and text).
 - **Footer:** Plain text buttons and links separated by middot characters, sage-ink, hovering to accent. No underlines at rest.
 - **Skip link:** Ink-filled, parked at `top: -100%`, drops to `top: 0` on focus.
 - **Mobile:** Below 480px the date nav spreads to `justify-content: space-between` across the full width, putting Previous and Next at opposite thumb reaches.
@@ -391,6 +397,7 @@ The design detector reflects that: the `design-system-*` rules and `overused-fon
 
 ### Do:
 - **Do** define every surface with the 1px hairline (`{colors.border}`). It is the system's structural element, and removing it in favour of shadow or spacing breaks the noticeboard.
+- **Do** draw every pressable edge with Pressable Line (`{colors.border-interactive}`) instead, and measure any replacement at 3:1 against white, the page, and linen. Hairline is a whisper and a control cannot afford one.
 - **Do** keep the events list one column wide at every breakpoint.
 - **Do** tint shadows with `rgba(26,42,26,…)`, never pure black — the modal overlay, which falls on the scrim rather than the page, is the sole documented exception.
 - **Do** reserve DM Mono for times, dates, and tag stamps.
