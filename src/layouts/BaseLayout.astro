@@ -1151,7 +1151,21 @@ const {
             margin-top: 0.25rem;
             color: var(--danger);
             font-size: 0.8125rem;
-            font-weight: 500;
+            font-weight: 600;
+        }
+
+        /* The message was the only signal, and on a phone it did not read as one:
+           --danger is #7B2D2D, deliberately the same value as --cat-theatre so the
+           palette gains a job rather than a hue. That is right for a tag on a
+           tinted chip and too quiet for 13px of text on white — reported on device
+           2026-08-08 as "it's not in red".
+           Marking the field itself is the fix that does not need a new colour, and
+           it is owed anyway: WCAG 1.4.1 says colour cannot be the only carrier, and
+           aria-invalid was already being set with nothing rendering it. */
+        .form-group input[aria-invalid="true"],
+        .form-group textarea[aria-invalid="true"] {
+            border-color: var(--danger);
+            box-shadow: 0 0 0 3px var(--cat-theatre-bg);
         }
 
         .form-error {

@@ -975,9 +975,39 @@ check came back, and neither was visible in a screenshot.
   - The focus trap reads focusables at Tab time and filters on `offsetParent`, which is exactly
     the hidden-field case the three time modes create. Items 60–61 ✓ (`modal-form.js:26-33`)
 
-**Still not done: everything in the phase 5 backend list above.** The real submission, the
-offline error panel, both field errors, desktop share, and the null-time row. None of those were
-walked this session and none can be checked from a screenshot.
+### Phase 5 walked on device, same day
+
+The backend list above is now done. The real submission, the offline panel, desktop share and
+the null-time row all behaved as written. **The two field-error paths did not**, and between them
+they hid three separate defects — all in the half of phase 5 that only a device could reach.
+
+- **The native date picker ate the error message.** `setFieldError` ended with `input.focus()`,
+  and both guarded fields are `<input type="date">`. Focusing one on iOS opens the date wheel,
+  which covers the message that was just written — so the reported experience was "it reopens a
+  date dialogue, and if I close it and scroll up the text is there". **Now scrolls instead of
+  focusing.** Nothing is lost: both slots are `role="alert"`, so the message announces itself
+  without focus moving. This is the second time a `focus()` written for keyboard users has
+  misfired on touch; check the platform before moving focus to an input.
+- **"Pick a date to repeat until." was unreachable code.** Ticking *Recurring* set
+  `recurrenceEndDate.required = true`, so on a blank field the browser blocked submit and showed
+  its own **"Fill out this field"** bubble — the submit handler never ran, and the message written
+  specifically to replace that kind of bubble could never appear. It is now `aria-required`,
+  which keeps the semantics for assistive tech and leaves the decision with the JS that has the
+  better message. **`eventTimeStart` keeps native `required` deliberately** — nothing custom
+  competes for it there, and native validation is fine where it is the only validation.
+- **The error text did not read as an error.** `--danger` is `#7B2D2D`, deliberately the same
+  value as `--cat-theatre` so the palette gains a job rather than a hue. That is right for a tag
+  on a tinted chip and too quiet for 13px on white; the on-device report was simply "it's not in
+  red". Rather than spend a new colour, the **field itself is now marked** —
+  `input[aria-invalid="true"]` gets a `--danger` border and a `--cat-theatre-bg` ring. That was
+  owed regardless: `aria-invalid` was already being set with nothing rendering it, and WCAG 1.4.1
+  says colour cannot be the only carrier. **Whether `--danger` should become a brighter dedicated
+  error red is still open** — it is a palette decision, and it would break the one-value-two-jobs
+  reasoning that put `#7B2D2D` there.
+
+**Not a defect:** the success panel also carries "Anything wrong with it? Email
+hello@naastoday.com." That is in the markup (`SubmitEventModal.astro:163`) and was missing from
+the test script, not from the page.
 
 ---
 

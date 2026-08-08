@@ -122,7 +122,15 @@ function setFieldError(inputId, message) {
   slot.textContent = message || '';
   slot.hidden = !message;
   input.setAttribute('aria-invalid', message ? 'true' : 'false');
-  if (message) input.focus();
+  // Scroll, don't focus. Both guarded fields are <input type="date">, and
+  // focusing one on iOS opens the native date wheel — which covers the message
+  // that was just written, so you dismiss a picker you did not ask for and are
+  // then left to scroll up and find the complaint yourself. Reported on device
+  // 2026-08-08 for both the end-date and repeat-until cases.
+  //
+  // Nothing is lost by not focusing: each slot is role="alert", so the message
+  // is announced when it appears without focus having to move.
+  if (message) input.scrollIntoView({ block: 'center' });
 }
 
 function clearErrors(form) {
@@ -289,7 +297,14 @@ export function initSubmitForm({ defaultDate }) {
   // ── Recurring ──────────────────────────────────────────────────────────────
   document.getElementById('isRecurring').addEventListener('change', function () {
     document.getElementById('recurringSection').style.display = this.checked ? '' : 'none';
-    document.getElementById('recurrenceEndDate').required = this.checked;
+    // aria-required, not required. The native attribute made the browser block
+    // submit and show its own "Fill out this field" bubble, which meant the
+    // submit handler never ran and "Pick a date to repeat until." — written to
+    // replace exactly that kind of message — was unreachable code. The JS check
+    // below already covers both blank and before-the-start-date, and says which.
+    // aria-required keeps the semantics for assistive tech without handing the
+    // decision back to the browser.
+    document.getElementById('recurrenceEndDate').setAttribute('aria-required', this.checked ? 'true' : 'false');
   });
 
   document.getElementById('recurrenceFrequency').addEventListener('change', updateRecurrenceHint);
@@ -316,7 +331,7 @@ export function initSubmitForm({ defaultDate }) {
       document.getElementById('timeRangeSep').style.display = 'none';
       document.getElementById('eventTimeStart').required    = true;
       document.getElementById('recurringSection').style.display = 'none';
-      document.getElementById('recurrenceEndDate').required = false;
+      document.getElementById('recurrenceEndDate').setAttribute('aria-required', 'false');
       document.getElementById('recurrenceHint').textContent = '';
     }, 0);
   });
