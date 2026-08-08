@@ -14,19 +14,21 @@ surrounding context to relocate it. Phase 1 and item 10 have since shipped (`17a
 `fc3d8ed`, `34101d9`), so the line numbers in the EventsGrid, empty-state and modal-dismiss
 items are already historical.
 
-**Progress: 79 of 79 done. Phase 4 was device-walked on 2026-08-08 and two of its
-items came back — see the handoff at the end.**
-
-All seven phases are closed. **Nothing here is outstanding — but "closed" is not "verified",
-and the two are far apart for the later phases. Read the verification status below before
-treating this list as finished.**
+**Progress: 79 of 79 done, and as of 2026-08-08 every phase has been walked on a real
+device.** Five defects surfaced in those two passes; all are fixed and re-walked.
 
 | Phase | Verified how |
 |---|---|
 | 1–3 | Firefox at 375px **and on an iPhone** (2026-08-06). Found four bugs reading the diff had not. |
-| 4 | **iPhone, 2026-08-08.** Item 8's fill dim was invisible in the hand; the trim it prompted is in PRODUCT.md's known gaps. Keyboard items verified statically instead — see below. |
-| 5 | **Headless Firefox screenshots only.** No device, no keyboard, no real backend. |
+| 4 | **iPhone, 2026-08-08.** Item 8's fill dim was invisible in the hand, and the chrome cost — which no item had raised — came out of the same pass. Keyboard items verified statically; see the caveat below. |
+| 5 | **iPhone + a real submission against the live backend, 2026-08-08**, deleted afterwards from `/admin.html`. The two field-error paths hid three defects between them. |
 | 6–7 | Documents and decisions; nothing to verify beyond reading them. |
+
+**One honest gap remains: nobody has pressed Tab.** The focus and keyboard items (14, 15, 37,
+60–61) were verified by reading the DOM — skip link targets `<main>` with DateNav inside it,
+upcoming rows are real `<button>`s, `outline: none` survives only where a `box-shadow` ring
+replaces it, and the focus trap re-reads focusables at Tab time filtering on `offsetParent`.
+Statically they all hold. That is weaker than a keyboard and is recorded as such.
 
 The 2026-08-06 pass is the reason to take that gap seriously: walking phases 1–3 on a real
 phone found four defects that careful reasoning had missed entirely. Phases 4 and 5 have had no
