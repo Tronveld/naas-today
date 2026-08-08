@@ -14,7 +14,8 @@ surrounding context to relocate it. Phase 1 and item 10 have since shipped (`17a
 `fc3d8ed`, `34101d9`), so the line numbers in the EventsGrid, empty-state and modal-dismiss
 items are already historical.
 
-**Progress: 79 of 79 done.**
+**Progress: 79 of 79 done. Phase 4 was device-walked on 2026-08-08 and two of its
+items came back — see the handoff at the end.**
 
 All seven phases are closed. **Nothing here is outstanding — but "closed" is not "verified",
 and the two are far apart for the later phases. Read the verification status below before
@@ -23,7 +24,8 @@ treating this list as finished.**
 | Phase | Verified how |
 |---|---|
 | 1–3 | Firefox at 375px **and on an iPhone** (2026-08-06). Found four bugs reading the diff had not. |
-| 4–5 | **Headless Firefox screenshots only.** No device, no keyboard, no real backend. |
+| 4 | **iPhone, 2026-08-08.** Item 8's fill dim was invisible in the hand; the trim it prompted is in PRODUCT.md's known gaps. Keyboard items verified statically instead — see below. |
+| 5 | **Headless Firefox screenshots only.** No device, no keyboard, no real backend. |
 | 6–7 | Documents and decisions; nothing to verify beyond reading them. |
 
 The 2026-08-06 pass is the reason to take that gap seriously: walking phases 1–3 on a real
@@ -931,6 +933,51 @@ the one that matters:
 - **A submission with no time** (item 72) — pick "Not sure yet", submit, and confirm the row
   arrives with a null time and the card shows `TBC`. This is the one change that reaches the
   database schema's edges, and the validator no longer stops a null time from any source.
+
+---
+
+## Session handoff — 2026-08-08
+
+**Phase 4 walked on an iPhone.** The pass held again: two of the five things it was asked to
+check came back, and neither was visible in a screenshot.
+
+- **Item 8's zero-count dim did not survive contact.** The fill was the only signal —
+  `--bg` `#FAFBF6` against `--bg-card` `#FFFFFF`, a 1.5% luminance step — and at arm's length
+  the chips looked identical. The border could not help: item 38 deliberately holds every chip's
+  boundary at 3:1 because a zero-count chip is still a live control, and that is not being
+  undone. **Fixed by showing the number**: every chip now reads `Music (0)`, not a bare label.
+  That is *less* code than the conditional it replaced, and it also closes the ambiguity item 8
+  originally raised — a bare label read the same as "counts have not loaded yet".
+  **Note the pre-render still ships bare labels**; the counts arrive with JS. Pre-existing, not
+  a regression, but it is the one moment the old ambiguity still exists.
+- **The chrome, which no item had raised.** ~277px above the first card at 375×812 — masthead 54,
+  date 101, filters 122. About 40% of an iPhone's real estate after Safari's bars. Trimmed by
+  ~31px (padding, and the masthead down to 1.25rem below 480px); the rest is three settled
+  decisions and a layout question. **Recorded in PRODUCT.md under "Known gaps, decided but not
+  closed"** rather than solved here, on the item-70 precedent.
+
+**Two of my own errors in the 2026-08-07 handoff, corrected:**
+
+- **"Four cards fitted above the submit button, now three and a half" describes nothing.**
+  `EventsGrid.astro:76` renders `.submit-area` only when the day *has* events, after the whole
+  grid — so on a populated day it follows the list however long it is. The measurement came from
+  the empty-day "Coming up" list, where the CTA does follow a bounded set. The owner caught it.
+  Card height was walked and is fine.
+- **Tab order and the upcoming-row keyboard checks were put on a phone list.** An iPhone has no
+  Tab key. Those four were verified statically instead, which is weaker than a real keyboard but
+  honest about being so:
+  - Skip link targets `#main-content`, and DateNav is inside `<main>` (`index.astro:93`), so it
+    lands above the date controls. Item 14 ✓
+  - Upcoming rows are real `<button type="button">` inside the `<li>` (`index.astro:701`), so
+    Enter and Space come from the platform. Item 15 ✓
+  - `outline: none` survives only on form inputs, paired with a 3px `box-shadow` ring — an
+    indicator, not a removal. Item 37 ✓
+  - The focus trap reads focusables at Tab time and filters on `offsetParent`, which is exactly
+    the hidden-field case the three time modes create. Items 60–61 ✓ (`modal-form.js:26-33`)
+
+**Still not done: everything in the phase 5 backend list above.** The real submission, the
+offline error panel, both field errors, desktop share, and the null-time row. None of those were
+walked this session and none can be checked from a screenshot.
 
 ---
 

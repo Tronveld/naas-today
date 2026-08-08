@@ -271,7 +271,7 @@ The qualifier is load-bearing. **An active filter chip is exempt**, because its 
 **Character:** Georgia supplies the small-town-newspaper authority that a community resource needs to be believed; the system sans keeps the body text native and instantly familiar on whatever device it lands on. DM Mono does one job — it makes times read as data rather than prose, so the eye can find "8:00 PM" without reading the sentence around it. The pairing is deliberately unfashionable: three faces most people already have opinions about, used correctly.
 
 ### Hierarchy
-- **Display** (`{typography.display}`): The masthead only. One per page. Tight negative tracking keeps "Naas Today" feeling set rather than typed.
+- **Display** (`{typography.display}`): The masthead only. One per page. Tight negative tracking keeps "Naas Today" feeling set rather than typed. Drops to 1.25rem below 480px, where the space above the first event card is worth more than the wordmark's scale — still ahead of the 1.125rem date beneath it, so the masthead keeps outranking the state it sits over.
 - **Document Title** (`{typography.document-title}`): The `<h1>` on a standalone document page such as Terms, underscored by a hairline rule. The only place an `<h1>` appears that isn't the masthead, and the only place the serif stack carries a `'Times New Roman'` fallback.
 - **Headline** (`{typography.headline}`): Georgia at its largest below the masthead — empty-state and error-state headings, where the page has nothing else to say.
 - **Subhead** (`{typography.subhead}`): Modal titles. Serif marks the overlay as a distinct place.

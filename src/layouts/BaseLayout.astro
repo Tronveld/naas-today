@@ -232,10 +232,9 @@ const {
             white-space: nowrap;
         }
 
-        /* A day with no music events dims the Music chip rather than dropping its
-           count silently or disabling it. A bare label alone is ambiguous with
-           "counts have not loaded yet"; disabling would strand anyone whose active
-           filter just fell to zero, with no way to clear it.
+        /* A day with no music events shows "Music (0)" and drops the chip's fill to
+           page background, rather than disabling it — disabling would strand anyone
+           whose active filter just fell to zero, with no way to clear it.
 
            Only the fill recedes — the label keeps --ink-mid at 7.2:1, so the chip
            stays readable and tappable. Declared before the :hover and .active
@@ -243,8 +242,13 @@ const {
 
            The border used to recede too (--border-light, 1.13:1). It no longer does:
            a zero-count chip is still a live control, so its boundary owes the same
-           3:1 as every other chip's. Dropping to page-background fill is enough of a
-           signal on its own. */
+           3:1 as every other chip's.
+
+           The fill was the only signal until 2026-08-08, when a device pass found
+           #FAFBF6 on #FFFFFF indistinguishable at arm's length — a 1.5% luminance
+           step carrying the whole message. The literal "(0)" now does the work; the
+           fill is the secondary cue. It also settles the ambiguity item 8 raised,
+           where a bare label read the same as "counts have not loaded yet". */
         .filter-btn.is-empty:not(.active) {
             background: var(--bg);
         }
@@ -1277,6 +1281,28 @@ const {
                 width: 100%;
                 justify-content: space-between;
             }
+
+            /* Above-the-fold budget. A device pass on 2026-08-08 measured masthead +
+               date + filters at ~277px of a 375×812 viewport — ~40% of what an iPhone
+               actually shows once Safari's own chrome is subtracted, leaving room for
+               one card and the top of a second.
+
+               What is trimmed here is padding and the masthead's own size. What is
+               deliberately NOT trimmed: the 44px control heights (0130f70 — they are
+               the touch-target floor), the two-row filter wrap (684b36e — a scrolling
+               row hid Sport, Markets and Theatre), and the date label's words, which
+               stay "Today – Saturday, 8 August" in full. Those three are the whole
+               remaining cost, and none of them is padding. See PRODUCT.md's known
+               gaps: the real fix is a layout question, not a spacing one. */
+            header { padding: 0.5rem 0; }
+            .masthead { padding: 0; }
+            /* Display drops to 1.25rem here, mirroring the date's own mobile drop.
+               Still above the 1.125rem date label, so the masthead keeps outranking
+               the state below it. */
+            h1 { font-size: 1.25rem; }
+            .date-section { padding: 0.5rem 0; }
+            .date-header { gap: 0.375rem; }
+            .controls { padding: 0.625rem 0 0.5rem; }
             .modal-content {
                 border-radius: 16px 16px 0 0;
                 max-width: 100%;

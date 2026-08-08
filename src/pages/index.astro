@@ -577,15 +577,16 @@ const jsonLd = todayEvents.length > 0 ? {
         // is the visitor's to fix, and saying the wrong one reads as a broken site.
         const dayEvents = filteredEvents;
 
-        // Count badges. A zero-count chip is dimmed rather than left as a bare
-        // label — see the .is-empty rule in BaseLayout for why not disabled.
+        // Count badges. Every chip shows its count, zero included — see the
+        // .is-empty rule in BaseLayout for why not disabled, and why the fill
+        // dim alone was not enough.
         // Counts are taken before the category filters are applied, so they
         // always mean "events today with this tag", not "…that also survive
         // your other chips". A chip can therefore be both .active and .is-empty.
         FILTER_CHIPS.forEach(({ id, label, match }) => {
             const count = filteredEvents.filter(match).length;
             const btn = document.getElementById(id);
-            btn.querySelector('span').textContent = count > 0 ? `${label} (${count})` : label;
+            btn.querySelector('span').textContent = `${label} (${count})`;
             btn.classList.toggle('is-empty', count === 0);
         });
 
