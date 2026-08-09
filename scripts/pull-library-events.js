@@ -11,7 +11,7 @@
  * Usage: node scripts/pull-library-events.js
  */
 
-const { loadEnv, HTML_ENT, stripHtml, KIDS_RE, createClient, exitCode, reportInserted } = require('./lib');
+const { loadEnv, stripHtml, KIDS_RE, createClient, exitCode, setOutput, printSummary } = require('./lib');
 
 loadEnv();
 
@@ -212,31 +212,14 @@ async function main() {
   }
 
   // ── Summary ────────────────────────────────────────────────────────────────
-  const bar = '─'.repeat(62);
-  console.log(bar);
-  console.log('NAAS LIBRARY EVENT IMPORT — SUMMARY');
-  console.log(bar);
-  console.log(`  RSS items found      : ${rawItems.length}`);
-  console.log(`  Parseable events     : ${events.length}  (${skipped} skipped — no date found)`);
-  if (dryRun) {
-    console.log(`  Would insert         : ${inserted}`);
-  } else {
-    console.log(`  Inserted (${insertStatus.padEnd(8)}) : ${inserted}`);
-  }
-  console.log(`  Skipped (dupes)      : ${dupes}`);
-  console.log(`  Errors               : ${errors}`);
+  printSummary('NAAS LIBRARY EVENT IMPORT — SUMMARY', {
+    'RSS items found':   rawItems.length,
+    'Parseable events':  `${events.length}  (${skipped} skipped — no date found)`,
+    [dryRun ? 'Would insert' : `Inserted (${insertStatus})`]: inserted,
+    'Skipped (dupes)':   dupes,
+    'Errors':            errors,
+  }, log);
 
-  if (log.length) {
-    console.log('');
-    console.log('Details:');
-    for (const r of log) {
-      const kids = r.kids ? ' [kids]' : '';
-      const note = r.note ? ` — ${r.note}` : '';
-      console.log(`  [${r.status}] ${r.date}  ${r.title}${kids}${note}`);
-    }
-  }
-
-  console.log(bar);
   if (dryRun) {
     console.log(`\n[DRY RUN] ${inserted} event(s) would be inserted as "${insertStatus}".`);
   } else if (inserted > 0) {
@@ -250,7 +233,7 @@ async function main() {
 
   // Tells the workflow whether a rebuild is worth 15 credits. Zero on a dry run
   // because nothing was written — see scrape-sources.js.
-  reportInserted(dryRun ? 0 : inserted);
+  setOutput('inserted', dryRun ? 0 : inserted);
 
   // A failed feed fetch already exits above. This catches the quieter case: the
   // feed read fine but every insert was rejected. That used to exit 0.

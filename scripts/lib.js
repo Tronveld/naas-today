@@ -136,6 +136,39 @@ function createClient(url, key) {
   return { get, post, isDuplicate, cacheInserted };
 }
 
+// ── Run summary ───────────────────────────────────────────────────────────────
+// All three importers print the same shape: a titled bar, a block of counters,
+// then one line per event. `counters` is an object so each caller keeps its own
+// labels; `log` entries carry { status, date, title } plus optional note/kids/loc.
+function printSummary(title, counters, log) {
+  const bar = '─'.repeat(62);
+  console.log(bar);
+  console.log(title);
+  console.log(bar);
+  const width = Math.max(...Object.keys(counters).map(k => k.length));
+  for (const [label, value] of Object.entries(counters)) {
+    console.log(`  ${label.padEnd(width)} : ${value}`);
+  }
+
+  if (log.length) {
+    console.log('');
+    console.log('Details:');
+    for (const r of log) {
+      const note = r.note ? ` — ${r.note}` : '';
+      // A source-level entry has a url and no date; an event entry has a date.
+      if (!r.date) {
+        console.log(`  [${r.status}] ${r.url}${note}`);
+        continue;
+      }
+      const kids = r.kids ? ' [kids]'     : '';
+      const loc  = r.loc  ? ` @ ${r.loc}` : '';
+      console.log(`  [${r.status}] ${r.date}  ${r.title}${kids}${loc}${note}`);
+    }
+  }
+
+  console.log(bar);
+}
+
 // A fetcher that hits errors must exit non-zero. Exiting 0 on a dead source is
 // how a broken feed hides: the workflow goes green, nobody looks, and the site
 // quietly thins out — the same failure that let the library feed go five and a
@@ -160,8 +193,8 @@ function sourceForUrl(url) {
   }
 }
 
-// Publishes how many rows a fetcher inserted, as a GitHub Actions step output,
-// so the workflow can decide whether a rebuild is worth its 15 credits. Most
+// Writes a GitHub Actions step output. Both fetchers report `inserted` this way,
+// so the workflow can decide whether a rebuild is worth its 15 credits — most
 // days the answer is zero and the rebuild is pure waste.
 // Returns whether it wrote anything — off CI there is no $GITHUB_OUTPUT and
 // this is a no-op, since the fetchers run locally far more often than in CI.
@@ -172,11 +205,7 @@ function setOutput(key, value) {
   return true;
 }
 
-function reportInserted(count) {
-  return setOutput('inserted', count);
-}
-
 module.exports = {
   loadEnv, HTML_ENT, stripHtml, KIDS_RE, normaliseTitle, createClient, exitCode, sourceForUrl,
-  reportInserted, setOutput,
+  setOutput, printSummary,
 };

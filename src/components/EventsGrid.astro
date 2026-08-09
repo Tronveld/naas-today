@@ -38,6 +38,12 @@ const todayEvents = events.filter(e => {
      full, descriptions included, rather than "3 events". -->
 <p id="eventsStatus" class="visually-hidden" role="status" aria-live="polite"></p>
 
+<!-- Shown when a refresh failed but pre-rendered events are still on screen.
+     The page works, so this is a note rather than the error state. -->
+<p class="stale-note" id="staleNote" hidden>
+    Couldn't check for updates just now — showing the last saved listings.
+</p>
+
 <div class="events-container">
     <div class="events-grid" id="eventsGrid" style={todayEvents.length === 0 ? 'display:none' : 'display:grid'}>
         {todayEvents.map(event => <EventCard event={event} />)}

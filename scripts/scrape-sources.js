@@ -14,7 +14,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { loadEnv, stripHtml, KIDS_RE, createClient, exitCode, sourceForUrl, reportInserted } = require('./lib');
+const { loadEnv, stripHtml, KIDS_RE, createClient, exitCode, sourceForUrl, setOutput, printSummary } = require('./lib');
 
 loadEnv();
 
@@ -33,13 +33,6 @@ function readSources() {
     .split('\n')
     .map(l => l.trim())
     .filter(l => l.startsWith('http'));
-}
-
-// ── URL type classification ───────────────────────────────────────────────────
-function classifyUrl(url) {
-  if (url.includes('whatsontonight.ie')) return 'whatsontonight';
-  if (url.includes('moattheatre.com'))   return 'moattheatre';
-  return 'individual'; // Eventbrite, AllEvents.in, IntoKildare.ie, etc.
 }
 
 // ── Fetch HTML with browser-like headers ──────────────────────────────────────
@@ -197,6 +190,46 @@ function isNaasEvent(ldEvent) {
   return /\bnaas\b/i.test(text) || NAAS_VENUES.test(text);
 }
 
+// ── Source categories → the site's filter flags ──────────────────────────────
+// Moat Theatre and IntoKildare both tag their events, and a curated tag beats
+// guessing from prose every time. KIDS_RE over a full description gets Moat
+// exactly backwards: Chris Kent's adult stand-up blurb says "Between kids,
+// marriage and..." and scores true, while the children's panto — "The Panto
+// Legends Return!" — scores false. Moat tags them Comedy and Children/Family.
+//
+// So when a source supplies categories they are trusted outright and the regex
+// is not consulted. Sources that supply none keep the old text behaviour.
+//
+// Unmapped tags (Comedy, Coming Soon, This Week, Christmas, Talks, Art) simply
+// set nothing — the site has no filter for them. Comedy in particular is left
+// alone rather than folded into theatre: stand-up is not a play.
+const CATEGORY_FLAGS = {
+  music:    'is_music',
+  drama:    'is_theatre',
+  theatre:  'is_theatre',
+  theater:  'is_theatre',
+  family:   'is_for_kids',
+  children: 'is_for_kids',
+  kids:     'is_for_kids',
+  sport:    'is_sport',
+  sports:   'is_sport',
+  market:   'is_market',
+  markets:  'is_market',
+};
+
+// Accepts plain strings (Squarespace) or {name} objects (The Events Calendar).
+// Trailing digits are stripped so Moat's duplicated "Drama 2" lands on drama.
+function categoryFlags(categories) {
+  const flags = {};
+  if (!Array.isArray(categories)) return { flags, tagged: false };
+  for (const c of categories) {
+    const name = typeof c === 'string' ? c : (c && c.name) || '';
+    const key  = name.toLowerCase().trim().replace(/\s*\d+$/, '');
+    if (CATEGORY_FLAGS[key]) flags[CATEGORY_FLAGS[key]] = true;
+  }
+  return { flags, tagged: categories.length > 0 };
+}
+
 function jsonLdToEvent(ldEvent, sourceUrl) {
   const { date, time }         = parseIsoDateTime(ldEvent.startDate);
   const { date: endDate, time: timeEnd } = parseIsoDateTime(ldEvent.endDate);
@@ -211,7 +244,9 @@ function jsonLdToEvent(ldEvent, sourceUrl) {
 
   const location    = extractLocation(ldEvent.location) || extractLocation(ldEvent.organizer);
   const is_free     = detectFree(ldEvent.offers, title, description);
-  const is_for_kids = KIDS_RE.test(`${title} ${description}`);
+
+  const { flags, tagged } = categoryFlags(ldEvent.categories);
+  const is_for_kids = tagged ? !!flags.is_for_kids : KIDS_RE.test(`${title} ${description}`);
 
   // Prefer the canonical URL embedded in JSON-LD over the source URL
   const url = ldEvent.url || ldEvent['@id'] || sourceUrl;
@@ -226,6 +261,10 @@ function jsonLdToEvent(ldEvent, sourceUrl) {
     description,
     is_free,
     is_for_kids,
+    is_music:   !!flags.is_music,
+    is_theatre: !!flags.is_theatre,
+    is_sport:   !!flags.is_sport,
+    is_market:  !!flags.is_market,
     is_all_day: !time,
     url,
     status:    null, // set by caller
@@ -259,14 +298,19 @@ function dublinLocal(ms) {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 
-// Kildare Heritage — Squarespace events collection, ?format=json → upcoming[].
+// Squarespace events collection, ?format=json → upcoming[]. Used by Kildare
+// Heritage and by the Moat Theatre, which runs the same platform — the feed
+// carries real start and end times, which no HTML parser here can extract.
+//
 // The venue name and its town live in separate fields; joined into one string so
 // that isNaasEvent can see the town and extractLocation can show the venue.
-function kildareHeritageToLd(item, sourceUrl) {
+function squarespaceEventToLd(item, sourceUrl) {
   const loc   = item.location || {};
-  // Trim each part, not just the join: the feed's addressTitle carries trailing
-  // whitespace, which would render as "Naas Racecourse , County Kildare".
-  const place = [loc.addressTitle, loc.addressLine2].map(s => (s || '').trim()).filter(Boolean).join(', ');
+  // Trim and de-punctuate each part, not just the join. Kildare Heritage's
+  // addressTitle carries trailing whitespace ("Naas Racecourse , County
+  // Kildare") and Moat's addressLine2 a trailing comma ("Naas, County Kildare,").
+  const clean = (s) => (s || '').trim().replace(/[,\s]+$/, '');
+  const place = [loc.addressTitle, loc.addressLine2].map(clean).filter(Boolean).join(', ');
 
   return {
     '@type':     'Event',
@@ -275,13 +319,14 @@ function kildareHeritageToLd(item, sourceUrl) {
     endDate:     dublinLocal(item.endDate),
     location:    place ? { '@type': 'Place', name: place } : null,
     description: item.excerpt || item.body || '',
+    categories:  item.categories || [],
     url:         item.fullUrl ? new URL(item.fullUrl, sourceUrl).href : sourceUrl,
   };
 }
 
-async function fetchKildareHeritage(url) {
+async function fetchSquarespaceEvents(url) {
   const data = await fetchJson(`${url}?format=json`);
-  return (data.upcoming || []).map(item => kildareHeritageToLd(item, url));
+  return (data.upcoming || []).map(item => squarespaceEventToLd(item, url));
 }
 
 // IntoKildare — The Events Calendar REST API. Timestamps arrive as
@@ -310,6 +355,7 @@ function intoKildareToLd(e) {
     endDate:     bare(end),
     location:    place ? { '@type': 'Place', name: place } : null,
     description: e.excerpt || e.description || '',
+    categories:  e.categories || [],
     offers:      /^(free|0|€\s*0)$/i.test(cost) ? { price: 0 } : undefined,
     url:         e.website || e.url,
   };
@@ -323,7 +369,8 @@ async function fetchIntoKildare(url) {
 
 // Keyed by bare hostname, matching what sourceForUrl returns.
 const JSON_ADAPTERS = {
-  'kildareheritage.com': fetchKildareHeritage,
+  'kildareheritage.com': fetchSquarespaceEvents,
+  'moattheatre.com':     fetchSquarespaceEvents,
   'intokildare.ie':      fetchIntoKildare,
 };
 
@@ -341,38 +388,30 @@ function parseDateText(text) {
   return mo ? `${m[3]}-${mo}-${m[1].padStart(2, '0')}` : null;
 }
 
-// ── Generic listing-page HTML parser ─────────────────────────────────────────
-// Used by site-specific parsers; tries JSON-LD first, then HTML block fallback.
+// ── WhatsonTonight.ie listing page parser ─────────────────────────────────────
+// The last remaining HTML scrape. Tries JSON-LD first, then falls back to
+// matching `class="…event…"` blocks and reading a heading and a date out of each.
 //
-// opts:
-//   blockClass   — regex fragment matched against the block element's class attr
-//   headingTag   — regex fragment for the heading element (default: 'h[2-4]|strong')
-//   minTitleLen  — minimum character length for an accepted title (default: 1)
-//   location     — default location string for events found via HTML fallback
-//   isAllDay     — when true: extract description, detect free from text,
-//                  test kids against title+description;
-//                  when false: empty description, is_free=false, kids from title only
-function parseListingPage(html, sourceUrl, opts) {
-  const { blockClass, headingTag = 'h[2-4]|strong', minTitleLen = 1, location, isAllDay } = opts;
-
+// This used to be a `parseListingPage(html, url, opts)` taking five options, from
+// when several sources were scraped this way. One caller and one option set were
+// left, so the options are baked in here. **Prefer a JSON adapter to a parser for
+// anything new** — this path cannot extract a time at all, which is what left 81
+// Moat Theatre rows showing "TBC" until the Squarespace adapter replaced it.
+function parseWhatsonTonight(html, sourceUrl) {
   const ldEvents = extractJsonLd(html);
   if (ldEvents.length > 0) {
     return ldEvents.map(e => jsonLdToEvent(e, sourceUrl)).filter(e => e.title && e.date);
   }
 
   const events  = [];
-  const blockRe = new RegExp(
-    `<(?:article|div)[^>]+class="[^"]*(?:${blockClass})[^"]*"[^>]*>([\\s\\S]*?)` +
-    `(?=<(?:article|div)[^>]+class="[^"]*(?:${blockClass})|<\\/(?:main|section)>)`,
-    'gi'
-  );
+  const blockRe = /<(?:article|div)[^>]+class="[^"]*(?:event)[^"]*"[^>]*>([\s\S]*?)(?=<(?:article|div)[^>]+class="[^"]*(?:event)|<\/(?:main|section)>)/gi;
   let m;
   while ((m = blockRe.exec(html)) !== null) {
     const block  = m[1];
-    const titleM = block.match(new RegExp(`<(?:${headingTag})[^>]*>([\\s\\S]*?)<\\/(?:${headingTag})>`, 'i'));
+    const titleM = block.match(/<(?:h[2-4]|strong)[^>]*>([\s\S]*?)<\/(?:h[2-4]|strong)>/i);
     if (!titleM) continue;
     const title = stripHtml(titleM[1]).trim();
-    if (!title || title.length < minTitleLen) continue;
+    if (!title) continue;
 
     let date = null;
     const timeElemM = block.match(/<time[^>]*datetime="([^"]+)"/i);
@@ -385,8 +424,8 @@ function parseListingPage(html, sourceUrl, opts) {
 
     const linkM = block.match(/<a[^>]+href="([^"]+)"/i);
     const url   = linkM ? new URL(linkM[1], sourceUrl).href : sourceUrl;
-    const desc  = isAllDay ? stripHtml(block).replace(title, '').trim().slice(0, 2000) : '';
-    const text  = isAllDay ? `${title} ${desc}` : title;
+    const desc  = stripHtml(block).replace(title, '').trim().slice(0, 2000);
+    const text  = `${title} ${desc}`;
 
     events.push({
       title:       title.slice(0, 150),
@@ -394,11 +433,14 @@ function parseListingPage(html, sourceUrl, opts) {
       time:        null,
       time_end:    null,
       end_date:    null,
-      location,
+      location:    'Naas',
       description: desc,
-      is_free:     isAllDay ? /\bfree\b/i.test(text) : false,
+      // A looser test than the JSON-LD path's FREE_ADMISSION on purpose: these
+      // are short scraped blobs rather than full event copy, and no false
+      // positive has been observed here.
+      is_free:     /\bfree\b/i.test(text),
       is_for_kids: KIDS_RE.test(text),
-      is_all_day:  isAllDay,
+      is_all_day:  true,
       url,
       status:      null,
     });
@@ -406,30 +448,8 @@ function parseListingPage(html, sourceUrl, opts) {
   return events;
 }
 
-// ── WhatsonTonight.ie listing page parser ─────────────────────────────────────
-function parseWhatsonTonight(html, sourceUrl) {
-  return parseListingPage(html, sourceUrl, {
-    blockClass:  'event',
-    headingTag:  'h[2-4]|strong',
-    location:    'Naas',
-    isAllDay:    true,
-  });
-}
-
-// ── Moat Theatre homepage parser ──────────────────────────────────────────────
-function parseMoatTheatre(html, sourceUrl) {
-  return parseListingPage(html, sourceUrl, {
-    blockClass:  'show|event|production|post',
-    headingTag:  'h[1-4]',
-    minTitleLen: 3,
-    location:    'Moat Theatre, Naas',
-    isAllDay:    false,
-  });
-}
-
 // ── Extract events from one URL ───────────────────────────────────────────────
 async function extractEvents(url) {
-  const type    = classifyUrl(url);
   const adapter = JSON_ADAPTERS[sourceForUrl(url)];
 
   let events  = [];
@@ -438,8 +458,10 @@ async function extractEvents(url) {
 
   // A JSON adapter produces the same schema.org Event shapes the JSON-LD path
   // yields, so the two share everything downstream — the Naas filter, the
-  // off-town count and jsonLdToEvent.
-  if (adapter || type === 'individual') {
+  // off-town count and jsonLdToEvent. WhatsonTonight is the one HTML scrape.
+  if (!adapter && url.includes('whatsontonight.ie')) {
+    events = parseWhatsonTonight(await fetchPage(url), url);
+  } else {
     const ldEvents = adapter ? await adapter(url) : extractJsonLd(await fetchPage(url));
     if (ldEvents.length > 0) {
       const naasOnly = ldEvents.filter(isNaasEvent);
@@ -449,10 +471,6 @@ async function extractEvents(url) {
     if (events.length === 0 && offTown === 0) {
       warning = adapter ? 'Feed returned no events' : 'No JSON-LD Event found';
     }
-  } else if (type === 'whatsontonight') {
-    events = parseWhatsonTonight(await fetchPage(url), url);
-  } else if (type === 'moattheatre') {
-    events = parseMoatTheatre(await fetchPage(url), url);
   }
 
   // Drop past events
@@ -546,38 +564,17 @@ async function main() {
   }
 
   // ── Summary ────────────────────────────────────────────────────────────────
-  const bar = '─'.repeat(62);
-  console.log('\n' + bar);
-  console.log('NAAS TODAY — SCRAPE SOURCES SUMMARY');
-  console.log(bar);
-  console.log(`  URLs processed       : ${urls.length}`);
-  console.log(`  Events found (future): ${totalFound}`);
-  if (dryRun) {
-    console.log(`  Would insert         : ${totalInserted}`);
-  } else {
-    console.log(`  Inserted (${insertStatus.padEnd(8)}) : ${totalInserted}`);
-  }
-  console.log(`  Skipped (dupes)      : ${totalSkipped}`);
-  console.log(`  Dropped (not Naas)   : ${totalOffTown}`);
-  console.log(`  Sources failed       : ${sourceErrors} of ${urls.length}`);
-  console.log(`  Event errors         : ${eventErrors}`);
+  console.log('');
+  printSummary('NAAS TODAY — SCRAPE SOURCES SUMMARY', {
+    'URLs processed':        urls.length,
+    'Events found (future)': totalFound,
+    [dryRun ? 'Would insert' : `Inserted (${insertStatus})`]: totalInserted,
+    'Skipped (dupes)':       totalSkipped,
+    'Dropped (not Naas)':    totalOffTown,
+    'Sources failed':        `${sourceErrors} of ${urls.length}`,
+    'Event errors':          eventErrors,
+  }, log);
 
-  if (log.length) {
-    console.log('');
-    console.log('Details:');
-    for (const r of log) {
-      if (r.date) {
-        const kids = r.kids ? ' [kids]'    : '';
-        const loc  = r.loc  ? ` @ ${r.loc}` : '';
-        const note = r.note ? ` — ${r.note}` : '';
-        console.log(`  [${r.status}] ${r.date}  ${r.title}${kids}${loc}${note}`);
-      } else {
-        console.log(`  [${r.status}] ${r.url}${r.note ? ` — ${r.note}` : ''}`);
-      }
-    }
-  }
-
-  console.log(bar);
   if (dryRun) {
     console.log(`\n[DRY RUN] ${totalInserted} event(s) would be inserted as "${insertStatus}".`);
   } else if (totalInserted > 0) {
@@ -592,7 +589,7 @@ async function main() {
   // Tells the workflow whether a rebuild is worth 15 credits. Zero on a dry run
   // because nothing was written — reporting the hypothetical count here would
   // make the output mean something other than what it says.
-  reportInserted(dryRun ? 0 : totalInserted);
+  setOutput('inserted', dryRun ? 0 : totalInserted);
 
   // process.exitCode rather than process.exit(): the summary above still has to
   // reach the log. process.exit() would truncate it mid-write.
@@ -615,5 +612,9 @@ if (require.main === module) {
   });
 }
 
-// Exported for tests only — the CLI path above is what actually runs.
-module.exports = { extractJsonLd, isNaasEvent, kildareHeritageToLd, intoKildareToLd, detectFree };
+// Exported for tests — the CLI path above is what actually runs. Only the pure
+// mappers, so the tests never touch the network.
+module.exports = {
+  extractJsonLd, isNaasEvent, squarespaceEventToLd, intoKildareToLd, detectFree,
+  jsonLdToEvent,
+};

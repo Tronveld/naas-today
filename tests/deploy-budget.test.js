@@ -20,7 +20,7 @@ const os = require('os');
 const path = require('path');
 
 const { withinBudget } = require('../scripts/check-deploy-budget.js');
-const { reportInserted } = require('../scripts/lib.js');
+const { setOutput } = require('../scripts/lib.js');
 
 const NOW = new Date('2026-08-05T12:00:00Z');
 
@@ -85,14 +85,16 @@ describe('withinBudget', () => {
   });
 });
 
-describe('reportInserted', () => {
+// Both fetchers call setOutput('inserted', n) directly — the `inserted` key is
+// what gates the workflow's rebuild step.
+describe('setOutput', () => {
   // Off CI there is no $GITHUB_OUTPUT. Writing must not be attempted, and the
   // fetchers must not care — they run locally far more often than in Actions.
   test('no-ops when GITHUB_OUTPUT is unset', () => {
     const saved = process.env.GITHUB_OUTPUT;
     delete process.env.GITHUB_OUTPUT;
     try {
-      assert.equal(reportInserted(3), false);
+      assert.equal(setOutput('inserted', 3), false);
     } finally {
       if (saved !== undefined) process.env.GITHUB_OUTPUT = saved;
     }
@@ -103,7 +105,7 @@ describe('reportInserted', () => {
     const saved = process.env.GITHUB_OUTPUT;
     process.env.GITHUB_OUTPUT = file;
     try {
-      assert.equal(reportInserted(7), true);
+      assert.equal(setOutput('inserted', 7), true);
       assert.equal(fs.readFileSync(file, 'utf8'), 'inserted=7\n');
     } finally {
       if (saved === undefined) delete process.env.GITHUB_OUTPUT;
@@ -118,7 +120,7 @@ describe('reportInserted', () => {
     const saved = process.env.GITHUB_OUTPUT;
     process.env.GITHUB_OUTPUT = file;
     try {
-      assert.equal(reportInserted(0), true);
+      assert.equal(setOutput('inserted', 0), true);
       assert.equal(fs.readFileSync(file, 'utf8'), 'inserted=0\n');
     } finally {
       if (saved === undefined) delete process.env.GITHUB_OUTPUT;

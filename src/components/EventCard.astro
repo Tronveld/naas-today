@@ -1,4 +1,6 @@
 ---
+import { formatTimeShort } from '../scripts/date.js';
+
 interface Event {
   id: string;
   title: string;
@@ -23,14 +25,6 @@ interface Props {
 }
 
 const { event } = Astro.props;
-
-function formatTimeShort(time: string): { time: string; ampm: string } {
-  const [hours, minutes] = time.substring(0, 5).split(':');
-  const hour = parseInt(hours);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour % 12 || 12;
-  return { time: `${displayHour}:${minutes}`, ampm };
-}
 
 function formatDateShort(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -96,6 +90,6 @@ const sidebarTime = hasTime ? formatTimeShort(event.time!) : null;
       {event.is_market && <span class="tag market">Markets</span>}
       {event.is_theatre && <span class="tag theatre">Theatre</span>}
     </div>
-    <button class="share-btn" aria-label={`Share ${event.title}`} data-share-title={event.title} data-share-date={event.date} data-share-time={event.time || ''} data-share-time-end={event.time_end || ''} data-share-location={event.location} data-share-allday={event.is_all_day ? 'true' : 'false'}>Share <span aria-hidden="true">↗</span></button>
+    <button class="share-btn" aria-label={`Share ${event.title}`}>Share <span aria-hidden="true">↗</span></button>
   </div>
 </article>

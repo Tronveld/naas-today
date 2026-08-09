@@ -17,41 +17,9 @@ function isRateLimited(ip) {
   return false;
 }
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
+const { validDate, validTime, validUrl, json, err400, validateEventBody } = require('./lib/validate');
 
-const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-// Gregorian rule: every 4th year, except centuries, except every 400th.
-function isLeapYear(y) {
-  return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
-}
-
-function validDate(s) {
-  if (!DATE_RE.test(s)) return false;
-  const parts = s.split('-').map(Number);
-  const y = parts[0], m = parts[1], d = parts[2];
-  if (m < 1 || m > 12) return false;
-  const maxDay = m === 2 && isLeapYear(y) ? 29 : DAYS_IN_MONTH[m - 1];
-  return d >= 1 && d <= maxDay;
-}
-
-function validTime(s) {
-  if (!TIME_RE.test(s)) return false;
-  const parts = s.split(':').map(Number);
-  return parts[0] <= 23 && parts[1] <= 59;
-}
-
-function validUrl(value) {
-  try {
-    const parsed = new URL(value);
-    return ['http:', 'https:'].includes(parsed.protocol);
-  } catch {
-    return false;
-  }
-}
-
-// Exported for tests only — the Netlify runtime uses `handler` below.
+// Re-exported for tests only — the Netlify runtime uses `handler` below.
 exports.validDate = validDate;
 exports.validTime = validTime;
 exports.validUrl = validUrl;
@@ -66,11 +34,7 @@ exports.handler = async function(event, context) {
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY env vars');
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Server not configured' })
-    };
+    return json(500, { error: 'Server not configured' });
   }
 
   // Rate limiting — prefer Netlify's non-spoofable header over x-forwarded-for
@@ -89,70 +53,13 @@ exports.handler = async function(event, context) {
   try {
     data = JSON.parse(event.body);
   } catch {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
+    return err400('Invalid JSON');
   }
 
   const { title, date, endDate, time, timeEnd, isAllDay, location, description, isFree, isForKids, isMusic, isSport, isMarket, isTheatre, url } = data;
 
-  // Required field presence
-  if (!title || !date || !location) {
-    return {
-      statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Missing required fields: title, date, location' })
-    };
-  }
-
-  if (!isAllDay && !time) {
-    return {
-      statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Missing required field: time (or mark as all day)' })
-    };
-  }
-
-  // Type validation
-  if (typeof title !== 'string' || typeof date !== 'string' || typeof location !== 'string') {
-    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid field types' }) };
-  }
-  if (typeof isAllDay !== 'boolean' || typeof isFree !== 'boolean' || typeof isForKids !== 'boolean' ||
-      typeof isMusic !== 'boolean' || typeof isSport !== 'boolean' || typeof isMarket !== 'boolean' || typeof isTheatre !== 'boolean') {
-    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid boolean fields' }) };
-  }
-  if (description !== undefined && typeof description !== 'string') {
-    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid field types' }) };
-  }
-
-  // Length limits
-  if (title.length > 150) {
-    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Title too long (max 150 characters)' }) };
-  }
-  if (location.length > 150) {
-    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Location too long (max 150 characters)' }) };
-  }
-  if (description && description.length > 2000) {
-    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Description too long (max 2000 characters)' }) };
-  }
-  if (url && url.length > 500) {
-    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'URL too long (max 500 characters)' }) };
-  }
-
-  // Format validation (regex + numeric range check)
-  if (!validDate(date)) {
-    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid date format' }) };
-  }
-  if (endDate && !validDate(endDate)) {
-    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid end date format' }) };
-  }
-  if (time && !validTime(time)) {
-    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid time format' }) };
-  }
-  if (timeEnd && !validTime(timeEnd)) {
-    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid end time format' }) };
-  }
-  if (url && !validUrl(url)) {
-    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid URL (must start with http:// or https://)' }) };
-  }
+  const invalid = validateEventBody(data);
+  if (invalid) return err400(invalid);
 
   try {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/events`, {
@@ -192,17 +99,9 @@ exports.handler = async function(event, context) {
       throw new Error(err);
     }
 
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ success: true, message: 'Event submitted for review' })
-    };
+    return json(200, { success: true, message: 'Event submitted for review' });
   } catch (error) {
     console.error('Error submitting event to Supabase:', error);
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Failed to submit event' })
-    };
+    return json(500, { error: 'Failed to submit event' });
   }
 };

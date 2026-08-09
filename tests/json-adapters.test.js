@@ -15,7 +15,7 @@ const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
-  kildareHeritageToLd,
+  squarespaceEventToLd,
   intoKildareToLd,
   isNaasEvent,
 } = require('../scripts/scrape-sources.js');
@@ -27,7 +27,7 @@ const SRC = 'https://www.kildareheritage.com/event-calendar';
 // Taste of Kildare is epoch 1786791600275 = 11:00 UTC, and the event page shows
 // <time class="event-time-localized">12:00</time>. Dublin, not UTC, is the number
 // a reader of this site expects to see.
-describe('kildareHeritageToLd', () => {
+describe('squarespaceEventToLd', () => {
   const item = (over = {}) => ({
     title:     'Taste of Kildare',
     startDate: Date.UTC(2026, 7, 15, 11, 0),
@@ -39,7 +39,7 @@ describe('kildareHeritageToLd', () => {
   });
 
   test('converts the epoch to Dublin local time, not UTC', () => {
-    const ld = kildareHeritageToLd(item(), SRC);
+    const ld = squarespaceEventToLd(item(), SRC);
     assert.equal(ld.startDate, '2026-08-15T12:00'); // 11:00 UTC + 1h summer time
     assert.equal(ld.endDate,   '2026-08-16T18:00');
   });
@@ -48,17 +48,17 @@ describe('kildareHeritageToLd', () => {
   // previous day, because in summer Dublin is UTC+1 and 00:30 local is 23:30 UTC.
   // Same class of error CLAUDE.md warns about for localDateStr() on the frontend.
   test('keeps a past-midnight event on its own local day', () => {
-    const ld = kildareHeritageToLd(item({ startDate: Date.UTC(2026, 7, 15, 23, 30), endDate: null }), SRC);
+    const ld = squarespaceEventToLd(item({ startDate: Date.UTC(2026, 7, 15, 23, 30), endDate: null }), SRC);
     assert.equal(ld.startDate, '2026-08-16T00:30');
   });
 
   test('applies no offset in winter, when Dublin is UTC', () => {
-    const ld = kildareHeritageToLd(item({ startDate: Date.UTC(2026, 0, 15, 20, 0), endDate: null }), SRC);
+    const ld = squarespaceEventToLd(item({ startDate: Date.UTC(2026, 0, 15, 20, 0), endDate: null }), SRC);
     assert.equal(ld.startDate, '2026-01-15T20:00');
   });
 
   test('merges addressTitle and addressLine2 so the Naas filter can see the town', () => {
-    const ld = kildareHeritageToLd(
+    const ld = squarespaceEventToLd(
       item({ location: { addressTitle: 'Moat Theatre', addressLine2: 'Naas, County Kildare' } }),
       SRC,
     );
@@ -69,26 +69,37 @@ describe('kildareHeritageToLd', () => {
   // The live feed's addressTitle carries trailing whitespace, which reached the
   // card as "Naas Racecourse , County Kildare Ireland".
   test('trims each address part, not just the joined string', () => {
-    const ld = kildareHeritageToLd(
+    const ld = squarespaceEventToLd(
       item({ location: { addressTitle: 'Naas Racecourse ', addressLine2: 'County Kildare Ireland' } }),
       SRC,
     );
     assert.equal(ld.location.name, 'Naas Racecourse, County Kildare Ireland');
   });
 
+  // The Moat Theatre runs the same platform, and its addressLine2 ends in a
+  // comma — "Moat Theatre, Naas, County Kildare," on every card.
+  test('strips a trailing comma from an address part', () => {
+    const ld = squarespaceEventToLd(
+      item({ location: { addressTitle: 'Moat Theatre', addressLine2: 'Naas, County Kildare, ' } }),
+      SRC,
+    );
+    assert.equal(ld.location.name, 'Moat Theatre, Naas, County Kildare');
+    assert.equal(isNaasEvent(ld), true);
+  });
+
   test('drops an event with no location rather than inventing one', () => {
-    const ld = kildareHeritageToLd(item({ location: {} }), SRC);
+    const ld = squarespaceEventToLd(item({ location: {} }), SRC);
     assert.equal(ld.location, null);
     assert.equal(isNaasEvent(ld), false);
   });
 
   test('resolves fullUrl against the source URL', () => {
-    const ld = kildareHeritageToLd(item(), SRC);
+    const ld = squarespaceEventToLd(item(), SRC);
     assert.equal(ld.url, 'https://www.kildareheritage.com/event-calendar/taste-of-kildare-1');
   });
 
   test('survives an item with no dates at all', () => {
-    const ld = kildareHeritageToLd(item({ startDate: null, endDate: null }), SRC);
+    const ld = squarespaceEventToLd(item({ startDate: null, endDate: null }), SRC);
     assert.equal(ld.startDate, null);
     assert.equal(ld.endDate, null);
   });
@@ -193,5 +204,57 @@ describe('detectFree', () => {
   test('does not treat a free amenity as free admission', () => {
     assert.equal(text('Free parking on site. Tickets from €20.'), false);
     assert.equal(text('Gluten-free options available at the food stalls.'), false);
+  });
+});
+
+// Curated categories beat prose. KIDS_RE over a full description gets Moat's
+// listings exactly backwards: Chris Kent's adult stand-up blurb says "Between
+// kids, marriage and..." and scores true, while the children's panto scores
+// false. Moat tags them Comedy and Children/Family respectively, so when a
+// source supplies categories they are trusted and the regex is not consulted.
+describe('jsonLdToEvent — category mapping', () => {
+  const { jsonLdToEvent } = require('../scripts/scrape-sources.js');
+  const ev = (over = {}) => ({
+    '@type': 'Event', name: 'A Show', startDate: '2026-08-15T20:00',
+    location: { name: 'Moat Theatre, Naas' }, description: '', ...over,
+  });
+  const row = (over) => jsonLdToEvent(ev(over), 'https://www.moattheatre.com/shows');
+
+  test('maps Moat categories onto the site filter flags', () => {
+    assert.equal(row({ categories: ['Music'] }).is_music, true);
+    assert.equal(row({ categories: ['Drama'] }).is_theatre, true);
+    assert.equal(row({ categories: ['Family'] }).is_for_kids, true);
+    assert.equal(row({ categories: ['Children'] }).is_for_kids, true);
+  });
+
+  test('tolerates the duplicated "Drama 2" category', () => {
+    assert.equal(row({ categories: ['Drama 2'] }).is_theatre, true);
+  });
+
+  test('accepts IntoKildare category objects as well as plain strings', () => {
+    assert.equal(row({ categories: [{ name: 'Music' }] }).is_music, true);
+  });
+
+  test('ignores scheduling categories that are not filters', () => {
+    const r = row({ categories: ['Coming Soon', 'This Week', 'Christmas'] });
+    assert.equal(r.is_music, false);
+    assert.equal(r.is_theatre, false);
+    assert.equal(r.is_for_kids, false);
+  });
+
+  // The two cases that motivated this.
+  test('a comedy show is not for kids, whatever its blurb says', () => {
+    const r = row({ categories: ['Comedy'], description: 'Between kids, marriage and the mortgage.' });
+    assert.equal(r.is_for_kids, false);
+  });
+
+  test('a childrens panto is for kids, even with none of the words', () => {
+    const r = row({ categories: ['Children', 'Christmas', 'Comedy', 'Family'], description: 'The Panto Legends Return!' });
+    assert.equal(r.is_for_kids, true);
+  });
+
+  test('falls back to the text when a source gives no categories', () => {
+    assert.equal(row({ description: 'A storytime for toddlers.' }).is_for_kids, true);
+    assert.equal(row({ categories: [], description: 'A storytime for toddlers.' }).is_for_kids, true);
   });
 });

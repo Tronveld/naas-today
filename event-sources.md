@@ -22,9 +22,9 @@ Add a listing page for a venue or aggregator, not a link to tonight's gig.
 
 | Host | Method |
 |---|---|
-| `moattheatre.com` | Custom listing parser (`parseListingPage`) |
 | `whatsontonight.ie` | Custom listing parser (`parseListingPage`) |
-| `kildareheritage.com` | JSON adapter — Squarespace `?format=json` → `upcoming[]` |
+| `moattheatre.com` | JSON adapter — Squarespace `?format=json` → `upcoming[]` |
+| `kildareheritage.com` | JSON adapter — same Squarespace feed, same code |
 | `intokildare.ie` | JSON adapter — The Events Calendar REST API |
 | anything else | JSON-LD extraction — works when the page publishes `Event` objects, including inside a schema.org `ItemList` |
 
@@ -45,6 +45,20 @@ match within a date.
 ## Listing pages
 
 ### Moat Theatre — the single biggest source
+
+Read through the Squarespace JSON adapter since 2026-08-06. It was scraped with
+`parseListingPage` before that, which **never recorded a time**: it reads
+`<time datetime="…">` for the date, and Squarespace puts the date in that
+attribute and the time in the element's text. 81 future rows had landed with
+`time = null` and `is_all_day = false` — the combination `EventCard` renders as
+"TBC". The times had been published all along. A one-off migration backfilled 77
+of them on 2026-08-06; the remaining 4 never matched, because Moat had renamed
+the show. The script was deleted once it had run — recover it from git if a
+similar backfill is ever needed.
+
+If another HTML source ever looks like it is missing times, check whether it is
+Squarespace first — `?format=json` on any events collection is worth a try
+before writing a parser.
 
 https://www.moattheatre.com/shows
 

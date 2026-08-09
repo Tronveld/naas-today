@@ -13,6 +13,8 @@ colors:
   warm: "#775F43"
   border: "#e0e0d8"
   border-light: "#f0ece4"
+  border-interactive: "#8a8a7e"
+  danger: "#7B2D2D"
   scrim: "rgba(26,58,26,0.45)"
   overlay-shadow: "rgba(0,0,0,0.12)"
   overlay-shadow-soft: "rgba(0,0,0,0.08)"
@@ -241,18 +243,24 @@ Six flags, all pulled to the same weathered register. Each is a text colour pair
 - **Deep Forest Ink** (`{colors.ink}`): All primary text and headings. A near-black carrying the same green as the brand, so nothing on the page is neutral grey.
 - **Sage Ink** (`{colors.ink-mid}`): Secondary text — locations, footer, button labels at rest, form hints.
 - **Bark Ink** (`{colors.ink-light}`): Tertiary text — event descriptions, character counters, empty-state copy. Warm rather than cool, which is why descriptions feel like prose and not metadata.
-- **Hairline** (`{colors.border}`): The structural line. Every card, input, and control edge.
+- **Hairline** (`{colors.border}`): The structural line. Cards, the time pill, skeletons, modal edges — every surface that is only a surface.
 - **Whisper Rule** (`{colors.border-light}`): Section dividers and the header underline, where a full hairline would be too assertive.
+- **Pressable Line** (`{colors.border-interactive}`): The same warm grey walked down until it clears 3:1. Every edge that *is* a control — filter chips, date-nav buttons, share, the empty state's clear button, form fields, secondary buttons. See the Pressable Line Rule.
+- **Fault Red** (`{colors.danger}`): Form validation only — a field's error line, and the panel above the submit buttons when a send fails. **Deliberately the identical value to Theatre**, so the palette gains a job without gaining a hue; the Aged Family Rule applies to reds that shout as much as to category tags. 9.31:1 on card white. Nothing outside a form message may use it, and it is never a fill except as the Theatre tint behind its own text.
 
 ### Named Rules
 
-**The One Green Rule.** Hedgerow green is the only fully saturated voice on the page and appears as a *fill* at most once per viewport — the submit button, or the active Today chip, not both competing. Everywhere else it is a text or border colour. Its rarity is what makes the submit action findable without a single arrow or animation.
+**The One Green Rule.** Hedgerow green is the only fully saturated voice on the page and appears as a *fill* at most once per viewport **as a call to action** — the submit button, or the active Today chip, not both competing. Everywhere else it is a text or border colour. Its rarity is what makes the submit action findable without a single arrow or animation.
+
+The qualifier is load-bearing. **An active filter chip is exempt**, because its fill is a selection state rather than an invitation, and because the colour belongs to the *category*, not the brand — see Chips. Free's category colour happens to be the same value as the accent, so lighting the Free chip does put a second green fill on screen next to the submit button. That is a coincidence of the palette, not a second call to action, and it was accepted rather than designed around: recolouring Free to avoid it would break the Aged Family Rule for the sake of a rule about attention that a 13px chip does not compete for.
 
 **The Aged Family Rule.** All six category colours must read as the same weathered, sun-faded palette. No category may be brighter, more saturated, or louder than its siblings — a Markets tag and a Theatre tag have equal visual weight, always. Harmony outranks distinguishability here: these are labels on a noticeboard, not a wayfinding system. When adding a category, desaturate it until it sits inside the family, then check it still clears 4.5:1 on its own tint.
 
 **The Warm Text Rule.** Text never uses a neutral grey. Every ink carries either the page's green or the palette's brown. `#666` and its relatives are banned outright; they are the single fastest way to make this page look like a template.
 
 **The Contrast Floor Rule.** Every text colour clears WCAG AA (4.5:1) against every background it is placed on. The audience skews older and this is a product constraint, not a preference. The palette currently has **no violations**: the tightest pair is Weathered Leather on Linen (the time pill, 13px) at **5.29:1**, and every other text pair sits between 5.96:1 and 12.6:1. Weathered Leather was deepened from `#8B7355` (3.95:1, failing) to reach this floor. When adding or adjusting any text colour, measure it against every surface it can land on — for this palette that means white, the page, and linen.
+
+**The Pressable Line Rule.** A border that is a control's *only* definition owes 3:1 (WCAG 1.4.11), the same as any other non-text affordance. This system is flat and nearly fill-free, so that describes most of its controls — which is exactly why Hairline at 1.33:1 was not enough on its own. Hence two border colours, chosen on one question: **does this line separate something, or can you press it?** Separators keep Hairline; controls take Pressable Line (`{colors.border-interactive}`, **3.36:1** on the page, **3.49:1** on card white, **3.08:1** on linen). Note this is a *colour* axis and cuts across the *weight* axis in Shape — a form input is 1px like a card but takes the pressable colour, because it is a control. A zero-count filter chip takes it too: it recedes by dropping to the page fill, and a dimmed boundary on a live control was buying the recede with the thing the rule protects.
 
 ## Typography
 
@@ -263,11 +271,11 @@ Six flags, all pulled to the same weathered register. Each is a text colour pair
 **Character:** Georgia supplies the small-town-newspaper authority that a community resource needs to be believed; the system sans keeps the body text native and instantly familiar on whatever device it lands on. DM Mono does one job — it makes times read as data rather than prose, so the eye can find "8:00 PM" without reading the sentence around it. The pairing is deliberately unfashionable: three faces most people already have opinions about, used correctly.
 
 ### Hierarchy
-- **Display** (`{typography.display}`): The masthead only. One per page. Tight negative tracking keeps "Naas Today" feeling set rather than typed.
+- **Display** (`{typography.display}`): The masthead only. One per page. Tight negative tracking keeps "Naas Today" feeling set rather than typed. Drops to 1.25rem below 480px, where the space above the first event card is worth more than the wordmark's scale — still ahead of the 1.125rem date beneath it, so the masthead keeps outranking the state it sits over.
 - **Document Title** (`{typography.document-title}`): The `<h1>` on a standalone document page such as Terms, underscored by a hairline rule. The only place an `<h1>` appears that isn't the masthead, and the only place the serif stack carries a `'Times New Roman'` fallback.
 - **Headline** (`{typography.headline}`): Georgia at its largest below the masthead — empty-state and error-state headings, where the page has nothing else to say.
 - **Subhead** (`{typography.subhead}`): Modal titles. Serif marks the overlay as a distinct place.
-- **Section** (`{typography.section}`): The smallest serif step — the "What's next" heading. Serif always marks a change of section; the body never uses it.
+- **Section** (`{typography.section}`): The smallest serif step — the "Coming up" / "Next up" heading. Serif always marks a change of section; the body never uses it.
 - **Date** (`{typography.date}`): The current-date display. Sans, not serif, because it changes constantly and must feel like state rather than a heading. Drops to 1.125rem below 480px.
 - **Title** (`{typography.title}`): Event titles. Sans and semibold, sized only 1.28× the body — a notice, not a headline. This restraint is what lets twelve cards scan as equals.
 - **Body** (`{typography.body}`): Event descriptions and interface prose. The 660px column keeps the measure near 70 characters without needing a `max-width` on the paragraph.
@@ -291,11 +299,18 @@ A **single 660px column**, centred, with 1.5rem side padding tightening to 1rem 
 
 The vertical rhythm is a coarse rem scale (0.25 / 0.5 / 0.75 / 1 / 1.5 / 2 / 3rem) with cards separated by exactly 12px — tight enough that a dozen events read as one list rather than a series of panels. Card padding is asymmetric (`16px 20px`), giving slightly more horizontal breathing room than vertical, which keeps titles off the border without lengthening the scroll.
 
-Page order is fixed and load-bearing: masthead → date section → category filters → event list → submit prompt → "What's next" → footer. The submit call-to-action lives **after** the day's events, never before them, because the visitor's job comes first.
+Page order is fixed and load-bearing, and it has **two orders, chosen by whether the day has any events**:
 
-**Sticky header.** The masthead sticks at `top: 0` (`z-index: 100`) and gains a shadow only once the page has scrolled past 4px. It is the one element allowed to acknowledge scroll position.
+- **A day with events:** masthead → date section → category filters → event list → submit prompt → "Coming up" → footer. The submit call-to-action lives **after** the day's events, never before them, because the visitor's job comes first.
+- **A day with none:** masthead → date section → category filters → empty message → **"Next up" → submit prompt** → footer. The last two swap.
 
-**Breakpoints.** Only two, both narrow: `520px` reflows the "What's next" rows from a four-column grid into a two-by-two block, and `480px` tightens the container, shrinks the date display, spreads the date nav to full width, and converts modals into bottom sheets. There is no tablet or desktop breakpoint — the design is the same object at 375px and 1920px.
+The empty-day order follows the rule's *reason* rather than its letter. On a day with nothing on, the visitor's job is not answered by an empty grid — it is answered by the next few events. Putting the request for unpaid work above that answer is the thing the rule exists to prevent. Most weekdays in Naas have nothing on, so this is the more-shown of the two orders, not an edge case.
+
+**The upcoming section is named for its job.** "Coming up" when it is a footnote to a full day; **"Next up"** when the day is empty and the list is the answer. One section, two headings, and the heading is the only thing that changes.
+
+**Sticky date bar.** The **date section** sticks at `top: 0` (`z-index: 100`) and gains a shadow once its own top edge reaches the viewport top (`getBoundingClientRect().top <= 0`). It is the one element allowed to acknowledge scroll position. The masthead scrolls away with the page: halfway down a busy Saturday, which day you are reading matters and the site's name does not.
+
+**Breakpoints.** Only two, both narrow: `520px` reflows the upcoming-list rows from a four-column grid into a two-by-two block, and `480px` tightens the container, shrinks the date display, spreads the date nav to full width, and converts modals into bottom sheets. There is no tablet or desktop breakpoint — the design is the same object at 375px and 1920px.
 
 ### Named Rules
 
@@ -327,6 +342,8 @@ Corners are **gently curved, never soft**, and the radius encodes scale: the big
 
 Borders are the primary form-giver, and their weight carries meaning: **1px for structure** (cards, inputs, dividers) and **1.5px for interactive controls** (filter chips, date-nav buttons, share buttons, secondary buttons). The heavier line is how a control announces that it can be pressed, in a system with almost no fills.
 
+Weight and colour are separate axes and do not always agree. Inputs and secondary buttons are 1px like a card but take Pressable Line, because the Pressable Line Rule asks whether a thing can be pressed and this one asks how structural it is. When they disagree, colour wins on accessibility grounds and weight wins on look.
+
 **No icons.** The system uses no icon library. Directional and semantic marks are text glyphs (`←` `→` `↗` `↓` `✕`) or a single emoji pin (`📍`) for locations, always `aria-hidden` with a real text label beside it. Every arrow in a link ships as a character, not an SVG.
 
 ### Named Rules
@@ -338,14 +355,14 @@ Borders are the primary form-giver, and their weight carries meaning: **1px for 
 ### Buttons
 - **Shape:** Gently curved (8px), full-width up to a 320px cap for the primary submit action.
 - **Primary:** Solid hedgerow green with white text (12px 32px), semibold at 0.9375rem. Hovers to **deep forest ink**, not to a lighter or darker green — the darkening-toward-black move is deliberate and gives the press a sense of weight.
-- **Secondary:** Transparent with a 1px hairline and sage-ink text; on hover the border and text both take the accent. No fill ever appears.
+- **Secondary:** Transparent with a 1px Pressable Line and sage-ink text; on hover the border and text both take the accent. No fill ever appears.
 - **Hover / Focus:** All transitions are 0.15–0.2s. Focus-visible draws a 2px accent outline at 2px offset, on every focusable element without exception.
 - **Character:** *Plain and sturdy.* Nothing precious — honest borders, generous targets, obvious affordances. Built to be used confidently by a seventy-year-old on a bus.
 
 ### Chips
-- **Filter chips:** White fill, 1.5px hairline, sage-ink label at 0.8125rem, 6px radius. Each carries a `data-cat` attribute that binds it to its own category colour pair.
+- **Filter chips:** White fill, 1.5px Pressable Line, sage-ink label at 0.8125rem, 6px radius. Each carries a `data-cat` attribute that binds it to its own category colour pair.
 - **State:** On hover, the chip previews its category — border, text, and background all shift to that category's colours. When active, it inverts fully: category colour as the fill, white text. **A filter chip is the only element permitted to use a category colour as a background fill.**
-- **Overflow:** The chip row scrolls horizontally rather than wrapping, so the filter bar is always exactly one line tall.
+- **Overflow:** The chip row **wraps** rather than scrolling — one line on desktop, two on a phone. Every filter must be visible without interaction; a horizontally-scrolling row clipped at the viewport edge hid half the categories from anyone who did not think to swipe. Height is the cheaper thing to spend.
 
 ### Cards / Containers
 - **Corner Style:** 12px.
@@ -357,13 +374,13 @@ Borders are the primary form-giver, and their weight carries meaning: **1px for 
 - **Long descriptions:** Clamped to three lines past 220 characters, with a "Read more ↓" toggle in accent text.
 
 ### Inputs / Fields
-- **Style:** White fill, 1px hairline, 8px radius, 10px 12px padding at 0.9375rem — comfortably above the 16px iOS zoom threshold in practice.
+- **Style:** White fill, 1px Pressable Line, 8px radius, 10px 12px padding at 0.9375rem — comfortably above the 16px iOS zoom threshold in practice.
 - **Focus:** Border shifts to accent and a 3px meadow-tint halo appears (`box-shadow: 0 0 0 3px`). Soft, not a glow.
 - **Selects:** Native chrome removed and replaced with an inline SVG chevron as a data-URI, right-aligned at 0.75rem. No dependency, no icon font.
 - **Labels:** Always visible above the field, sage-ink, 0.875rem, medium weight. Placeholder text is never a substitute for a label.
 
 ### Navigation
-- **Date nav:** Four text buttons — Previous, Today, Pick a date, Next — each a minimum 44×44px with 1.5px hairline borders and 6px radius. Prev and Today are hidden when not applicable rather than disabled. Today, when shown, is the sole tinted control on the row (meadow tint, accent border and text).
+- **Date nav:** Four text buttons — Previous, Today, Pick a date, Next — each a minimum 44×44px with 1.5px Pressable Line borders and 6px radius. Prev and Today are hidden when not applicable rather than disabled. Today, when shown, is the sole tinted control on the row (meadow tint, accent border and text).
 - **Footer:** Plain text buttons and links separated by middot characters, sage-ink, hovering to accent. No underlines at rest.
 - **Skip link:** Ink-filled, parked at `top: -100%`, drops to `top: 0` on focus.
 - **Mobile:** Below 480px the date nav spreads to `justify-content: space-between` across the full width, putting Previous and Next at opposite thumb reaches.
@@ -391,6 +408,7 @@ The design detector reflects that: the `design-system-*` rules and `overused-fon
 
 ### Do:
 - **Do** define every surface with the 1px hairline (`{colors.border}`). It is the system's structural element, and removing it in favour of shadow or spacing breaks the noticeboard.
+- **Do** draw every pressable edge with Pressable Line (`{colors.border-interactive}`) instead, and measure any replacement at 3:1 against white, the page, and linen. Hairline is a whisper and a control cannot afford one.
 - **Do** keep the events list one column wide at every breakpoint.
 - **Do** tint shadows with `rgba(26,42,26,…)`, never pure black — the modal overlay, which falls on the scrim rather than the page, is the sole documented exception.
 - **Do** reserve DM Mono for times, dates, and tag stamps.
@@ -403,6 +421,7 @@ The design detector reflects that: the `design-system-*` rules and `overused-fon
 ### Don't:
 - **Don't** use pure `#FFFFFF` as a page background or neutral grey (`#666`, `#888`) for any text. Every neutral in this system carries green or brown.
 - **Don't** add a second accent colour. Hedgerow green is the only brand voice, and it appears as a fill roughly once per viewport.
+- **Don't** use Fault Red (`{colors.danger}`) for anything but form validation, and don't reach for a browser dialog instead. `alert()` and `confirm()` render as "naastoday.com says" — a different product's voice, in a box that lands nowhere near the field that caused it. The one sanctioned exception is `confirm()` on a genuinely destructive action, which is what the platform dialog is for.
 - **Don't** use elevation to signal importance. Shadows respond to interaction; they never rank content.
 - **Don't** use a category colour as a background fill anywhere except an active filter chip.
 - **Don't** make an event title more than ~1.3× body size, or promote any single event with size, colour, or imagery. Every notice is equal.

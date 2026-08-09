@@ -34,7 +34,7 @@ A general aggregator cannot truthfully claim this, because the value comes from 
 
 **How events reach the site (three paths, all converging on a moderation queue):**
 
-1. **Automated scraping** — `scripts/scrape-sources.js` pulls from a maintained URL list in `event-sources.md` (Eventbrite, AllEvents.in, WhatsonTonight.ie, IntoKildare.ie, Moat Theatre). `scripts/pull-library-events.js` pulls the Naas Library RSS feed.
+1. **Automated scraping** — `scripts/scrape-sources.js` pulls from a maintained URL list in `event-sources.md` (Moat Theatre, WhatsonTonight.ie, Kildare Heritage, IntoKildare.ie, WhatsGoingOn.ie). `scripts/pull-library-events.js` pulls the Naas Library RSS feed. Eventbrite and AllEvents.in were removed on 2026-08-05 — see the "Removed sources" section of `event-sources.md`.
 2. **Community submission** — a public form on the site, including a recurring-series option (weekly/fortnightly/monthly).
 3. **Bulk CSV import** — `scripts/import-events.js`, operator-run.
 
@@ -51,7 +51,7 @@ Everything lands as `pending`. The operator approves or rejects via a password-p
 **Confirmed capabilities**
 - Browse approved events for a chosen date; move day by day or jump to a date.
 - Filter by all six categories — free, kids, music, sport, markets, theatre. Filters combine, persist to the URL as a `filters` parameter (so a filtered view is shareable), and each button shows a live count of matching events for the current day, dropping the count when none match.
-- Submit a single event, or a recurring series stored as separate occurrences sharing a `recurring_group_id`.
+- Submit a single event, or a recurring series stored as separate occurrences sharing a `recurring_group_id`. **Only title, date and location are required.** A description is optional, and the time can be left as "Not sure yet", which stores no time and renders as `TBC`. Decided 2026-08-07 (critique item 72): the form previously refused the neighbour who knows only *"Saturday morning, the square"*, while the column was already nullable, the card already rendered `TBC`, and the scrapers already produced such rows daily. The strictness was costing exactly the submissions the site most wants. Format is still validated whenever a value **is** supplied — see `tests/event-body.test.js`.
 - Operator moderation: list, approve, reject, edit, delete, including bulk operations across a recurring series from a given date forward.
 - Multi-day events (`end_date`), all-day events (`is_all_day`), optional end times, optional event URL.
 - A terms page.
@@ -62,6 +62,11 @@ Everything lands as `pending`. The operator approves or rejects via a password-p
 - Dependency list is deliberately three packages. Tests use Node's built-in runner; no test framework is to be added. **Restraint about dependencies is a standing project value**, not an accident, and follows from the low-maintenance goal.
 - A CSP is enforced via `netlify.toml`. Umami Cloud is the only allowed analytics origin.
 - Locale is `en_IE`. Dates are handled in local time, never UTC.
+
+**Known gaps, decided but not closed**
+- **There is no answer to "what's on this weekend?" beyond stepping day by day.** The Users section names it as one of the two defining questions, and the interface answers only the other one. Reviewed 2026-08-07 (critique item 70) and **deliberately left as it is**: the day-at-a-time shape is a real product decision, not an inheritance from the name, and the "Coming up" / "Next up" list already partly covers the gap by showing the next five events regardless of date. A second navigation mode is a feature that deserves its own design pass — it touches the URL model, the filters and the pre-render — and should not arrive as a side effect of a refactor. **Recorded here so the gap stays visible rather than being rediscovered as a bug.**
+- **Filters AND together.** Two lit chips means an event must match both. This is now stated on screen when a filtered day comes up empty with more than one chip active (critique item 71), rather than being left to inference. Whether OR would serve the "free things for the kids" case better is untested.
+- **The chrome above the first event card costs about a third of a phone screen.** Measured on 2026-08-08 at 375×812: masthead 54px, date section 101px, filter rows 122px — ~277px before a single event, or ~40% of what an iPhone shows once Safari's own bars are subtracted. One card fits, plus the title of the next. **Trimmed, not solved:** padding and the mobile masthead size came down ~31px, and that is the end of what spacing can give. The remaining cost is three deliberate decisions, each defensible alone — 44px touch targets (0130f70), the two-row filter wrap that made all six categories visible (684b36e), and a date label that spells out "Today – Saturday, 8 August" in full. A real fix has to ask whether the filter row belongs above the fold at all, or whether the chrome should collapse on scroll; both change the layout rather than its spacing, and neither should arrive as a side effect of a trim. **Recorded here so the gap stays visible rather than being rediscovered as a bug.**
 
 **Explicitly undecided — do not assume either way**
 - **Monetisation.** No ads, sponsored placement, or paid promotion exist today, and none are planned, but the operator has not ruled them out as a permanent commitment. Do not design as though sponsored slots are coming, and do not state anywhere that the site will never carry them.
@@ -75,13 +80,13 @@ Everything lands as `pending`. The operator approves or rejects via a password-p
 - **Binding visual constraints already in force:** forest green `#2d5a2d` as the brand anchor; warm beige/linen backgrounds; Georgia for headings, system UI stack for body, DM Mono for times and tags; **light mode only**.
 - **Anti-references** the operator has already ruled out: purple gradients and SaaS hero patterns; Facebook Events clutter; Airbnb-style aspirational photography; the generic Eventbrite grid.
 
-Design system detail beyond these commitments lives in the code and in `docs/superpowers/specs/`, not here.
+Design system detail beyond these commitments lives in `DESIGN.md` and its sidecar `.impeccable/design.json`, not here.
 
 ## Evidence on Hand
 
 - **Real event data** in Supabase — genuine Naas events with real titles, venues, dates. Never fabricate sample events that read as real listings.
 - **Real source list** — `event-sources.md`, the actual scraper input.
-- **Prior design records** — `docs/superpowers/specs/` and `docs/superpowers/plans/` hold the 2026-03-24 UI/UX overhaul, the 2026-03-25 layout and event-card redesigns, and the 2026-04-02 terms page.
+- **Prior design records** — `docs/superpowers/plans/` holds the 2026-03-25 layout and event-card redesigns and the 2026-04-02 terms page. The matching `specs/` directory was deleted on 2026-08-06: it described a card layout and palette that were never shipped, so it misled anyone who read it. Recover from git if the history is ever needed.
 - **Analytics** via Umami Cloud exist, but no traffic figures have been shared.
 
 **Absences future work must not fill by invention:** no testimonials, no user research, no traffic or usage numbers, no press, no partnership or endorsement from any venue, business, or Kildare County Council body, no logo asset beyond the wordmark treatment in the header. Do not imply official or council backing — the site is independent.

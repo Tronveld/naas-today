@@ -7,6 +7,7 @@
 // DELETE /.netlify/functions/admin-events  body: { id }
 
 const crypto = require('crypto');
+const { validDate, validTime, json, DATE_RE } = require('./lib/validate');
 
 const ITERATIONS = 310_000;
 const KEYLEN     = 64;
@@ -21,33 +22,11 @@ const ALLOWED_PATCH_FIELDS = new Set([
 ]);
 
 const UUID_RE   = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DATE_RE   = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_RE   = /^\d{2}:\d{2}(:\d{2})?$/;
 const BOOL_FIELDS    = new Set(['is_all_day', 'is_free', 'is_for_kids', 'is_music', 'is_sport', 'is_market', 'is_theatre']);
 const DATE_FIELDS    = new Set(['date', 'end_date']);
 const TIME_FIELDS    = new Set(['time', 'time_end']);
 const STR_FIELDS     = new Set(['title', 'location', 'description', 'url', 'status']);
 const STR_MAX_LENGTHS = { title: 150, location: 150, description: 2000, url: 500, status: 10 };
-
-function validDate(s) {
-  if (!DATE_RE.test(s)) return false;
-  const parts = s.split('-').map(Number);
-  return parts[1] >= 1 && parts[1] <= 12 && parts[2] >= 1 && parts[2] <= 31;
-}
-
-function validTime(s) {
-  if (!TIME_RE.test(s)) return false;
-  const parts = s.split(':').map(Number);
-  return parts[0] <= 23 && parts[1] <= 59;
-}
-
-function json(statusCode, body) {
-  return {
-    statusCode,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  };
-}
 
 // ── Auth helper ──────────────────────────────────────────────────────────────
 // Secret keys (sb_secret_…) are not JWTs — use only the apikey header.
@@ -118,6 +97,27 @@ function validateBulkIds(ids) {
   return [[...new Set(ids)], null];
 }
 
+// A date belongs to one occurrence, never to a set. Both bulk paths PATCH many
+// rows with one field object, so a date in it lands on every row and flattens
+// the series into a single day — which is exactly what happened to the Naas
+// Country Market series: 85 future Fridays collapsed onto 2026-08-07 and the
+// live site showed 85 copies of the same market on one date.
+//
+// Dropped rather than rejected. The admin edit form always includes `date`
+// (admin.html builds `date: editDate.value` and passes the same object to
+// apiPatchGroup), so a 400 would make it impossible to bulk-edit a time or a
+// flag. The response reports what was ignored instead of staying quiet about it.
+const BULK_IMMUTABLE = new Set(['date', 'end_date']);
+
+function stripBulkImmutable(fields) {
+  const safe = {}, ignored = [];
+  for (const [k, v] of Object.entries(fields)) {
+    if (BULK_IMMUTABLE.has(k)) ignored.push(k);
+    else safe[k] = v;
+  }
+  return [safe, ignored];
+}
+
 function validatePatchFields(fields) {
   // Returns an error string, or null if valid
   const safeFields = {};
@@ -178,8 +178,12 @@ async function handlePatch(event, supabaseUrl, secretKey) {
       return json(400, { error: 'Missing or empty fields' });
     }
 
-    const [safeFields, fieldErr] = validatePatchFields(fields);
+    const [validFields, fieldErr] = validatePatchFields(fields);
     if (fieldErr) return json(400, { error: fieldErr });
+    const [safeFields, ignored] = stripBulkImmutable(validFields);
+    if (Object.keys(safeFields).length === 0) {
+      return json(400, { error: `Nothing to update — ${ignored.join(', ')} cannot be set on multiple events` });
+    }
 
     const list = safeIds.map(encodeURIComponent).join(',');
     const res = await fetch(
@@ -197,7 +201,7 @@ async function handlePatch(event, supabaseUrl, secretKey) {
     if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
 
     const updated = await res.json();
-    return json(200, { success: true, count: updated.length });
+    return json(200, { success: true, count: updated.length, ignored });
   }
 
   // ── Bulk mode: update all future events in a recurring series ──
@@ -208,8 +212,12 @@ async function handlePatch(event, supabaseUrl, secretKey) {
       return json(400, { error: 'Missing or empty fields' });
     }
 
-    const [safeFields, fieldErr] = validatePatchFields(fields);
+    const [validFields, fieldErr] = validatePatchFields(fields);
     if (fieldErr) return json(400, { error: fieldErr });
+    const [safeFields, ignored] = stripBulkImmutable(validFields);
+    if (Object.keys(safeFields).length === 0) {
+      return json(400, { error: `Nothing to update — ${ignored.join(', ')} cannot be set across a series` });
+    }
 
     const res = await fetch(
       `${supabaseUrl}/rest/v1/events?recurring_group_id=eq.${encodeURIComponent(group_id)}&date=gte.${encodeURIComponent(from_date)}`,
@@ -226,7 +234,7 @@ async function handlePatch(event, supabaseUrl, secretKey) {
     if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
 
     const updated = await res.json();
-    return json(200, { success: true, count: updated.length });
+    return json(200, { success: true, count: updated.length, ignored });
   }
 
   // ── Single event mode ──
@@ -339,5 +347,8 @@ exports.handler = async function(event) {
 };
 
 // Exported for tests only — Netlify uses the handler above.
-exports.validateBulkIds = validateBulkIds;
-exports.MAX_BULK_IDS    = MAX_BULK_IDS;
+exports.validateBulkIds     = validateBulkIds;
+exports.MAX_BULK_IDS        = MAX_BULK_IDS;
+exports.stripBulkImmutable  = stripBulkImmutable;
+exports.validDate           = validDate;
+exports.validTime           = validTime;

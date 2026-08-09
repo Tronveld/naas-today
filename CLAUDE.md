@@ -72,13 +72,16 @@ src/
     EventsGrid.astro         — grid of EventCards, empty/loading/error states,
                                and the submit-event area below the list
     Footer.astro             — copyright + about/contact/terms/submit links
-    AppModals.astro          — About/Contact/Submit modals bundled with their own
-                               copy of the modal JS (see the note below)
+    AppModals.astro          — About/Contact/Submit modals for pages that are not
+                               index.astro; wires the shared script (see below)
     modals/
       DatePickerModal.astro
       SubmitEventModal.astro
       AboutModal.astro
       ContactModal.astro
+  scripts/
+    draft.js                 — submit-form draft persistence (sessionStorage)
+    modal-form.js            — modal system + submit form, shared by index and AppModals
   pages/
     index.astro              — fetches events at build time, assembles all components, embeds client JS
     terms.astro              — static terms & disclaimer page (own scoped <style>)
@@ -87,7 +90,9 @@ public/
   robots.txt
 ```
 
-**Note — the modal JS exists in two places.** `index.astro` imports the four modals individually and defines `openModal`/`closeModal`/`trapFocus` in its own client script. `terms.astro` imports `AppModals.astro`, which bundles three modals *plus a second TypeScript copy of the same logic*, because it does not load `index.astro`'s script. **A fix to the modal system in one file does not fix the other** — change both, or the About/Contact modals will behave differently on `/` and `/terms`.
+**The modal system and the submit form live in `src/scripts/modal-form.js`**, shared by `index.astro` and `AppModals.astro` (which `/terms` uses). It exports `openModal`, `closeModal`, `initModals()` and `initSubmitForm({ defaultDate })`; `defaultDate` is the only thing that differs between the two callers — on `/` the day being viewed, on `/terms` today.
+
+This used to be two copies, the second a TypeScript retype of the first, and CLAUDE.md carried a warning that fixing one did not fix the other. Two copies of a form that takes a 2000-character description is two chances to lose someone's typing. `src/scripts/draft.js` was already shared for the same reason — a draft started on `/` has to still be there on `/terms`.
 
 **`src/pages/index.astro`** — Key sections:
 - Frontmatter fetches approved events from Supabase at build time; pre-renders `EventsGrid` with today's events; emits JSON-LD structured data.
@@ -97,7 +102,8 @@ public/
   - **`fetchEvents()`** — calls `/.netlify/functions/get-events`; skips loading spinner if pre-rendered events are already visible.
   - **`renderEvents()`** — filters `events` array by `currentDate`, active filters, then calls `createEventCard()` per event.
   - **`createEventCard(event)`** — builds event cards using DOM methods (`textContent` only — never `innerHTML` with user data).
-  - **Modal system** — `openModal(id)` / `closeModal(id)` manage focus, ARIA, and a per-modal Tab key trap stored on `modal._trapHandler`.
+  - **`FILTER_CHIPS`** — the six category chips as one array carrying `id`, `slug`, `label`, `match` and `active`. The count badges, the toggle handlers, the `?filters=` round-trip and the filtering all read it; there is no separate per-filter variable.
+  - **Modal system** — imported from `src/scripts/modal-form.js`; `index.astro` calls `openModal`/`closeModal` directly only for the date picker.
 
 `public/admin.html` — password-protected admin interface. On load it calls `admin-auth` with `check_setup` to determine whether to show the first-time setup form or the login form. Once authenticated, it calls `admin-events` to list, approve/reject, edit, or delete events. The password is stored only in `sessionStorage` (cleared on tab close) and sent via the `x-admin-password` header on every admin API request.
 
@@ -109,9 +115,17 @@ public/
 | `submit-event.js` | POST | Inserts a new event with `status = 'pending'`; rate-limited (5/IP/hour) |
 | `submit-recurring.js` | POST | Submits a recurring event series (weekly/fortnightly/monthly); each occurrence stored as a separate row sharing a `recurring_group_id`; rate-limited (5/IP/hour) |
 | `admin-auth.js` | POST | First-time setup + login. Actions: `check_setup`, `setup`, `login`. Rate-limited (10/IP/15 min) |
-| `admin-events.js` | GET / PATCH / DELETE | Protected event management. Requires `x-admin-password` header on every call. Supports bulk update/delete of recurring event groups from a given date forward |
+| `admin-events.js` | GET / PATCH / DELETE | Protected event management. Requires `x-admin-password` header on every call. Supports bulk update/delete of recurring event groups from a given date forward. **`date` and `end_date` are stripped from both bulk paths** (`stripBulkImmutable`) — see below |
 
 All functions use the Supabase REST API directly (`fetch` to `/rest/v1/`) — no Supabase client library.
+
+**Shared validation lives in `netlify/functions/lib/validate.js`** — `validDate`, `validTime`, `validUrl`, `json`, `err400` and `validateEventBody`. It is in a subdirectory because **Netlify deploys every top-level file in `netlify/functions/` as a function**; a `_validate.js` was tried first and `netlify dev` reported "Loaded function _validate", so the underscore convention does not apply. A subdirectory is only a function when it holds a file matching its own name, so `lib/` is invisible to the detector.
+
+It exists because the three write paths each had their own `validDate` and they had drifted: submit-event checked month lengths and leap years while submit-recurring and admin-events range-checked the day `1..31` and stopped. `2026-02-31` was refused from the public form and **accepted from the recurring form** — the one that turns a single bad date into up to 104 rows. `tests/validator-parity.test.js` runs the same inputs through all three so a fourth fork fails loudly. `submit-event.js` and `submit-recurring.js` re-export the validators for those tests; `scripts/audit-event-dates.js` imports the module directly.
+
+**Bulk edits never carry a date.** Both PATCH bulk paths (`ids` and `group_id`) apply one field object to many rows, so a `date` in it lands on every row and flattens a recurring series into a single day. That happened on the live site: editing one Naas Country Market occurrence with "this and all future events" collapsed 85 Friday occurrences onto 2026-08-07, and the site showed 85 copies of the same market on one date.
+
+`stripBulkImmutable` drops `date` and `end_date` in bulk modes and returns them in the response as `ignored`. Dropped rather than rejected because `public/admin.html` always builds `date: editDate.value` into its fields object and passes it straight to `apiPatchGroup` — a 400 would make it impossible to bulk-edit a time or a category flag. Single-event edits are unaffected and can still change a date.
 
 **Admin authentication**: passwords are hashed with PBKDF2-SHA256 (310,000 iterations, OWASP 2023 recommendation) and stored in the `admin_config` table. The password is re-verified on every `admin-events` request (stateless — no session tokens). Only whitelisted fields (`ALLOWED_PATCH_FIELDS`) can be updated via PATCH.
 
@@ -132,7 +146,7 @@ Table: `events`
 | `is_all_day` | boolean | When true, no time is required or shown |
 | `is_free` | boolean | |
 | `is_for_kids` | boolean | |
-| `is_music` | boolean | Category filter flag; default `false` |
+| `is_music` | boolean | Category filter flag; default `false`. Set from the source's own categories — see below |
 | `is_market` | boolean | Category filter flag; default `false` |
 | `is_sport` | boolean | Category filter flag; default `false` |
 | `is_theatre` | boolean | Category filter flag; default `false` |
@@ -158,6 +172,25 @@ The scheduled workflow passes `--auto-approve` to both fetchers, so **`status = 
 `source` is read-only: it is in the `admin-events` GET select list but deliberately **not** in `ALLOWED_PATCH_FIELDS`. It records what happened and should not be editable.
 
 To approve a submitted event, change its `status` to `'approved'` — either in the Supabase Table Editor or via the admin panel at `/admin.html`. Events only appear on the public site when `status = 'approved'`.
+
+#### Category flags come from the source, not from the text
+
+`CATEGORY_FLAGS` in `scrape-sources.js` maps a source's own tags onto the six
+filters: `Music` → `is_music`, `Drama`/`Theatre` → `is_theatre`,
+`Family`/`Children`/`Kids` → `is_for_kids`, and so on. Both Moat Theatre
+(Squarespace) and IntoKildare (The Events Calendar) publish tags; plain strings
+and `{name}` objects are both accepted, and a trailing digit is stripped so
+Moat's duplicated `Drama 2` lands on `drama`.
+
+**When a source supplies categories they are trusted outright and `KIDS_RE` is
+not consulted.** The regex over a full description gets Moat exactly backwards:
+Chris Kent's adult stand-up blurb says "Between kids, marriage and…" and scores
+true, while the children's panto — "The Panto Legends Return!" — scores false.
+Moat tags them `Comedy` and `Children`/`Family`. Sources with no categories keep
+the old text-matching behaviour.
+
+Unmapped tags (`Comedy`, `Coming Soon`, `This Week`, `Christmas`, `Talks`) set
+nothing. Comedy is deliberately not folded into theatre — stand-up is not a play.
 
 #### `admin_config` table
 
@@ -188,21 +221,27 @@ All scripts `require('./lib')`. Exports:
 | `createClient(url, key)` | Returns `{ get, post, isDuplicate, cacheInserted }` bound to the given Supabase URL/key. `isDuplicate` caches per-date DB queries for the lifetime of the instance; call `cacheInserted(title, date)` after each successful insert to keep the cache consistent within a run. |
 | `exitCode({ sourceErrors, eventErrors })` | Returns `1` if either count is above zero, else `0`. Both fetchers set `process.exitCode` from it so a dead source fails the run instead of passing quietly. Finding nothing is deliberately **not** an error — an all-duplicates run is what a healthy second pull of the day looks like. |
 | `sourceForUrl(url)` | Bare hostname for the `source` column (`www.` stripped, lowercased), or `null` if the URL will not parse. Never throws — the tag is diagnostic and must not cost the event. |
-| `setOutput(key, value)` | Appends `key=value` to `$GITHUB_OUTPUT`. No-op (returns `false`) when unset, i.e. everywhere but CI. |
-| `reportInserted(count)` | `setOutput('inserted', count)`. Both fetchers call it so the workflow can decide whether a rebuild is worth 15 Netlify credits. Reports `0` on a dry run — nothing was written, so anything else would misstate it. |
+| `printSummary(title, counters, log)` | The titled bar + counter block + per-event detail lines all three importers end with. `counters` is an object so each caller keeps its own labels; a `log` entry with a `date` prints as an event, one with a `url` as a source. |
+| `setOutput(key, value)` | Appends `key=value` to `$GITHUB_OUTPUT`. No-op (returns `false`) when unset, i.e. everywhere but CI. Both fetchers call `setOutput('inserted', n)` so the workflow can decide whether a rebuild is worth 15 Netlify credits. They report `0` on a dry run — nothing was written, so anything else would misstate it. |
 
 #### Script files
 
 | File | Purpose |
 |---|---|
 | `pull-library-events.js` | Fetches upcoming events from the Naas Library RSS feed and imports them into Supabase as `pending`. Skips duplicates via fuzzy title matching. Flags: `--auto-approve`, `--dry-run`. |
-| `scrape-sources.js` | Fetches and extracts events from the URLs listed in `event-sources.md`. Three extraction paths: a shared `parseListingPage` helper for the HTML listing sites (Moat Theatre, WhatsonTonight, configured per-site via options); JSON-LD extraction for anything else; and `JSON_ADAPTERS` for sources serving structured JSON from a separate endpoint (Kildare Heritage, IntoKildare). Adapters map records into schema.org `Event` shapes so all three paths converge on the same `isNaasEvent` → `jsonLdToEvent` → duplicate-check → insert pipeline. Skips past events and duplicates. Exits non-zero if any source fails. Flags: `--auto-approve`, `--dry-run`. **Eventbrite was removed on 2026-08-05 — it blocks scrapers (`HTTP 405`) and its terms prohibit automated collection. Do not add it back;** see the "Removed sources" section of `event-sources.md`. See also the "Evaluated, not used" section there before researching new sources — 30+ candidates were probed on 2026-08-06. |
+| `scrape-sources.js` | Fetches and extracts events from the URLs listed in `event-sources.md`. Three extraction paths: `JSON_ADAPTERS` for sources serving structured JSON from a separate endpoint (Moat Theatre and Kildare Heritage share one Squarespace adapter; IntoKildare has its own); JSON-LD extraction for pages that publish `Event` objects; and `parseWhatsonTonight` for WhatsonTonight, the only remaining HTML scrape. **Prefer an adapter to a parser** — the HTML path cannot extract a time at all, which is what left 81 Moat rows showing "TBC". Adapters map records into schema.org `Event` shapes so all three paths converge on the same `isNaasEvent` → `jsonLdToEvent` → duplicate-check → insert pipeline. Skips past events and duplicates. Exits non-zero if any source fails. Flags: `--auto-approve`, `--dry-run`. **Eventbrite was removed on 2026-08-05 — it blocks scrapers (`HTTP 405`) and its terms prohibit automated collection. Do not add it back;** see the "Removed sources" section of `event-sources.md`. See also the "Evaluated, not used" section there before researching new sources — 30+ candidates were probed on 2026-08-06. |
 | `weekly-post.js` | Generates a social media post for the upcoming week's approved events and copies it to the clipboard. Flags: `--list` (output raw JSON), `--select=id1,id2` (pin specific events). |
 | `import-events.js` | Bulk-imports events from a CSV file into Supabase as `pending`. Usage: `node scripts/import-events.js <file.csv> [--dry-run]`. CSV must have a header row; required columns: `title`, `date` (`YYYY-MM-DD`), `location`. |
 | `check-deploy-budget.js` | **Read-only.** Counts production deploys in the trailing 30 days via the Netlify API and emits `allowed=true\|false` for the workflow's rebuild step. Env: `NETLIFY_AUTH_TOKEN` (optional), `NETLIFY_SITE_ID`, `REBUILD_CAP` (default 15). Fails **open** — no token, or an API error, warns and allows, because the "only rebuild when events arrived" gate is the primary control and a silently disabled rebuild is harder to notice than a warning. |
 | `notify-pending.js` | Emails a reminder while any event is `status = 'pending'` (i.e. a human submission awaiting review). Sends nothing when the queue is empty. Exits non-zero if events are waiting but the mailer is unconfigured or the send fails — an undeliverable reminder must be loud. Flag: `--dry-run` (print the email instead of sending). Env: `RESEND_API_KEY`, `NOTIFY_EMAIL_TO`, optional `NOTIFY_EMAIL_FROM`. |
-| `audit-event-dates.js` | **Read-only.** Checks every row already in `events` against the *current* validators, importing them from the live function rather than reimplementing them. Answers what tests cannot: whether rows inserted while a validator was wrong are still bad. Never writes to Supabase. **The backstop for auto-approved scraper output** — nobody reads those rows before they publish, so run this after any scraper change. |
-| `fix-library-entities.js` | One-time migration: decodes HTML entities in existing Naas Library event records stored in Supabase. |
+| `audit-event-dates.js` | **Read-only.** Checks every row already in `events` against the *current* validators, importing them from `netlify/functions/lib/validate.js` rather than reimplementing them. Answers what tests cannot: whether rows inserted while a validator was wrong are still bad. Never writes to Supabase. **The backstop for auto-approved scraper output** — nobody reads those rows before they publish, so run this after any scraper change. |
+
+Two one-off migrations lived here and were deleted on 2026-08-06 once they had
+run: `fix-library-entities.js` (decoded HTML entities in stored Naas Library
+rows) and `fix-moat-times.js` (backfilled Moat Theatre start/end times from the
+Squarespace feed — 77 of 81 fixed, 4 unmatched because Moat had renamed the
+show). Recover either from git if a similar backfill is ever needed. **Do not
+add new one-shot migrations to this table** — run them, then delete them.
 
 ## Scheduled fetching
 
@@ -234,7 +273,7 @@ Notes:
 
 A daily unconditional rebuild is 30 deploys — 450 credits — over budget before a single hand-pushed commit. So the rebuild step is gated twice:
 
-1. **Only when events actually arrived.** Both fetchers report their insert count via `reportInserted`, and the step requires one of them to be above zero. Historically only 2–7 days a month bring new events, so this is the control that does the real work.
+1. **Only when events actually arrived.** Both fetchers report their insert count via `setOutput('inserted', n)`, and the step requires one of them to be above zero. Historically only 2–7 days a month bring new events, so this is the control that does the real work.
 2. **A cap on total production deploys.** `check-deploy-budget.js` counts the trailing 30 days — including pushes to `main`, which cost the same 15 credits — and blocks past `REBUILD_CAP` (default 15, leaving headroom inside the 20).
 
 A trailing 30-day window is used rather than the billing month because the team's cycle starts on the 14th, not the 1st, and guessing that boundary optimistically is what pauses the site.
@@ -260,7 +299,7 @@ Analytics are provided by Umami Cloud (`https://cloud.umami.is`), which is allow
 
 ## Design authority
 
-Three files at the repo root own design and product decisions. **Read them before changing UI; they outrank this section and the specs in `docs/superpowers/specs/`.**
+Three files at the repo root own design and product decisions. **Read them before changing UI; they outrank this section.**
 
 | File | Owns |
 |---|---|
@@ -268,7 +307,10 @@ Three files at the repo root own design and product decisions. **Read them befor
 | `DESIGN.md` | The visual system — colour, type, layout, elevation, shape, and component tokens, with named rules. Frontmatter tokens are normative. |
 | `.impeccable/design.json` | Sidecar extending DESIGN.md: tonal ramps, shadow/motion tokens, breakpoints, and renderable component snippets. |
 
-The older specs in `docs/superpowers/specs/` are historical. The 2026-03-24 spec in particular describes a time-sidebar card layout and a brighter category palette that were **never shipped** — do not treat it as current.
+`docs/superpowers/specs/` was deleted on 2026-08-06. Those three specs described a
+time-sidebar card layout and a brighter category palette that were **never
+shipped**, so every reader had to be warned off them. The plans in
+`docs/superpowers/plans/` are kept: they record what was actually built.
 
 A design detector runs on edit and flags any font-size, radius, or colour absent from DESIGN.md's frontmatter. When it fires, first check whether DESIGN.md is incomplete rather than assuming the CSS is wrong.
 

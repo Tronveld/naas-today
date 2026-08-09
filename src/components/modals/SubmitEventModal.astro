@@ -3,10 +3,14 @@
 <div class="modal" id="submitModal" role="dialog" aria-modal="true" aria-labelledby="submitModalTitle">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 id="submitModalTitle">Add an Event</h2>
+            <h2 id="submitModalTitle">Submit an event</h2>
             <button class="modal-close" id="closeSubmitModal" aria-label="Close">✕</button>
         </div>
         <div class="modal-body">
+            <!-- The intro is wrapped in with the form: hiding the <form> alone left
+                 "Spotted something happening in Naas?" sitting above the thank-you,
+                 still inviting a submission that had just been made. -->
+            <div id="submitFormPanel">
             <p>Spotted something happening in Naas? Let everyone know!</p>
             <p>All submissions are reviewed to keep the calendar accurate and spam-free.</p>
             <form id="eventForm">
@@ -18,9 +22,12 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="eventDescription">Description *</label>
-                    <textarea id="eventDescription" required maxlength="2000"></textarea>
-                    <div class="char-counter" id="descCharCounter">0 / 2000</div>
+                    <label for="eventDescription">Description <span class="form-hint">(optional)</span></label>
+                    <textarea id="eventDescription" maxlength="2000"></textarea>
+                    <!-- Reads as guidance while empty and as a count once they
+                         start. "0 / 2000" under a blank required field states a
+                         ceiling nobody is near and sets no expectation at all. -->
+                    <div class="char-counter" id="descCharCounter">A sentence or two is plenty</div>
                 </div>
 
                 <div class="form-group">
@@ -37,7 +44,8 @@
 
                 <div class="form-group">
                     <label for="eventEndDate">End date <span class="form-hint">(leave blank for single-day events)</span></label>
-                    <input type="date" id="eventEndDate">
+                    <input type="date" id="eventEndDate" aria-describedby="eventEndDateError">
+                    <p class="field-error" id="eventEndDateError" role="alert" hidden></p>
                 </div>
 
                 <div class="form-group">
@@ -60,13 +68,17 @@
                     </div>
                     <div class="form-group">
                         <label for="recurrenceEndDate">Repeat until <span aria-hidden="true">*</span></label>
-                        <input type="date" id="recurrenceEndDate">
+                        <input type="date" id="recurrenceEndDate" aria-describedby="recurrenceEndDateError recurrenceHint">
+                        <p class="field-error" id="recurrenceEndDateError" role="alert" hidden></p>
                         <p class="field-hint" id="recurrenceHint" style="margin-top:4px;color:var(--ink-mid);font-size:0.875em"></p>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Time *</label>
+                <!-- A fieldset/legend, because "Time *" was a <label> with no `for`
+                     and no wrapped input: it associated with nothing at all. The
+                     three radios are one question and now say so. -->
+                <fieldset class="form-group">
+                    <legend>Time *</legend>
                     <div class="time-mode-group">
                         <label class="radio-label">
                             <input type="radio" name="timeMode" value="specific" checked>
@@ -80,13 +92,22 @@
                             <input type="radio" name="timeMode" value="allday">
                             All day
                         </label>
+                        <!-- The whole point of item 72: "Saturday morning, the
+                             square" is a submission worth having. Shows as TBC,
+                             which the card has always been able to render. -->
+                        <label class="radio-label">
+                            <input type="radio" name="timeMode" value="unknown">
+                            Not sure yet
+                        </label>
                     </div>
                     <div class="time-inputs" id="timeInputs">
+                        <label for="eventTimeStart" class="visually-hidden">Start time</label>
                         <input type="time" id="eventTimeStart" required>
                         <span class="time-sep" id="timeRangeSep" style="display:none">to</span>
+                        <label for="eventTimeEnd" class="visually-hidden">End time</label>
                         <input type="time" id="eventTimeEnd" style="display:none">
                     </div>
-                </div>
+                </fieldset>
 
                 <h3 class="form-section-heading">Where & Tags</h3>
 
@@ -125,11 +146,23 @@
                     </div>
                 </div>
 
+                <p class="form-error" id="formError" role="alert" hidden></p>
+
                 <div class="form-actions">
                     <button type="button" class="btn-secondary" id="cancelSubmit">Cancel</button>
-                    <button type="submit" class="btn-primary">Submit Event</button>
+                    <button type="submit" class="btn-primary">Submit an event</button>
                 </div>
             </form>
+            </div>
+
+            <!-- Replaces the form on success rather than closing behind an OS
+                 dialog, so the confirmation arrives where the visitor is. -->
+            <div class="submit-success" id="submitSuccess" hidden>
+                <h3>Thanks — that's in.</h3>
+                <p id="submitSuccessBody"></p>
+                <p class="submit-success-contact">Anything wrong with it? Email <a href="mailto:hello@naastoday.com">hello@naastoday.com</a>.</p>
+                <button type="button" class="btn-primary" id="submitSuccessDone">Done</button>
+            </div>
         </div>
     </div>
 </div>
