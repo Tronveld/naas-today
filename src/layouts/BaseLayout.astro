@@ -27,15 +27,16 @@ const {
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content={title}>
     <meta name="twitter:description" content={description}>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><rect width='48' height='48' rx='8' fill='%232d5a2d'/><text x='24' y='34' font-size='20' font-family='serif' font-weight='bold' fill='white' text-anchor='middle'>NT</text></svg>">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><rect width='48' height='48' fill='%23186C42'/><text x='24' y='34' font-size='20' font-family='system-ui,sans-serif' font-weight='bold' fill='white' text-anchor='middle'>NT</text></svg>">
     {/* The id matters: updateJsonLd() replaces #jsonld-events on every render.
         Without it the client appended a second block beside this one, leaving
         the page with both the pre-rendered day and the day being viewed. */}
     {jsonLd && <script type="application/ld+json" id="jsonld-events" set:html={JSON.stringify(jsonLd)} />}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap"></noscript>
+    {/* No webfont. DM Mono and Georgia are both gone: the system stack carries
+        display, body and figures, and `font-variant-numeric: tabular-nums` does
+        what the mono was there for. That removes two preconnects and a
+        render-blocking-on-load stylesheet from every page, which is the right
+        trade for a site whose stated goal is to stay cheap and light. */}
     <style is:global>
         * {
             margin: 0;
@@ -44,51 +45,56 @@ const {
         }
 
         :root {
-            --bg:           #FAFBF6;
+            /* The page is a light room with one saturated object in it. The green
+               is a field that owns a whole region, not an accent sprinkled over a
+               neutral — 5.62:1 against white, so display and body type both clear
+               AA on it, which is what let the band carry the day's answer. */
+            --bg:           #F6F7F4;
             --bg-card:      #FFFFFF;
-            --bg-muted:     #F5F0E8;
-            --ink:          #1a3a1a;
-            --ink-mid:      #4d5b4d;
-            --ink-light:    #5c5848;
-            --accent:       #2d5a2d;
-            --accent-light: #E8F0E4;
-            --warm:         #775F43;
-            --border:       #e0e0d8;
-            --border-light: #f0ece4;
-            /* The hairline above is 1.33:1 on white — a deliberate whisper on cards and
-               dividers, but WCAG 1.4.11 wants 3:1 for anything whose boundary IS the
-               control. In a system with almost no fills, that boundary is all a chip or a
-               secondary button has. 3.36:1 on the page, 3.49:1 on card white. */
-            --border-interactive: #8a8a7e;
-            /* Deliberately the same value as --cat-theatre: the Aged Family Rule
-               says no new hue, and the palette had no error colour at all until
-               the alert() boxes went inline. 9.31:1 on card white. */
-            --danger:       #7B2D2D;
-            --shadow-sm:    0 1px 3px rgba(26,42,26,0.05);
-            --shadow-md:    0 4px 16px rgba(26,42,26,0.08);
-            --shadow-overlay: rgba(26,58,26,0.45);
-
-            /* Category colors */
-            --cat-free:       #2d5a2d;
-            --cat-free-bg:    #E8F0E4;
-            --cat-kids:       #1A5F7A;
-            --cat-kids-bg:    #E0F0F5;
-            --cat-music:      #5C3D1E;
-            --cat-music-bg:   #F0E8DE;
-            --cat-sport:      #1A4C2E;
-            --cat-sport-bg:   #DCF0E6;
-            --cat-markets:    #7A4F1F;
-            --cat-markets-bg: #F5EADB;
-            --cat-theatre:    #7B2D2D;
-            --cat-theatre-bg: #F0E0DE;
+            --bg-muted:     #F1F7F3;
+            --ink:          #14171A;
+            --ink-mid:      #5B6560;
+            --ink-light:    #3E4642;
+            --accent:       #186C42;
+            --accent-light: #E7F1EA;
+            /* Type on the green. 4.85:1 on --accent — the label sizes it carries
+               (11–12px uppercase) are not large text, so it owes the full 4.5:1. */
+            --on-accent-dim: #A9D8BE;
+            --border:       #E4E7E4;
+            --border-light: #EFF1EE;
+            /* WCAG 1.4.11 wants 3:1 for anything whose boundary IS the control.
+               3.11:1 on card white, 3.02:1 on the page. */
+            --border-interactive: #8A918C;
+            /* The one hue outside the green, and only for form validation.
+               7.98:1 on card white. */
+            --danger:       #A32020;
+            /* The error tint. It used to be --cat-theatre-bg, borrowed from a
+               category colour so the palette gained a job rather than a hue —
+               but the category palette is gone, and an undefined custom property
+               renders as nothing, which would have left the invalid-field halo
+               and the form error banner invisible. --danger is also its own red
+               now rather than a reused brown: it is 13px text on white, and a
+               device pass in August reported the old value as "not in red". */
+            --danger-tint:  #FBEAEA;
+            --shadow-sm:    0 1px 2px rgba(20,23,26,0.04);
+            --shadow-md:    0 4px 14px rgba(20,23,26,0.07);
+            --shadow-overlay: rgba(20,23,26,0.45);
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+                         'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: var(--bg);
             color: var(--ink);
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
+        }
+
+        /* Every figure on this page is a time, a date or a count, and all three
+           are read in columns down a list. Tabular figures are what the mono
+           face used to be here for. */
+        .band-next-w, .weekstrip-n, .ev-when, .upcoming-time, .upcoming-date {
+            font-variant-numeric: tabular-nums;
         }
 
         .container {
@@ -97,103 +103,207 @@ const {
             padding: 0 1.5rem;
         }
 
-        /* ── Header / Masthead ── */
-        header {
-            background: var(--bg-card);
-            border-bottom: 1px solid var(--border-light);
-            padding: 0.625rem 0;
+        /* ── Band ─────────────────────────────────────────────────────────
+           The day's answer, at the size the answer deserves. It is one element
+           in one order, sized by its own content: `is-xl` when nothing is on,
+           because there is nothing else to spend the space on and the next real
+           event needs the room; `is-sm` from two events up, because the cards
+           are the answer and the band should get out of their way in one line.
+
+           This is what replaced the nameplate. A wordmark is what a site is
+           called; on a page whose whole job is one question, the largest thing
+           should be the reply. */
+        .band {
+            background: var(--accent);
+            color: #fff;
+            padding: 1rem 0 1.125rem;
         }
 
-        .masthead {
-            text-align: left;
-            padding: 0.125rem 0;
+        .band-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 0.625rem;
+            font-size: 0.75rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--on-accent-dim);
         }
 
-        h1 {
-            font-family: Georgia, serif;
-            font-size: clamp(1.625rem, 3vw, 2.25rem);
+        .band-brand {
             font-weight: 700;
-            color: var(--ink);
-            line-height: 1.1;
+            color: #fff;
+            letter-spacing: 0.04em;
+            flex-shrink: 0;
+        }
+
+        .band-date {
+            text-align: right;
+        }
+
+        .band-answer {
+            margin: 0;
+            font-weight: 700;
+            letter-spacing: -0.028em;
+            line-height: 1.08;
+        }
+
+        .band.is-sm { padding-bottom: 0.9375rem; }
+        .band.is-sm .band-answer {
+            margin-top: 0.5625rem;
+            font-size: 1.25rem;
             letter-spacing: -0.02em;
         }
-
-        .tagline {
-            font-size: 0.875rem;
-            color: var(--ink-light);
-            margin-top: 0.25rem;
+        .band.is-lg .band-answer { margin-top: 0.875rem; font-size: 1.6875rem; }
+        .band.is-xl { padding-top: 1.25rem; padding-bottom: 1.375rem; }
+        .band.is-xl .band-answer {
+            margin-top: 1.25rem;
+            /* 11vw, not 9vw: at 9vw this resolved to 34px on a 375px phone and
+               set on one line, so the signature move was full size on desktop
+               and undersized on the primary device. It now breaks to two lines
+               and fills the band, as approved. */
+            font-size: clamp(2.5rem, 11vw, 2.75rem);
+            line-height: 1.04;
         }
 
-        /* ── Date Section ── */
-        .date-section {
-            background: var(--bg);
+        /* An empty day that ends at "nothing" is a dead end. This says what there
+           IS, in the same breath, without the visitor stepping a day at a time
+           to find it. */
+        .band-next {
+            display: block;
+            margin-top: 1.25rem;
+            padding-top: 0.9375rem;
+            border-top: 1px solid rgba(255,255,255,0.3);
+            text-decoration: none;
+            color: #fff;
+        }
+        .band-next[hidden] { display: none; }
+        .band-next-k {
+            display: block;
+            font-size: 0.6875rem;
+            letter-spacing: 0.11em;
+            text-transform: uppercase;
+            color: var(--on-accent-dim);
+            font-weight: 700;
+        }
+        .band-next-w {
+            display: block;
+            margin-top: 0.4375rem;
+            font-size: 1.0625rem;
+            font-weight: 700;
+            letter-spacing: -0.015em;
+        }
+        .band-next-t {
+            display: block;
+            margin-top: 0.25rem;
+            font-size: 0.96875rem;
+            line-height: 1.3;
+        }
+        .band-next-v {
+            display: block;
+            margin-top: 0.3125rem;
+            font-size: 0.8125rem;
+            color: var(--on-accent-dim);
+        }
+        @media (hover: hover) {
+            .band-next:hover .band-next-t { text-decoration: underline; }
+        }
+        .band-next:focus-visible {
+            outline: 2px solid #fff;
+            outline-offset: 3px;
+        }
+
+        /* ── Week strip ───────────────────────────────────────────────────
+           Seven fixed days, and the whole of the date navigation. The four
+           buttons it replaced reflowed under the thumb: on today the row was
+           [Pick a date][Next], and pressing Next added Previous and Today
+           *above* it, moving the control out from under the finger still on it.
+
+           Seven columns cannot do that. They also answer "what's on this
+           weekend" at a glance, which is the second of the two questions
+           PRODUCT.md names and the one nothing on the page used to answer. */
+        .weekstrip {
+            background: var(--bg-card);
             border-bottom: 1px solid var(--border);
-            padding: 0.75rem 0;
             position: sticky;
             top: 0;
             z-index: 100;
             transition: box-shadow 0.2s ease;
         }
 
-        .date-section.scrolled {
-            box-shadow: 0 2px 8px rgba(26,42,26,0.08);
+        .weekstrip.scrolled {
+            box-shadow: 0 2px 8px rgba(20,23,26,0.07);
         }
 
-        .date-header {
+        .weekstrip .container {
             display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.625rem;
-        }
-
-        .current-date {
-            font-size: clamp(1.625rem, 3.5vw, 2rem);
-            font-weight: 700;
-            line-height: 1.2;
-            color: var(--ink);
-        }
-
-        .date-nav {
-            display: flex;
-            gap: 0.5rem;
             align-items: center;
+            gap: 0.75rem;
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
         }
 
-        .date-nav-btn {
-            background: transparent;
-            border: 1.5px solid var(--border-interactive);
+        .weekstrip-k {
+            font-size: 0.65625rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
             color: var(--ink-mid);
-            cursor: pointer;
-            transition: all 0.15s;
-            min-height: 44px;
-            min-width: 44px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
         }
+
+        .weekstrip-r {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            flex: 1;
+            gap: 0.125rem;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            min-width: 0;
+        }
+
+        .weekstrip-d {
+            display: block;
+            text-align: center;
+            text-decoration: none;
+            color: inherit;
+            padding: 0.25rem 0;
+            border-radius: 4px;
+        }
+
+        .weekstrip-day {
+            display: block;
+            font-size: 0.65625rem;
+            color: var(--ink-mid);
+            letter-spacing: 0.03em;
+        }
+
+        .weekstrip-n {
+            display: block;
+            margin-top: 0.125rem;
+            font-size: 0.9375rem;
+            font-weight: 700;
+        }
+
+        /* Zero prints as a dash rather than a 0. A column of numerals with 0s in
+           it reads as data; a dash reads as "nothing", which is the answer. */
+        .weekstrip-n.is-nil { color: #B9BFBB; font-weight: 400; }
+
+        .weekstrip-d.is-current { background: var(--accent-light); }
+        .weekstrip-d.is-current .weekstrip-day { color: var(--accent); font-weight: 700; }
+        .weekstrip-d.is-current .weekstrip-n { color: var(--accent); }
 
         @media (hover: hover) {
-            .date-nav-btn:hover {
-                border-color: var(--accent);
-                color: var(--accent);
-            }
+            .weekstrip-d:hover { background: var(--border-light); }
+            .weekstrip-d.is-current:hover { background: var(--accent-light); }
         }
 
-        #prevDay, #nextDay, #todayBtn, #changeDateBtn {
-            padding: 0.375rem 0.875rem;
-            border-radius: 6px;
-            font-size: 0.8125rem;
-            font-weight: 500;
-        }
-
-        .date-nav-btn.today-btn {
-            background: var(--accent-light);
-            border-color: var(--accent);
-            color: var(--accent);
-            font-weight: 600;
-        }
-
-        /* ── Controls ── */
+        /* ── Controls ─────────────────────────────────────────────────────
+           Not rendered. FILTERS_ENABLED in src/scripts/flags.js is false, so
+           nothing on the page carries these classes today. The block is kept
+           whole, and styled as it was, so bringing the row back is one boolean
+           and not a rebuild — see that file for the measurements behind it. */
         .controls {
             padding: 0.875rem 0 0.75rem;
         }
@@ -253,74 +363,119 @@ const {
             background: var(--bg);
         }
 
-        /* Category filter colors via data-cat attribute */
-        .filter-btn[data-cat="free"]    { --_cat: var(--cat-free);    --_cat-bg: var(--cat-free-bg); }
-        .filter-btn[data-cat="kids"]    { --_cat: var(--cat-kids);    --_cat-bg: var(--cat-kids-bg); }
-        .filter-btn[data-cat="music"]   { --_cat: var(--cat-music);   --_cat-bg: var(--cat-music-bg); }
-        .filter-btn[data-cat="sport"]   { --_cat: var(--cat-sport);   --_cat-bg: var(--cat-sport-bg); }
-        .filter-btn[data-cat="markets"] { --_cat: var(--cat-markets); --_cat-bg: var(--cat-markets-bg); }
-        .filter-btn[data-cat="theatre"] { --_cat: var(--cat-theatre); --_cat-bg: var(--cat-theatre-bg); }
-
+        /* The six per-category hues are gone with the world that held them. A
+           chip now previews and inverts in the one accent, like every other
+           control here — the colours existed to make six chips distinguishable
+           in a permanent row, and the row is not permanent any more. If the row
+           ever comes back this still works whole; it just speaks in one voice.
+           `data-cat` stays on the markup so a future palette has a hook. */
         @media (hover: hover) {
             .filter-btn[data-cat]:hover {
-                border-color: var(--_cat);
-                color: var(--_cat);
-                background: var(--_cat-bg);
+                border-color: var(--accent);
+                color: var(--accent);
+                background: var(--accent-light);
             }
         }
 
         .filter-btn[data-cat].active {
-            background: var(--_cat);
+            background: var(--accent);
             color: white;
-            border-color: var(--_cat);
+            border-color: var(--accent);
         }
 
         /* ── Events Grid ── */
         .events-container {
-            padding: 0 0 4rem;
+            padding: 0.75rem 0 0;
         }
 
-        /* ── Submit Area ── */
+        /* An empty day is the most-shown screen and it has nothing to hold open:
+           4rem under a one-line message used to sit between the reader and the
+           list that is actually answering them. */
+        .events-container:has(.empty-state.visible) {
+            padding-bottom: 0;
+        }
+
+        /* ── Submit Area ──────────────────────────────────────────────────
+           One prompt, in one place, on every day. There used to be two — this
+           one after the cards and a separate empty-day copy after the upcoming
+           list — kept in sync by a hidden-flag helper and four display writes.
+           Placing the single block after the upcoming list satisfies the rule
+           that made two necessary: the visitor's job is answered first either
+           way, by the cards or by what is coming. */
+        /* One line, at the end, in the page's own voice — a question and an
+           answer rather than a full-width green slab. The slab was the second
+           saturated green block on a page that now opens with one, and two of
+           them made the ask compete with the answer. */
         .submit-area {
-            padding: 1.5rem 0 2rem;
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 0.125rem 1.25rem;
+            font-size: 0.875rem;
+            color: var(--ink-mid);
         }
 
+        .submit-area p {
+            color: var(--ink-mid);
+            font-size: 0.875rem;
+        }
+
+        /* Same reason as .event-location: a 44px control with a border-bottom
+           draws the rule at the bottom of the target, not under the words. */
         .submit-area-btn {
-            background: var(--accent);
-            color: white;
+            background: none;
             border: none;
-            border-radius: 8px;
-            padding: 0.75rem 2rem;
+            padding: 0;
             min-height: 44px;
-            font-size: 0.9375rem;
-            font-weight: 600;
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--accent);
             cursor: pointer;
-            transition: background 0.15s;
-            width: 100%;
-            max-width: 320px;
+            text-decoration: underline;
+            text-decoration-thickness: 2px;
+            text-decoration-color: #BEE0CC;
+            text-underline-offset: 4px;
+            transition: text-decoration-color 0.15s;
+            white-space: nowrap;
         }
 
         @media (hover: hover) {
             .submit-area-btn:hover {
-                background: var(--ink);
+                text-decoration-color: var(--accent);
             }
         }
 
+        /* The error state's Try again reuses this class but is a real action in a
+           panel, not an inline ask, so it keeps a button's shape. */
+        .error-state .submit-area-btn {
+            border: 1.5px solid var(--border-interactive);
+            padding: 0.625rem 1.25rem;
+            color: var(--ink-mid);
+            text-decoration: none;
+        }
+
+
+        /* One column at every width. A second column here is the aggregator grid
+           PRODUCT.md names as an anti-reference; the measure stays a column and
+           the wide screen simply has margins. */
         .events-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 12px;
+            gap: 0.5625rem;
         }
 
-        /* ── Event Card ── */
+        /* ── Event Card ──
+           Square. The 12px radius belonged to a system where a card was a piece
+           of paper on a board; here the page is a plain white column and a
+           softened corner is the one thing that would make it look like a
+           product tile. The hairline is the whole definition. */
         .event-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            box-shadow: var(--shadow-sm);
-            transition: box-shadow 0.15s ease, transform 0.15s ease;
-            padding: 16px 20px;
+            transition: box-shadow 0.15s ease;
+            padding: 0.8125rem 0.9375rem 0.875rem;
         }
 
         @media (hover: hover) {
@@ -341,73 +496,87 @@ const {
             border-radius: 2px;
         }
 
-        /* ── Card layout ── */
-        .ev-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            gap: 12px;
-            margin-bottom: 4px;
-        }
-
-        .ev-time {
-            font-family: 'DM Mono', monospace;
-            color: var(--warm);
-            font-size: 0.9375rem;
-            font-weight: 600;
-            white-space: nowrap;
-            flex-shrink: 0;
-            background: var(--bg-muted);
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            padding: 0.125rem 0.625rem;
-            /* Shared with .ev-allday so the card's top-right slot keeps one
-               height whether it holds a time, ALL DAY, TBC, or a date range. */
-            min-height: 28px;
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .ev-allday {
-            font-family: 'DM Mono', monospace;
-            color: var(--warm);
-            font-size: 0.6875rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            white-space: nowrap;
-            flex-shrink: 0;
-            background: var(--bg-muted);
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            padding: 0.125rem 0.625rem;
-            min-height: 28px;
-            display: inline-flex;
-            align-items: center;
+        /* ── Card layout ──
+           The time leads the card. It used to sit in a rounded pill opposite the
+           title, which cost the title its full width on every wrap and forced
+           four different states (time, ALL DAY, TBC, date range) through one
+           28px slot to keep the list even. As a first line it needs no slot, no
+           pill and no minimum height — and it can finally show the end time,
+           which the pill dropped silently even where the data had one. */
+        .ev-when {
+            color: var(--accent);
+            font-size: 0.8125rem;
+            font-weight: 700;
+            letter-spacing: -0.005em;
         }
 
         .event-title {
-            font-size: 1.125rem;
-            font-weight: 600;
+            font-size: 1.0625rem;
+            font-weight: 700;
             color: var(--ink);
-            margin-bottom: 0.25rem;
-            line-height: 1.35;
+            margin: 0.3125rem 0 0;
+            line-height: 1.24;
+            letter-spacing: -0.017em;
         }
+
+        /* The venue as a stamped name, not an address and not an emoji.
+           It used to be `📍 Naas Potato Market, Church Lane, Naas, Co. Kildare`
+           in a full-width 44px band — the largest tap target on the card, for
+           the street the reader did not come for, marked by the most saturated
+           thing on the page repeated once per card.
+
+           `width: fit-content` keeps the 44px touch floor (it is a link, and
+           that floor is a product constraint) while stopping the target from
+           covering the empty half of the row. */
+        /* Venue and source on one 44px row rather than two. See EventCard.astro. */
+        .ev-meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            column-gap: 0.75rem;
+        }
+
+        /* Three 44px targets now share this row within about 200px on a phone.
+           They touch but never overlap, so the floor holds — but a mis-tap on
+           the source hostname leaves the site entirely, and the audience skews
+           older, so Share gets a wider moat than the row's default gap. */
+        .ev-meta .event-url + .share-btn { margin-left: 0.75rem; }
+
+        /* Share stays beside the source rather than being pushed to the far end.
+           At `margin-left:auto` it floated ~480px away on desktop as a lone word
+           with nothing tying it to the row, and — sharing the accent, size and
+           row with the source hostname — it read as a third outbound link. */
+        .ev-meta .share-btn { margin-left: 0; }
 
         .event-location {
             color: var(--ink-mid);
-            font-size: 0.75rem;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
+            font-size: 0.8125rem;
+            font-weight: 400;
             display: flex;
             align-items: center;
-            gap: 0.25rem;
+            width: fit-content;
+            max-width: 100%;
             min-height: 44px;
         }
 
+        /* Sentence case, not tracked uppercase. The shouting treatment was there
+           to make the venue read as a stamp in a system built out of stamps;
+           this one is built out of plain sentences, and "NAAS POTATO MARKET" in
+           the middle of one is the loudest thing on the card for no reason. The
+           underline is what marks it as the link. */
+        /* Pressable Line, not the hairline. This is the card's only link that is
+           not already accent-coloured, so the underline is the whole of its
+           affordance — at --border (1.15:1 on white) it was invisible, which on
+           an audience that skews older means the venue simply is not a link. */
+        /* Underlined, not bottom-bordered. The link is a 44px flex box for the
+           touch floor, so a border-bottom draws at the bottom of that box —
+           fourteen pixels under the words, reading as a stray rule rather than
+           as an underline. text-decoration follows the glyphs. */
         a.event-location {
-            text-decoration: none;
             color: var(--ink-mid);
+            text-decoration: underline;
+            text-decoration-color: var(--border-interactive);
+            text-underline-offset: 3px;
         }
 
         @media (hover: hover) {
@@ -464,16 +633,17 @@ const {
         .event-url {
             display: flex;
             align-items: center;
+            /* flex eats the whitespace text node before the ↗ glyph; the gap
+               puts it back. */
             gap: 0.25rem;
-            /* Was inline-block, i.e. content-width. Keeping it content-width means
-               the 44px target covers the link and not the empty half of the line —
-               tapping blank space should not open an external site. */
+            /* Content-width, so the 44px target covers the link and not the empty
+               half of the line — tapping blank space should not open an external
+               site. */
             width: fit-content;
             min-height: 44px;
             color: var(--accent);
             font-size: 0.75rem;
             text-decoration: none;
-            margin-bottom: 0.25rem;
         }
 
         @media (hover: hover) {
@@ -497,57 +667,73 @@ const {
             flex-wrap: wrap;
         }
 
+        /* One tag, one voice. Six hues made sense when a tag echoed a coloured
+           chip in a permanent filter row; with no row to echo, six colours on a
+           card are six decorations. What a reader needs from a tag is to spot
+           "Free" and "For kids" quickly, and a single quiet accent stamp does
+           that without turning a six-card Saturday into a paintbox. */
         .tag {
-            padding: 0.125rem 0.5rem;
-            border-radius: 999px;
-            font-size: 0.6875rem;
-            font-family: 'DM Mono', monospace;
-            font-weight: 500;
+            padding: 0.1875rem 0.4375rem;
+            font-size: 0.65625rem;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.07em;
+            color: var(--accent);
+            background: var(--bg-muted);
+            border: 1px solid #CBE0D3;
         }
 
-        .tag.free    { background: var(--cat-free-bg);    color: var(--cat-free); }
-        .tag.kids    { background: var(--cat-kids-bg);    color: var(--cat-kids); }
-        .tag.music   { background: var(--cat-music-bg);   color: var(--cat-music); }
-        .tag.sport   { background: var(--cat-sport-bg);   color: var(--cat-sport); }
-        .tag.market  { background: var(--cat-markets-bg); color: var(--cat-markets); }
-        .tag.theatre { background: var(--cat-theatre-bg); color: var(--cat-theatre); }
-
+        /* A text action on the venue row, not a bordered box in the corner. As a
+           1.5px 44px button with a 6px radius it was the heaviest object on a
+           card made of hairlines — six of them down a Saturday, all shouting
+           louder than the tags they sat opposite, in a world that has no radius
+           anywhere else. It keeps the 44px touch floor via padding. */
         .share-btn {
             background: none;
-            border: 1.5px solid var(--border-interactive);
-            color: var(--ink-mid);
-            font-size: 0.75rem;
-            font-weight: 500;
-            cursor: pointer;
-            padding: 0.25rem 0.625rem;
+            border: none;
+            padding: 0;
             min-height: 44px;
-            border-radius: 6px;
-            transition: all 0.15s;
+            font-family: inherit;
+            font-size: 0.75rem;
+            font-weight: 400;
+            color: var(--accent);
+            cursor: pointer;
             white-space: nowrap;
+            transition: text-decoration-color 0.15s;
+            /* The system's one rule for telling an action from a destination:
+               an in-page action carries the pale green underline (this and
+               "Tell us"), an outbound link does not (the source hostname). The
+               venue keeps a neutral underline because it is a destination whose
+               text gives no other clue that it is one. */
+            text-decoration: underline;
+            text-decoration-thickness: 2px;
+            text-decoration-color: #BEE0CC;
+            text-underline-offset: 4px;
         }
 
         @media (hover: hover) {
             .share-btn:hover {
-                border-color: var(--accent);
-                color: var(--accent);
+                text-decoration-color: var(--accent);
             }
         }
 
         /* ── Upcoming Section ─────────────────────────────────────────── */
         .upcoming-section {
-            margin-top: 2rem;
-            border-top: 1px solid var(--border-light);
-            padding-top: 1.25rem;
-            padding-bottom: 2rem;
+            margin-top: 0.4375rem;
+            padding-bottom: 0.5rem;
         }
+        /* A quiet label, not a heading. On most weekdays this list is the page's
+           actual content, but it is still other days — the band above has
+           already said what today is, and a display-sized "Coming up" would
+           argue with it. */
         .upcoming-heading {
-            font-family: Georgia, serif;
-            font-size: 1.25rem;
+            font-size: 0.6875rem;
+            letter-spacing: 0.11em;
+            text-transform: uppercase;
+            color: var(--ink-mid);
             font-weight: 700;
-            color: var(--ink);
-            margin: 0 0 0.75rem;
+            margin: 0 0 0.5rem;
+            padding: 0 0.125rem;
         }
         .upcoming-list {
             list-style: none;
@@ -555,81 +741,77 @@ const {
             padding: 0;
             display: flex;
             flex-direction: column;
-            gap: 0;
+            gap: 0.375rem;
         }
-        /* Styles both the pre-rendered <li> and the <button> renderUpcoming() puts
-           inside one. The button resets below are inert on the <li>. */
+        /* A compact event card, not a second way of writing an event down.
+           These rows used to be a four-column grid of 13px text with a tint on
+           hover — the same content as a card, in a weaker language, on the
+           screen where most weekdays they ARE the content. Same fill, same
+           hairline, same radius, same resting shadow as .event-card; one
+           density step down, because they are other days.
+
+           Styles both the pre-rendered <li> and the <button> renderUpcoming()
+           puts inside one. The button resets below are inert on the <li>. */
+        /* An event card one density step down, and now with the date as a stamp
+           on the left rather than buried in a meta line. These are other days,
+           and which day is the first thing you need from them. */
         .upcoming-item {
-            display: grid;
-            grid-template-columns: 7rem 3.5rem 1fr auto;
-            gap: 0.5rem;
-            align-items: center;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
             min-height: 44px;
             width: 100%;
             font: inherit;
             color: inherit;
-            background: none;
-            border: none;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
             text-align: left;
-            padding: 0.5rem 0.5rem;
-            border-radius: 6px;
+            text-decoration: none;
+            padding: 0.5625rem 0.8125rem 0.625rem;
             cursor: pointer;
-            transition: background 0.12s;
+            transition: box-shadow 0.15s ease;
         }
         @media (hover: hover) {
-            .upcoming-item:hover {
-                background: var(--bg-muted);
-            }
+            .upcoming-item:hover { box-shadow: var(--shadow-md); }
+            .upcoming-item:hover .upcoming-title { text-decoration: underline; }
         }
-        /* Split from the hover rule above so it stays outside @media (hover: hover):
-           keyboard focus must survive on touch devices too. The `outline: none` here
-           is still the WCAG 2.4.7 failure item 37 is about — untouched on purpose. */
-        /* A ~1.05:1 background tint was the only focus signal here, with
-           `outline: none` removing the real one — a flat WCAG 2.4.7 failure on a
-           keyboard-operable control. The tint stays as reinforcement; the outline
-           is the system's standard 2px accent at 2px offset. */
+        /* Outside @media (hover: hover) on purpose: keyboard focus must survive
+           on touch devices too. */
         .upcoming-item:focus-visible {
-            background: var(--bg-muted);
             outline: 2px solid var(--accent);
             outline-offset: 2px;
         }
         .upcoming-date {
-            font-size: 0.8125rem;
+            flex: 0 0 2.125rem;
+            text-align: center;
+            font-size: 0.65625rem;
+            letter-spacing: 0.06em;
             color: var(--ink-mid);
-            white-space: nowrap;
+            font-weight: 700;
+            line-height: 1.15;
+            padding-top: 0.0625rem;
         }
-        .upcoming-time {
-            font-size: 0.75rem;
-            font-family: 'DM Mono', monospace;
-            color: var(--ink-mid);
-            white-space: nowrap;
-        }
-        .upcoming-title {
-            font-size: 0.875rem;
-            font-weight: 500;
+        .upcoming-dom {
+            display: block;
+            font-size: 1rem;
+            letter-spacing: -0.02em;
             color: var(--ink);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
         }
-        .upcoming-location {
+        .upcoming-body { min-width: 0; flex: 1; }
+        .upcoming-title {
+            display: block;
+            font-size: 0.90625rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.26;
+            letter-spacing: -0.012em;
+        }
+        .upcoming-meta {
+            display: block;
+            margin-top: 0.1875rem;
             font-size: 0.75rem;
             color: var(--ink-mid);
-            text-align: right;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            max-width: 8rem;
-        }
-        @media (max-width: 520px) {
-            .upcoming-item {
-                grid-template-columns: 1fr auto;
-                grid-template-rows: auto auto;
-            }
-            .upcoming-date { grid-column: 1; grid-row: 1; }
-            .upcoming-time { grid-column: 2; grid-row: 1; text-align: right; }
-            .upcoming-title { grid-column: 1; grid-row: 2; }
-            .upcoming-location { grid-column: 2; grid-row: 2; }
+            font-variant-numeric: tabular-nums;
         }
 
         /* ── Card load animation ── */
@@ -722,11 +904,14 @@ const {
             gap: 16px;
         }
 
+        /* Square and the same padding as the card it stands in for. It kept the
+           retired world's 12px radius and 16px 20px padding, so the placeholder
+           was a different shape from the thing that replaced it — the one moment
+           where that is most obvious, because the swap happens under the eye. */
         .skeleton-card {
             border: 1px solid var(--border);
-            border-radius: 12px;
             background: var(--bg-card);
-            padding: 16px 20px;
+            padding: 0.8125rem 0.9375rem 0.875rem;
         }
 
         .skeleton-line {
@@ -751,7 +936,7 @@ const {
            straight off to the upcoming list beneath it. */
         .empty-state {
             text-align: center;
-            padding: 2rem 1rem 1.5rem;
+            padding: 1.5rem 1rem 1.25rem;
             display: none;
         }
 
@@ -785,29 +970,10 @@ const {
             display: none;
         }
 
-        /* ── Empty day's submit prompt ── */
-        /* Separated by a rule so it reads as a footnote to the answer above it
-           rather than as the answer itself. */
-        .empty-cta {
-            border-top: 1px solid var(--border-light);
-            padding: 1.5rem 0 2rem;
-            text-align: center;
-        }
-
-        .empty-cta p {
-            color: var(--ink-mid);
-            font-size: 0.875rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .empty-cta[hidden] {
-            display: none;
-        }
-
         .empty-state h3 {
-            font-family: Georgia, serif;
             font-weight: 700;
-            font-size: 1.5rem;
+            font-size: 1.125rem;
+            letter-spacing: -0.02em;
             color: var(--ink);
             margin-bottom: 0.5rem;
         }
@@ -940,8 +1106,8 @@ const {
         }
 
         .modal-header h2 {
-            font-family: Georgia, serif;
             font-size: 1.375rem;
+            letter-spacing: -0.02em;
             font-weight: 700;
             color: var(--ink);
         }
@@ -978,6 +1144,17 @@ const {
         }
 
         /* ── Form Elements ── */
+        /* Ten native controls — four time-mode radios and six category
+           checkboxes — rendered in the browser's own blue, which is the one
+           colour on the page that belongs to no one. There was not a single
+           `accent-color` declaration in src/ before this. One line points them
+           at the brand instead, and it is the cheapest possible way to stop the
+           submit sheet contradicting "one accent" ten times over. */
+        .form-group input[type="radio"],
+        .form-group input[type="checkbox"] {
+            accent-color: var(--accent);
+        }
+
         .form-group {
             margin-bottom: 1.25rem;
         }
@@ -1109,8 +1286,7 @@ const {
         }
 
         .form-section-heading {
-            font-family: Georgia, serif;
-            font-size: 0.875rem;
+            font-size: 0.8125rem;
             font-weight: 700;
             color: var(--ink);
             text-transform: uppercase;
@@ -1154,25 +1330,20 @@ const {
             font-weight: 600;
         }
 
-        /* The message was the only signal, and on a phone it did not read as one:
-           --danger is #7B2D2D, deliberately the same value as --cat-theatre so the
-           palette gains a job rather than a hue. That is right for a tag on a
-           tinted chip and too quiet for 13px of text on white — reported on device
-           2026-08-08 as "it's not in red".
-           Marking the field itself is the fix that does not need a new colour, and
-           it is owed anyway: WCAG 1.4.1 says colour cannot be the only carrier, and
-           aria-invalid was already being set with nothing rendering it. */
+        /* Marking the field itself, not only the message: WCAG 1.4.1 says colour
+           cannot be the only carrier, and aria-invalid was already being set with
+           nothing rendering it. */
         .form-group input[aria-invalid="true"],
         .form-group textarea[aria-invalid="true"] {
             border-color: var(--danger);
-            box-shadow: 0 0 0 3px var(--cat-theatre-bg);
+            box-shadow: 0 0 0 3px var(--danger-tint);
         }
 
         .form-error {
             margin-bottom: 1rem;
             padding: 0.75rem 1rem;
             border-radius: 8px;
-            background: var(--cat-theatre-bg);
+            background: var(--danger-tint);
             color: var(--danger);
             font-size: 0.875rem;
             font-weight: 500;
@@ -1183,8 +1354,8 @@ const {
         }
 
         .submit-success h3 {
-            font-family: Georgia, serif;
             font-size: 1.25rem;
+            letter-spacing: -0.02em;
             font-weight: 700;
             color: var(--ink);
             margin-bottom: 0.75rem;
@@ -1265,9 +1436,9 @@ const {
         }
 
         .error-state h3 {
-            font-family: Georgia, serif;
             font-weight: 700;
-            font-size: 1.5rem;
+            font-size: 1.125rem;
+            letter-spacing: -0.02em;
             color: var(--ink);
             margin-bottom: 0.5rem;
         }
@@ -1278,8 +1449,8 @@ const {
 
         /* ── Deep link pulse ── */
         @keyframes deep-link-pulse {
-            0%, 100% { box-shadow: var(--shadow-sm), 0 0 0 0 rgba(45, 90, 45, 0); }
-            50%       { box-shadow: var(--shadow-sm), 0 0 0 8px rgba(45, 90, 45, 0.2); }
+            0%, 100% { box-shadow: var(--shadow-sm), 0 0 0 0 rgba(24, 108, 66, 0); }
+            50%       { box-shadow: var(--shadow-sm), 0 0 0 8px rgba(24, 108, 66, 0.22); }
         }
 
         .deep-link-highlight {
@@ -1289,34 +1460,27 @@ const {
         /* ── Responsive ── */
         @media (max-width: 480px) {
             .container { padding: 0 1rem; }
-            .current-date { font-size: 1.125rem; }
-            .tagline { display: none; }
-            .date-nav {
-                width: 100%;
-                justify-content: space-between;
-            }
 
-            /* Above-the-fold budget. A device pass on 2026-08-08 measured masthead +
-               date + filters at ~277px of a 375×812 viewport — ~40% of what an iPhone
-               actually shows once Safari's own chrome is subtracted, leaving room for
-               one card and the top of a second.
+            /* Above-the-fold budget. A device pass on 2026-08-08 measured the old
+               masthead + date + filters at ~277px of a 375×812 viewport; the
+               nameplate redesign brought it to ~152px on today.
 
-               What is trimmed here is padding and the masthead's own size. What is
-               deliberately NOT trimmed: the 44px control heights (0130f70 — they are
-               the touch-target floor), the two-row filter wrap (684b36e — a scrolling
-               row hid Sport, Markets and Theatre), and the date label's words, which
-               stay "Today – Saturday, 8 August" in full. Those three are the whole
-               remaining cost, and none of them is padding. See PRODUCT.md's known
-               gaps: the real fix is a layout question, not a spacing one. */
-            header { padding: 0.5rem 0; }
-            .masthead { padding: 0; }
-            /* Display drops to 1.25rem here, mirroring the date's own mobile drop.
-               Still above the 1.125rem date label, so the masthead keeps outranking
-               the state below it. */
-            h1 { font-size: 1.25rem; }
-            .date-section { padding: 0.5rem 0; }
-            .date-header { gap: 0.375rem; }
-            .controls { padding: 0.625rem 0 0.5rem; }
+               The band is sized by its answer instead of by its own importance,
+               so the number is now two numbers. On a day with events the band is
+               one line and the strip is 44px — about 110px before the first card,
+               which is less than either predecessor while showing the count, the
+               date and seven days of navigation. On an empty day it deliberately
+               costs more, because there are no cards to push down and the space
+               buys the next real event instead of a blank screen. */
+            .band { padding: 0.875rem 0 1rem; }
+            .band.is-xl { padding-top: 1rem; padding-bottom: 1.25rem; }
+            .band-top { font-size: 0.6875rem; }
+            /* The label stays. Seven columns do fit beside it at 375px — the
+               approved comp proves it — and it is the strip's only name for an
+               audience that skews older and may not read seven letters and
+               seven numerals as a week on sight. */
+            .weekstrip-k { font-size: 0.625rem; }
+            .weekstrip .container { gap: 0.5rem; }
             .modal-content {
                 border-radius: 16px 16px 0 0;
                 max-width: 100%;
@@ -1343,17 +1507,17 @@ const {
             .skeleton-line,
             .deep-link-highlight { animation: none !important; }
             .modal, .modal-content { transition: none !important; }
-            .event-card, .date-section, .date-nav-btn, .filter-btn, .submit-area-btn,
-            .btn-primary, .btn-secondary, .share-btn, .upcoming-item, .modal-close,
-            .empty-clear-btn, .footer-links a, .footer-links button,
-            .form-actions button, .form-group input, .form-group textarea,
-            .form-group select { transition: none !important; }
+            .event-card, .weekstrip, .weekstrip-d, .band-next, .filter-btn,
+            .submit-area-btn, .btn-primary, .btn-secondary, .share-btn,
+            .upcoming-item, .modal-close, .empty-clear-btn, .footer-links a,
+            .footer-links button, .form-actions button, .form-group input,
+            .form-group textarea, .form-group select { transition: none !important; }
         }
     </style>
     <script defer src="https://cloud.umami.is/script.js" data-website-id="8066e0da-4cdf-41c7-9981-f59854563ab5"></script>
     <script>
         (function() {
-            var hdr = document.querySelector('.date-section');
+            var hdr = document.querySelector('.weekstrip');
             if (!hdr) return;
             function onScroll() { hdr.classList.toggle('scrolled', hdr.getBoundingClientRect().top <= 0); }
             window.addEventListener('scroll', onScroll, { passive: true });
@@ -1362,6 +1526,33 @@ const {
     </script>
 </head>
 <body>
+    <!--
+    THESIS: The day's answer is the page, and the list is its evidence. Refuses
+    the category arrangement where a masthead and a date bar are the largest
+    things and the reply to "is anything on?" is inferred by counting cards.
+
+    OWN-WORLD: One saturated field (#186C42) carrying white display type, on a
+    near-white page of square white cards defined by 1px hairlines. No webfont,
+    no serif, no mono, no icon, no radius, no category palette — the system
+    stack with tabular figures, one accent, one green tag stamp.
+
+    STORY: A resident on a phone reads the answer in one line, sees the seven
+    days ahead as counts, and either finds today's events with the description
+    visible without a tap — only the tail of a very long one folded away — or is
+    handed the next real event by name.
+
+    FIRST VIEWPORT: Green band, brand left and date right at 12px; the answer
+    beneath at 20px when there are events and up to 44px when there are none,
+    where it is followed by the next event's day, time, title and venue. Then a
+    seven-column week strip, sticky, then the cards. The submit ask is one line
+    at the very end, after Coming up.
+
+    FORM: The Answer — candidate 1 of the rendered comp round, chosen by the
+    owner after two re-rolls of the direction seed (0baf9f88, 92b5df03).
+
+    FINISH: unreviewed and undocumented is unfinished; this build ends with the
+    finish review, the verdict, and DESIGN.md.
+    -->
     <slot />
 </body>
 </html>

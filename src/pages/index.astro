@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import Header from '../components/Header.astro';
-import DateNav from '../components/DateNav.astro';
+import Band from '../components/Band.astro';
+import WeekStrip from '../components/WeekStrip.astro';
 import FilterControls from '../components/FilterControls.astro';
 import EventsGrid from '../components/EventsGrid.astro';
 import Footer from '../components/Footer.astro';
@@ -9,7 +9,8 @@ import DatePickerModal from '../components/modals/DatePickerModal.astro';
 import SubmitEventModal from '../components/modals/SubmitEventModal.astro';
 import AboutModal from '../components/modals/AboutModal.astro';
 import ContactModal from '../components/modals/ContactModal.astro';
-import { shortTimeLabel } from '../scripts/date.js';
+import { clockLabel } from '../scripts/date.js';
+import { FILTERS_ENABLED } from '../scripts/flags.js';
 // Same query get-events.js serves at runtime — see that module for why it is shared.
 import { APPROVED_EVENTS_QUERY } from '../../netlify/functions/lib/events-query.js';
 
@@ -39,32 +40,36 @@ const todayEvents = initialEvents.filter(e => {
   return e.date === todayStr;
 });
 
-// "Coming up" is built client-side by renderUpcoming(), but the static HTML shipped a
-// heading over an empty <ul>. First paint, no-JS visitors and anything slow enough to
-// see the pre-rendered page got a promise with nothing under it — on the section that
-// most often holds the only answer, since most weekdays in Naas have no events at all.
-//
-// This mirrors renderUpcoming() rather than improving on it, because the client replaces
-// the list on load and any difference would show as a flicker. That means: compare on
-// `date` alone (a multi-day run that started before today is deliberately not "upcoming",
-// matching the client), take the first five, and lean on the query's date.asc,time.asc
-// ordering instead of re-sorting.
-const upcomingEvents = initialEvents.filter(e => e.date > todayStr).slice(0, 5);
+// The band names the next real event when today has none, so an empty day ends
+// on something to do rather than on the word "nothing". Only read when the day
+// is empty, but computed unconditionally — it is one array scan.
+const nextEvent = initialEvents.find(e => e.date > todayStr) ?? null;
 
-function upcomingDateLabel(dateStr: string): string {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-IE', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
+// "Coming up" is replaced client-side by renderUpcoming(), but the static HTML
+// shipped a heading over an empty <ul> before this existed. First paint, no-JS
+// visitors and anything slow enough to see the pre-rendered page got a promise
+// with nothing under it — on the section that most often holds the only answer,
+// since most weekdays in Naas have no events at all.
+//
+// This mirrors renderUpcoming() rather than improving on it, because the client
+// replaces the list on load and any difference would show as a flicker.
+const upcomingEvents = initialEvents.filter(e => e.date > todayStr).slice(0, todayEvents.length === 0 ? 5 : 3);
+
+function upcomingDow(dateStr: string): string {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-IE', { weekday: 'short' }).toUpperCase();
+}
+function upcomingDom(dateStr: string): string {
+  return String(new Date(dateStr + 'T00:00:00').getDate());
 }
 
-// Same 12-hour form as the card's Time Pill. This used to pass the stored value
-// straight through, so a 2pm event read "2:00 PM" on its card and "14:00" in the
-// list directly beneath it.
-function upcomingTimeLabel(event: any): string {
-  if (event.is_all_day) return 'All day';
-  return event.time ? shortTimeLabel(event.time) : '';
+// Same place-not-address treatment the event card uses.
+function venueLabel(location: string): string {
+  return location.split(',')[0].trim() || location;
+}
+
+function upcomingMeta(event: any): string {
+  const when = event.is_all_day ? 'All day' : event.time ? clockLabel(event.time) : 'Time TBC';
+  return `${when} · ${venueLabel(event.location)}`;
 }
 
 // Build JSON-LD for today's events
@@ -89,51 +94,56 @@ const jsonLd = todayEvents.length > 0 ? {
 
 <BaseLayout jsonLd={jsonLd}>
   <a href="#main-content" class="skip-link">Skip to main content</a>
-  <Header />
-  {/* DateNav is inside <main> so the skip link lands above it. With <main>
-      starting after the date controls, "skip to main content" skipped past
-      prev/today/pick-a-date/next and a keyboard user had to shift-tab back.
-      .container moved down a level so the date bar keeps its full-bleed
-      background. */}
+  <Band dateStr={todayStr} todayStr={todayStr} count={todayEvents.length} next={nextEvent} />
+  {/* WeekStrip is inside <main> so the skip link lands above the date controls
+      rather than past them — the same reason DateNav was moved in before it. */}
   <main id="main-content" role="main">
-    <DateNav />
+    <WeekStrip events={initialEvents} todayStr={todayStr} currentStr={todayStr} />
     <div class="container">
-    <FilterControls />
+    {/* Built, not shown — see src/scripts/flags.js for the measurements and for
+        what flipping the flag brings back. */}
+    {FILTERS_ENABLED && <FilterControls />}
     <h2 class="visually-hidden" id="eventsListHeading">Today's events</h2>
     <EventsGrid events={initialEvents} todayStr={todayStr} />
+
     <section
       id="upcomingSection"
       class="upcoming-section"
-      aria-label="Coming up"
+      aria-labelledby="upcomingHeading"
       style={upcomingEvents.length === 0 ? 'display:none' : undefined}
     >
-      <h2 class="upcoming-heading" id="upcomingHeading">{todayEvents.length === 0 ? 'Next up' : 'Coming up'}</h2>
-      {/* renderUpcoming() replaces these rows on load, wrapping each in a real
-          <button>. They ship as plain <li> on purpose: without JS a button here
-          would announce a control that cannot do anything. */}
+      <h2 class="upcoming-heading" id="upcomingHeading">Coming up</h2>
+      {/* Real links, not buttons. `?date=` is a state this page already reads on
+          load, so these work with JS off and can be opened in a new tab; the
+          client intercepts them for speed, not for function. That is also why
+          renderUpcoming() can rebuild them without wiring a handler per row. */}
       <ul id="upcomingList" class="upcoming-list">
         {upcomingEvents.map(event => (
-          <li class="upcoming-item">
-            <span class="upcoming-date">{upcomingDateLabel(event.date)}</span>
-            <span class="upcoming-time">{upcomingTimeLabel(event)}</span>
-            <span class="upcoming-title">{event.title}</span>
-            <span class="upcoming-location">{event.location}</span>
+          <li>
+            <a class="upcoming-item" href={`?date=${event.date}`} data-date={event.date}>
+              <span class="upcoming-date">
+                {upcomingDow(event.date)}
+                <span class="upcoming-dom">{upcomingDom(event.date)}</span>
+              </span>
+              <span class="upcoming-body">
+                <span class="upcoming-title">{event.title}</span>
+                <span class="upcoming-meta">{upcomingMeta(event)}</span>
+              </span>
+            </a>
           </li>
         ))}
       </ul>
     </section>
 
-    <!-- The empty day's submit prompt, deliberately after the upcoming list.
-         DESIGN.md's page-order rule puts the CTA after the day's events so the
-         visitor's job comes first; on a day with no events that job is answered
-         by the list above, not by the empty grid, so the CTA follows it here. -->
-    <div class="empty-cta" id="emptyCta" hidden={todayEvents.length > 0}>
-      <p>Know of something happening? Add it to the noticeboard.</p>
-      <button class="submit-area-btn" id="emptySubmitBtn">Submit an event</button>
+    <!-- One submit prompt for every state, and it comes last. The visitor's job
+         is answered first either way — by the cards, or by what is coming. -->
+    <div class="submit-area" id="submitArea">
+      <p>Know of something on in Naas?</p>
+      <button class="submit-area-btn" id="submitEventBtn">Tell us →</button>
     </div>
     </div>
   </main>
-  <Footer />
+  <Footer datePicker={true} />
   <DatePickerModal />
   <SubmitEventModal />
   <AboutModal />
@@ -146,7 +156,16 @@ const jsonLd = todayEvents.length > 0 ? {
 
   <script>
     import { initModals, initSubmitForm, openModal, closeModal } from '../scripts/modal-form.js';
-    import { localDateStr, formatTimeShort, shortTimeLabel } from '../scripts/date.js';
+    import {
+      localDateStr, clockLabel, timeRangeLabel,
+      dayAnswer, dayWordFor, nextPhrase, weekAhead,
+    } from '../scripts/date.js';
+    // Astro compiles the frontmatter and this block separately, so a shared module
+    // is the only way one constant governs both the markup and the behaviour.
+    // DESCRIPTION_CLAMP is here for exactly that reason: EventCard.astro folds
+    // the pre-rendered card and createEventCard() folds the hydrated one, and
+    // two hardcoded thresholds is how they drift.
+    import { FILTERS_ENABLED, DESCRIPTION_CLAMP } from '../scripts/flags.js';
 
     // ── Utilities ──────────────────────────────────────────────────────
 
@@ -164,8 +183,6 @@ const jsonLd = todayEvents.length > 0 ? {
         return t.value;
     }
 
-    const DESC_THRESHOLD = 220;
-
     function setupDescriptionToggle(p) {
         if (p.dataset.toggleInit === 'true') return;
         p.dataset.toggleInit = 'true';
@@ -174,7 +191,7 @@ const jsonLd = todayEvents.length > 0 ? {
         p.classList.add('is-truncatable', 'is-collapsed');
         btn.addEventListener('click', () => {
             const collapsed = p.classList.toggle('is-collapsed');
-            btn.textContent = collapsed ? 'Read more ↓' : 'Show less ↑';
+            btn.textContent = collapsed ? 'Read more' : 'Show less';
             btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
         });
     }
@@ -206,6 +223,13 @@ const jsonLd = todayEvents.length > 0 ? {
         };
     }
 
+    // One definition of "is this event on this day", used by the card list, the
+    // week strip counts and the band's answer. They disagreed once already, when
+    // only some of them understood a multi-day run.
+    const onDay = (e, ds) => (e.endDate ? e.date <= ds && e.endDate >= ds : e.date === ds);
+
+    const venueOf = e => e.location.split(',')[0].trim() || e.location;
+
     // ── State ───────────────────────────────────────────────────────────
     let events = (window.__INITIAL_EVENTS__ || []).map(toEvent);
     let currentDate = new Date();
@@ -229,11 +253,13 @@ const jsonLd = todayEvents.length > 0 ? {
         const todayStr = localDateStr(new Date());
         const dateStr = localDateStr(currentDate);
         if (dateStr !== todayStr) params.set('date', dateStr);
-        const activeFilters = FILTER_CHIPS.filter(c => c.active).map(c => c.slug);
-        if (activeFilters.length) params.set('filters', activeFilters.join(','));
+        if (FILTERS_ENABLED) {
+            const activeFilters = FILTER_CHIPS.filter(c => c.active).map(c => c.slug);
+            if (activeFilters.length) params.set('filters', activeFilters.join(','));
+        }
         // Preserve ?event= only while it still points at something. handleDeepLink
         // clears it on a miss, so a link to a deleted or rejected event stops
-        // riding along on every subsequent date change and filter tap.
+        // riding along on every subsequent date change.
         const eventParam = new URLSearchParams(location.search).get('event');
         if (eventParam) params.set('event', eventParam);
         const qs = params.toString();
@@ -247,6 +273,10 @@ const jsonLd = todayEvents.length > 0 ? {
             const d = new Date(dateParam + 'T00:00:00');
             if (!isNaN(d.getTime())) currentDate = d;
         }
+        // Ignored while the chips are not rendered. Honouring an old ?filters= link
+        // would drop the visitor into a filtered day with no visible control to
+        // undo it — a worse outcome than showing them the whole day.
+        if (!FILTERS_ENABLED) return;
         const filtersParam = params.get('filters');
         if (filtersParam) {
             const active = new Set(filtersParam.split(','));
@@ -258,6 +288,7 @@ const jsonLd = todayEvents.length > 0 ? {
     // Pushes the six filter flags back onto their buttons. Shared by readUrlState
     // and the empty state's "Show all events" escape.
     function syncFilterButtons() {
+        if (!FILTERS_ENABLED) return;
         FILTER_CHIPS.forEach(({ id, active }) => {
             const btn = document.getElementById(id);
             if (!btn) return;
@@ -278,8 +309,6 @@ const jsonLd = todayEvents.length > 0 ? {
         document.getElementById('eventsGrid').style.display = 'none';
         document.getElementById('emptyState').classList.remove('visible');
         document.getElementById('loadingState').classList.add('visible');
-        const submitArea = document.getElementById('submitArea');
-        if (submitArea) submitArea.style.display = 'none';
     }
 
     function hideLoading() {
@@ -329,33 +358,16 @@ const jsonLd = todayEvents.length > 0 ? {
     }
 
     // ── Rendering ───────────────────────────────────────────────────────
-    function formatDateDisplay(date) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const compareDate = new Date(date);
-        compareDate.setHours(0, 0, 0, 0);
-        // The year is dropped for dates in the current year — it is redundant and
-        // pushes the line to two rows on 320px phones. Kept when it is not.
-        const dateOpts = { day: 'numeric', month: 'long' };
-        if (date.getFullYear() !== today.getFullYear()) dateOpts.year = 'numeric';
-        if (compareDate.getTime() === today.getTime()) {
-            const dayName = date.toLocaleDateString('en-IE', { weekday: 'long' });
-            return `Today – ${dayName}, ${date.toLocaleDateString('en-IE', dateOpts)}`;
-        }
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        if (compareDate.getTime() === tomorrow.getTime()) {
-            return `Tomorrow – ${date.toLocaleDateString('en-IE', dateOpts)}`;
-        }
-        return date.toLocaleDateString('en-IE', { weekday: 'long', ...dateOpts });
+    function longDateLabel(date) {
+        // Must match Band.astro's own call exactly, or the date rewrites itself
+        // under the reader when this script takes over.
+        return date.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long' });
     }
 
     function formatEventTime(event) {
         if (event.isAllDay) return 'All day';
         if (!event.time) return '';
-        const start = shortTimeLabel(event.time);
-        if (event.timeEnd) return start + ' – ' + shortTimeLabel(event.timeEnd);
-        return start;
+        return timeRangeLabel(event.time, event.timeEnd);
     }
 
     function formatDateForShare(dateStr) {
@@ -382,8 +394,6 @@ const jsonLd = todayEvents.length > 0 ? {
 
     // Confirms in the button itself. A toast would need a whole toast system for
     // one message, and the button is where the visitor is already looking.
-    // Child nodes are stashed and put back rather than round-tripping innerHTML —
-    // this label carries an element, and the file's rule is textContent only.
     async function copyLink(btn, payload) {
         const original = btn ? [...btn.childNodes] : null;
         try {
@@ -402,6 +412,18 @@ const jsonLd = todayEvents.length > 0 ? {
         return d.toLocaleDateString('en-IE', { day: 'numeric', month: 'short' });
     }
 
+    // The card's first line. Mirrors EventCard.astro's `when`; every case
+    // resolves to a string so the slot is never empty.
+    function whenLabel(event) {
+        const span = event.endDate && event.endDate !== event.date
+            ? `${formatDateShort(event.date)} – ${formatDateShort(event.endDate)}`
+            : '';
+        const clock = event.time ? timeRangeLabel(event.time, event.timeEnd) : '';
+        if (event.isAllDay) return span ? `${span} · All day` : 'All day';
+        if (span) return clock ? `${span} · ${clock}` : span;
+        return clock || 'Time TBC';
+    }
+
     // Builds an event card using DOM methods (avoids XSS from raw data)
     function createEventCard(event) {
         const card = document.createElement('article');
@@ -409,77 +431,31 @@ const jsonLd = todayEvents.length > 0 ? {
         card.dataset.eventId = event.id;
         card.setAttribute('aria-labelledby', 'event-title-' + event.id);
 
-        // Top row: title + inline time/allday badge
-        const top = document.createElement('div');
-        top.className = 'ev-top';
+        const when = document.createElement('div');
+        when.className = 'ev-when';
+        when.textContent = whenLabel(event);
+        card.appendChild(when);
 
         const title = document.createElement('h3');
         title.className = 'event-title';
         title.id = 'event-title-' + event.id;
         title.textContent = event.title;
-        top.appendChild(title);
+        card.appendChild(title);
 
-        const isMultiDay = event.endDate && event.endDate !== event.date;
-        const hasTime = event.time && !event.isAllDay;
-
-        if (event.isAllDay) {
-            const t = document.createElement('span');
-            t.className = 'ev-allday';
-            t.textContent = 'ALL DAY';
-            top.appendChild(t);
-        } else if (isMultiDay && !event.isAllDay) {
-            const t = document.createElement('span');
-            t.className = 'ev-allday';
-            t.textContent = formatDateShort(event.date) + ' – ' + formatDateShort(event.endDate);
-            top.appendChild(t);
-        } else if (hasTime) {
-            const st = formatTimeShort(event.time);
-            const t = document.createElement('span');
-            t.className = 'ev-time';
-            t.textContent = st.time + ' ' + st.ampm;
-            top.appendChild(t);
-        } else {
-            const t = document.createElement('span');
-            t.className = 'ev-allday';
-            t.textContent = 'TBC';
-            top.appendChild(t);
-        }
-        card.appendChild(top);
+        // Venue and source share one 44px row — see EventCard.astro for why.
+        const meta = document.createElement('div');
+        meta.className = 'ev-meta';
 
         const loc = document.createElement('a');
         loc.className = 'event-location';
         loc.href = `https://maps.google.com/?q=${encodeURIComponent(event.location + ', Naas, Ireland')}`;
         loc.target = '_blank';
         loc.rel = 'noopener noreferrer';
-        const pin = document.createElement('span');
-        pin.setAttribute('aria-hidden', 'true');
-        pin.textContent = '📍';
-        loc.appendChild(pin);
-        loc.appendChild(document.createTextNode(' ' + event.location));
-        card.appendChild(loc);
-
-        const descText = event.description || '';
-        const isLong = descText.length > DESC_THRESHOLD;
-        const desc = document.createElement('p');
-        desc.className = 'event-description';
-        desc.textContent = descText;
-        if (isLong) {
-            desc.dataset.truncatable = 'true';
-            desc.style.marginBottom = '0';
-        }
-        card.appendChild(desc);
-        if (isLong) {
-            const toggleBtn = document.createElement('button');
-            toggleBtn.className = 'desc-toggle-btn';
-            toggleBtn.type = 'button';
-            toggleBtn.textContent = 'Read more ';
-            const downArrow = document.createElement('span');
-            downArrow.setAttribute('aria-hidden', 'true');
-            downArrow.textContent = '↓';
-            toggleBtn.appendChild(downArrow);
-            toggleBtn.setAttribute('aria-expanded', 'false');
-            card.appendChild(toggleBtn);
-        }
+        // Must match EventCard.astro's `venue` — the pre-rendered card and this one
+        // sit in the same list and any difference shows as a flicker on hydration.
+        loc.title = event.location;
+        loc.textContent = venueOf(event);
+        meta.appendChild(loc);
 
         if (event.url) {
             try {
@@ -490,16 +466,43 @@ const jsonLd = todayEvents.length > 0 ? {
                     urlEl.href = parsed.href;
                     urlEl.target = '_blank';
                     urlEl.rel = 'noopener noreferrer';
-                    urlEl.textContent = parsed.hostname.replace(/^www\./, '') + ' ';
-                    const extArrow = document.createElement('span');
-                    extArrow.setAttribute('aria-hidden', 'true');
-                    extArrow.textContent = '↗';
-                    urlEl.appendChild(extArrow);
-                    card.appendChild(urlEl);
+                    urlEl.textContent = parsed.hostname.replace(/^www\./, '');
+                    meta.appendChild(urlEl);
                 }
             } catch {
                 // Invalid URL — skip
             }
+        }
+        // Share is a text action on this row now, not a bordered box in the
+        // card's corner — see EventCard.astro.
+        const shareBtn = document.createElement('button');
+        shareBtn.className = 'share-btn';
+        shareBtn.textContent = 'Share';
+        shareBtn.setAttribute('aria-label', `Share ${event.title}`);
+        shareBtn.addEventListener('click', () => shareEvent(event, shareBtn));
+        meta.appendChild(shareBtn);
+
+        card.appendChild(meta);
+
+        const descText = event.description || '';
+        const isLong = descText.length > DESCRIPTION_CLAMP;
+        if (descText) {
+            const desc = document.createElement('p');
+            desc.className = 'event-description';
+            desc.textContent = descText;
+            if (isLong) {
+                desc.dataset.truncatable = 'true';
+                desc.style.marginBottom = '0';
+            }
+            card.appendChild(desc);
+        }
+        if (isLong) {
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'desc-toggle-btn';
+            toggleBtn.type = 'button';
+            toggleBtn.textContent = 'Read more';
+            toggleBtn.setAttribute('aria-expanded', 'false');
+            card.appendChild(toggleBtn);
         }
 
         const footer = document.createElement('div');
@@ -508,36 +511,96 @@ const jsonLd = todayEvents.length > 0 ? {
         const tags = document.createElement('div');
         tags.className = 'event-tags';
         const tagDefs = [
-            [event.isFree,     'free',    'Free'],
-            [event.isForKids,  'kids',    'For kids'],
-            [event.isMusic,    'music',   'Music'],
-            [event.isSport,    'sport',   'Sport'],
-            [event.isMarket,   'market',  'Markets'],
-            [event.isTheatre,  'theatre', 'Theatre'],
+            [event.isFree,     'Free'],
+            [event.isForKids,  'For kids'],
+            [event.isMusic,    'Music'],
+            [event.isSport,    'Sport'],
+            [event.isMarket,   'Market'],
+            [event.isTheatre,  'Theatre'],
         ];
-        tagDefs.forEach(([flag, cls, label]) => {
+        tagDefs.forEach(([flag, label]) => {
             if (flag) {
                 const tag = document.createElement('span');
-                tag.className = 'tag ' + cls;
+                tag.className = 'tag';
                 tag.textContent = label;
                 tags.appendChild(tag);
             }
         });
         footer.appendChild(tags);
 
-        const shareBtn = document.createElement('button');
-        shareBtn.className = 'share-btn';
-        shareBtn.textContent = 'Share ';
-        const shareArrow = document.createElement('span');
-        shareArrow.setAttribute('aria-hidden', 'true');
-        shareArrow.textContent = '↗';
-        shareBtn.appendChild(shareArrow);
-        shareBtn.setAttribute('aria-label', `Share ${event.title}`);
-        shareBtn.addEventListener('click', () => shareEvent(event, shareBtn));
-        footer.appendChild(shareBtn);
-
         card.appendChild(footer);
         return card;
+    }
+
+    // ── The band ────────────────────────────────────────────────────────
+    // The day's answer and the band's own size, which is a function of it. The
+    // sentence is built by the same helper Band.astro uses, so hydration does
+    // not rewrite the largest words on the page.
+    function renderBand(dayCount) {
+        const dateStr = localDateStr(currentDate);
+        const todayStr = localDateStr(new Date());
+        const band = document.querySelector('.band');
+        const answerEl = document.getElementById('dayAnswer');
+        if (answerEl) answerEl.textContent = dayAnswer(dayCount, dayWordFor(dateStr, todayStr));
+        if (band) {
+            band.classList.remove('is-xl', 'is-lg', 'is-sm');
+            band.classList.add(dayCount === 0 ? 'is-xl' : dayCount === 1 ? 'is-lg' : 'is-sm');
+        }
+
+        // "Next in Naas" belongs to the empty day only. On a day with events the
+        // cards are the answer and this would be a second one.
+        const next = dayCount === 0
+            ? events.filter(e => e.date > dateStr)
+                    .sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''))[0]
+            : null;
+        const link = document.getElementById('bandNext');
+        if (!link) return;
+        if (!next) { link.hidden = true; return; }
+        link.hidden = false;
+        link.href = `?date=${next.date}`;
+        link.dataset.date = next.date;
+        document.getElementById('bandNextWhen').textContent = nextPhrase(next, dateStr);
+        document.getElementById('bandNextTitle').textContent = next.title;
+        document.getElementById('bandNextVenue').textContent = venueOf(next);
+    }
+
+    // ── The week strip ──────────────────────────────────────────────────
+    // Seven days from today, always. It is the whole of the date navigation, and
+    // it deliberately stops at a week: anything further out is the footer's date
+    // picker, which is the rarer visit.
+    function renderWeekStrip() {
+        const list = document.querySelector('.weekstrip-r');
+        if (!list) return;
+        const todayStr = localDateStr(new Date());
+        const currentStr = localDateStr(currentDate);
+
+        list.replaceChildren(...weekAhead(todayStr).map(ds => {
+            const d = new Date(ds + 'T00:00:00');
+            const n = events.filter(e => onDay(e, ds)).length;
+
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.className = 'weekstrip-d' + (ds === currentStr ? ' is-current' : '') + (ds === todayStr ? ' is-today' : '');
+            a.href = ds === todayStr ? '/' : `?date=${ds}`;
+            a.dataset.date = ds;
+            if (ds === currentStr) a.setAttribute('aria-current', 'date');
+            const long = d.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long' });
+            a.setAttribute('aria-label', `${long} — ${n === 0 ? 'nothing on' : n === 1 ? '1 event' : `${n} events`}`);
+
+            const day = document.createElement('span');
+            day.className = 'weekstrip-day';
+            day.setAttribute('aria-hidden', 'true');
+            day.textContent = d.toLocaleDateString('en-IE', { weekday: 'short' })[0];
+
+            const count = document.createElement('span');
+            count.className = 'weekstrip-n' + (n === 0 ? ' is-nil' : '');
+            count.setAttribute('aria-hidden', 'true');
+            count.textContent = n === 0 ? '–' : String(n);
+
+            a.append(day, count);
+            li.appendChild(a);
+            return li;
+        }));
     }
 
     function renderEvents() {
@@ -545,6 +608,8 @@ const jsonLd = todayEvents.length > 0 ? {
         const grid = document.getElementById('eventsGrid');
         const emptyState = document.getElementById('emptyState');
         const errorState = document.getElementById('errorState');
+        // The one place the CTA still hides: the error state carries its own
+        // Try again button, and two stacked actions is worse than one.
         const submitArea = document.getElementById('submitArea');
         const dateStr = localDateStr(currentDate);
 
@@ -552,43 +617,48 @@ const jsonLd = todayEvents.length > 0 ? {
             grid.style.display = 'none';
             emptyState.classList.remove('visible');
             errorState.classList.add('visible');
-            // The error state has its own Try again button below it.
             if (submitArea) submitArea.style.display = 'none';
-            setEmptyCtaHidden(true);
+            // Nothing loaded, so the band cannot claim a count either way.
+            const answerEl = document.getElementById('dayAnswer');
+            if (answerEl) answerEl.textContent = '';
+            const bandNext = document.getElementById('bandNext');
+            if (bandNext) bandNext.hidden = true;
             updateJsonLd([]);
             renderUpcoming();
+            renderWeekStrip();
             announce('Could not load events.');
             return;
         }
         errorState.classList.remove('visible');
+        if (submitArea) submitArea.style.display = '';
 
         const staleNote = document.getElementById('staleNote');
         if (staleNote) staleNote.hidden = !isStale;
 
-        let filteredEvents = events.filter(event => {
-            if (event.endDate) {
-                return event.date <= dateStr && event.endDate >= dateStr;
-            }
-            return event.date === dateStr;
-        });
+        let filteredEvents = events.filter(e => onDay(e, dateStr));
 
         // Held before the category filters are applied, so an empty result can tell
         // "nothing is on today" from "your filters hid everything". Only one of those
         // is the visitor's to fix, and saying the wrong one reads as a broken site.
         const dayEvents = filteredEvents;
+        // Counts the day, not the filtered result: the band answers "is anything
+        // on?", which a filter does not change.
+        renderBand(dayEvents.length);
+        renderWeekStrip();
 
-        // Count badges. Every chip shows its count, zero included — see the
-        // .is-empty rule in BaseLayout for why not disabled, and why the fill
-        // dim alone was not enough.
-        // Counts are taken before the category filters are applied, so they
-        // always mean "events today with this tag", not "…that also survive
-        // your other chips". A chip can therefore be both .active and .is-empty.
-        FILTER_CHIPS.forEach(({ id, label, match }) => {
-            const count = filteredEvents.filter(match).length;
-            const btn = document.getElementById(id);
-            btn.querySelector('span').textContent = `${label} (${count})`;
-            btn.classList.toggle('is-empty', count === 0);
-        });
+        // Count badges. Every chip shows its count, zero included. Counts are
+        // taken before the category filters are applied, so they always mean
+        // "events today with this tag", not "…that also survive your other
+        // chips". A chip can therefore be both .active and .is-empty.
+        if (FILTERS_ENABLED) {
+            FILTER_CHIPS.forEach(({ id, label, match }) => {
+                const count = filteredEvents.filter(match).length;
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.querySelector('span').textContent = `${label} (${count})`;
+                btn.classList.toggle('is-empty', count === 0);
+            });
+        }
 
         // AND across the active chips, as before: an event must match every one.
         for (const chip of FILTER_CHIPS) {
@@ -597,9 +667,11 @@ const jsonLd = todayEvents.length > 0 ? {
 
         if (filteredEvents.length === 0) {
             grid.style.display = 'none';
-            emptyState.classList.add('visible');
-            // The submit prompt for an empty day lives after the upcoming list.
-            if (submitArea) submitArea.style.display = 'none';
+            // A genuinely empty day is already answered by the band, at display
+            // size, with the next real event under it. Only a day emptied *by
+            // filters* needs a panel — that is a different sentence and it needs
+            // an escape hatch.
+            emptyState.classList.toggle('visible', dayEvents.length > 0);
             setEmptyState(dayEvents.length);
             updateJsonLd([]);
             renderUpcoming();
@@ -608,8 +680,6 @@ const jsonLd = todayEvents.length > 0 ? {
 
         grid.style.display = 'grid';
         emptyState.classList.remove('visible');
-        if (submitArea) submitArea.style.display = '';
-        setEmptyCtaHidden(true);
         filteredEvents.sort((a, b) => a.time.localeCompare(b.time));
         grid.innerHTML = '';
         filteredEvents.forEach(event => grid.appendChild(createEventCard(event)));
@@ -626,119 +696,91 @@ const jsonLd = todayEvents.length > 0 ? {
         if (status) status.textContent = text;
     }
 
-    function setEmptyCtaHidden(hidden) {
-        const cta = document.getElementById('emptyCta');
-        if (cta) cta.hidden = hidden;
-    }
-
-    // An empty day has two causes and they need different words. Telling someone
-    // "nothing listed" when four events are sitting behind a filter they set is
-    // false, and the filter row is not sticky, so they cannot see what caused it.
+    // Only reached with events hidden behind filters, or with none at all. The
+    // second case renders nothing — the band said it — but still announces, so a
+    // screen reader is told the day is empty rather than left in silence.
     function setEmptyState(dayCount) {
         const heading  = document.getElementById('emptyHeading');
         const message  = document.getElementById('emptyMessage');
         const clearBtn = document.getElementById('clearFiltersBtn');
-        const filtersHidThem = dayCount > 0;
-        // "today" is only true on the day itself; the visitor can be three taps into
-        // next week. The date sits right above this message, so a wrong word here is
-        // the kind of small lie that makes the rest look unreliable.
-        const isToday = localDateStr(currentDate) === localDateStr(new Date());
-        const dayWord = isToday ? 'today' : 'this day';
-        // "today" already carries its own preposition — "on today" is not English,
-        // and reads as broken to exactly the older resident this is built for.
-        const dayPhrase = isToday ? 'today' : 'on this day';
 
-        if (filtersHidThem) {
-            const activeCount = FILTER_CHIPS.filter(c => c.active).length;
-            heading.textContent = 'No matching events';
-            // Filters AND together and nothing said so, which is why
-            // "Free + For kids" returning nothing read as "there is nothing on"
-            // rather than "no one event is both". Only worth saying with two or
-            // more lit: with one chip there is no combining to explain.
-            const andNote = activeCount > 1
-                ? ' An event has to match every filter you have on — try turning one off.'
-                : '';
-            message.textContent = (dayCount === 1
-                ? `There is 1 other event ${dayPhrase}.`
-                : `There are ${dayCount} other events ${dayPhrase}.`) + andNote;
-            clearBtn.hidden = false;
-            // Not the moment to ask for a submission — the day is not empty.
-            setEmptyCtaHidden(true);
-            announce(`No matching events. ${dayCount} ${dayCount === 1 ? 'event' : 'events'} hidden by filters.`);
-        } else {
-            heading.textContent = 'Quiet day in Naas';
-            message.textContent = `Nothing listed for ${dayWord}.`;
+        if (dayCount === 0) {
             clearBtn.hidden = true;
-            setEmptyCtaHidden(false);
             announce('No events on this day.');
+            return;
         }
+
+        const activeCount = FILTER_CHIPS.filter(c => c.active).length;
+        // "today" is only true on the day itself; the visitor can be three taps
+        // into next week.
+        const isToday = localDateStr(currentDate) === localDateStr(new Date());
+        const dayPhrase = isToday ? 'today' : 'on this day';
+        heading.textContent = 'No matching events';
+        // Filters AND together and nothing said so, which is why "Free + For
+        // kids" returning nothing read as "there is nothing on" rather than "no
+        // one event is both". Only worth saying with two or more lit.
+        const andNote = activeCount > 1
+            ? ' An event has to match every filter you have on — try turning one off.'
+            : '';
+        message.textContent = (dayCount === 1
+            ? `There is 1 other event ${dayPhrase}.`
+            : `There are ${dayCount} other events ${dayPhrase}.`) + andNote;
+        clearBtn.hidden = false;
+        announce(`No matching events. ${dayCount} ${dayCount === 1 ? 'event' : 'events'} hidden by filters.`);
     }
 
     function renderUpcoming() {
         const section = document.getElementById('upcomingSection');
         const list = document.getElementById('upcomingList');
         const dateStr = localDateStr(currentDate);
+        const dayCount = events.filter(e => onDay(e, dateStr)).length;
 
+        // Five on a day with nothing on, where this list is most of the page;
+        // three when there are cards above it and it is a footnote to them.
         const upcoming = events
             .filter(e => e.date > dateStr)
             .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
-            .slice(0, 5);
+            .slice(0, dayCount === 0 ? 5 : 3);
 
         if (upcoming.length === 0) { section.style.display = 'none'; return; }
         section.style.display = '';
 
-        // On an empty day this list is the answer, not a sidebar, so it says so.
-        const heading = document.getElementById('upcomingHeading');
-        const dayIsEmpty = document.getElementById('emptyState').classList.contains('visible');
-        if (heading) heading.textContent = dayIsEmpty ? 'Next up' : 'Coming up';
-
-        list.innerHTML = '';
-
-        upcoming.forEach(event => {
-            // A real <button> inside the <li>, not role="button" on the <li> itself:
-            // that stripped the <ul> of its list semantics and produced accessible
-            // names like "Thu, 7 Aug 20:00 Trad Session The Storehouse".
-            const li = document.createElement('li');
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'upcoming-item';
-
+        list.replaceChildren(...upcoming.map(event => {
             const d = new Date(event.date + 'T00:00:00');
-            const dateLabel = d.toLocaleDateString('en-IE', { weekday: 'short', month: 'short', day: 'numeric' });
+            const li = document.createElement('li');
+
+            // A real link, so it survives with JS off and can be opened in a new
+            // tab. The delegated handler below intercepts it for speed.
+            const a = document.createElement('a');
+            a.className = 'upcoming-item';
+            a.href = `?date=${event.date}`;
+            a.dataset.date = event.date;
 
             const dateEl = document.createElement('span');
             dateEl.className = 'upcoming-date';
-            dateEl.textContent = dateLabel;
+            dateEl.textContent = d.toLocaleDateString('en-IE', { weekday: 'short' }).toUpperCase();
+            const dom = document.createElement('span');
+            dom.className = 'upcoming-dom';
+            dom.textContent = String(d.getDate());
+            dateEl.appendChild(dom);
 
-            const timeEl = document.createElement('span');
-            timeEl.className = 'upcoming-time';
-            // The third of the three formatters item 74 had to reconcile: this one
-            // passed the stored HH:MM straight through and overwrote the server's
-            // 12-hour version on hydration.
-            timeEl.textContent = event.isAllDay ? 'All day' : (event.time ? shortTimeLabel(event.time) : '');
+            const body = document.createElement('span');
+            body.className = 'upcoming-body';
 
             const titleEl = document.createElement('span');
             titleEl.className = 'upcoming-title';
             titleEl.textContent = event.title;
 
-            const locationEl = document.createElement('span');
-            locationEl.className = 'upcoming-location';
-            locationEl.textContent = event.location;
+            const metaEl = document.createElement('span');
+            metaEl.className = 'upcoming-meta';
+            const when = event.isAllDay ? 'All day' : event.time ? clockLabel(event.time) : 'Time TBC';
+            metaEl.textContent = `${when} · ${venueOf(event)}`;
 
-            btn.append(dateEl, timeEl, titleEl, locationEl);
-            li.appendChild(btn);
-
-            // No keydown handler any more — a real button gets Enter and Space free.
-            btn.addEventListener('click', () => {
-                currentDate = new Date(event.date + 'T00:00:00');
-                updateDateDisplay();
-                renderEvents();
-                writeUrlState();
-                window.scrollTo({ top: 0, behavior: scrollBehavior() });
-            });
-
-            list.appendChild(li);
-        });
+            body.append(titleEl, metaEl);
+            a.append(dateEl, body);
+            li.appendChild(a);
+            return li;
+        }));
     }
 
     // ── JSON-LD Structured Data ─────────────────────────────────────────
@@ -772,44 +814,46 @@ const jsonLd = todayEvents.length > 0 ? {
 
     // ── Date Navigation ─────────────────────────────────────────────────
     function updateDateDisplay() {
-        document.getElementById('currentDateDisplay').textContent = formatDateDisplay(currentDate);
-        // Built from the date rather than reusing formatDateDisplay, whose "Today – "
-        // prefix reads badly inside a heading ("Events on Today – Friday, 7 August").
+        const el = document.getElementById('currentDateDisplay');
+        if (el) el.textContent = longDateLabel(currentDate);
+        // Built from the date rather than reusing the band's sentence, whose
+        // "today" reads badly inside a heading.
         document.getElementById('eventsListHeading').textContent =
             'Events on ' + currentDate.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long' });
-        const isToday = localDateStr(currentDate) === localDateStr(new Date());
-        document.getElementById('todayBtn').style.display = isToday ? 'none' : '';
-        document.getElementById('prevDay').style.display = isToday ? 'none' : '';
     }
 
-    function changeDate(days) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        currentDate.setDate(currentDate.getDate() + days);
-        if (currentDate < today) currentDate = today;
+    function goToDate(dateStr, { scroll = true } = {}) {
+        currentDate = new Date(dateStr + 'T00:00:00');
         updateDateDisplay();
         renderEvents();
         writeUrlState();
+        if (scroll) window.scrollTo({ top: 0, behavior: scrollBehavior() });
     }
+
+    // One delegated handler for every date link on the page — the week strip,
+    // the band's "Next in Naas" and the Coming up rows. They are real anchors to
+    // ?date=, which already works on load, so this only saves the reload.
+    // Modified clicks fall through, or cmd-click would stop opening a new tab.
+    document.addEventListener('click', (e) => {
+        if (e.defaultPrevented || e.button !== 0) return;
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        const link = e.target.closest('a[data-date]');
+        if (!link) return;
+        e.preventDefault();
+        goToDate(link.dataset.date);
+    });
 
     // ── Event Listeners ─────────────────────────────────────────────────
     window.addEventListener('popstate', () => {
+        // Back must be able to return to today, so the date is reset before the
+        // URL is re-read rather than left at wherever the visitor had got to.
+        currentDate = new Date();
         readUrlState();
         updateDateDisplay();
         renderEvents();
     });
 
-    document.getElementById('prevDay').addEventListener('click', () => changeDate(-1));
-    document.getElementById('nextDay').addEventListener('click', () => changeDate(1));
-
-    document.getElementById('todayBtn').addEventListener('click', () => {
-        currentDate = new Date();
-        updateDateDisplay();
-        renderEvents();
-        writeUrlState();
-    });
-
-    document.getElementById('changeDateBtn').addEventListener('click', () => {
+    document.getElementById('changeDateBtn')?.addEventListener('click', () => {
         const dateInput = document.getElementById('dateInput');
         dateInput.min = localDateStr(new Date());
         dateInput.value = localDateStr(currentDate);
@@ -819,14 +863,11 @@ const jsonLd = todayEvents.length > 0 ? {
     document.getElementById('closeDateModal').addEventListener('click', () => closeModal('dateModal'));
 
     document.getElementById('dateInput').addEventListener('change', (e) => {
-        currentDate = new Date(e.target.value + 'T00:00:00');
-        updateDateDisplay();
-        renderEvents();
-        writeUrlState();
+        goToDate(e.target.value, { scroll: false });
         closeModal('dateModal');
     });
 
-    FILTER_CHIPS.forEach(chip => {
+    if (FILTERS_ENABLED) FILTER_CHIPS.forEach(chip => {
         document.getElementById(chip.id).addEventListener('click', function() {
             chip.active = !chip.active;
             this.classList.toggle('active', chip.active);
@@ -877,6 +918,13 @@ const jsonLd = todayEvents.length > 0 ? {
     // ── Init ─────────────────────────────────────────────────────────────
     readUrlState();
     updateDateDisplay();
+    // Paint the requested day from the build-time events before going to the
+    // network. The pre-rendered HTML is always *today*, so following a ?date=
+    // link — the week strip and every Coming up row are real links to one —
+    // used to show Saturday's date over Monday's answer, Monday's strip marker
+    // and Monday's cards until get-events came back. Everything needed to render
+    // Saturday was already in memory; only the fetch was being waited on.
+    if (events.length) renderEvents();
     initDescriptionToggles(document.getElementById('eventsGrid'));
     initModals();
     // The submit modal opens on the day being viewed, not on today — a visitor

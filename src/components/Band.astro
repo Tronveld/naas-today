@@ -1,0 +1,84 @@
+---
+// clockLabel, not shortTimeLabel: renderBand() in index.astro writes this same
+// line on hydration and uses the compact form, so the two disagreed — the band
+// said "Tomorrow, 10:00 AM" while the Coming up row for the same event said
+// "10am", on one screen, until JS replaced the first with the second. Fourth
+// time this project has had two formatters for one fact.
+import { dayAnswer, dayWordFor, nextPhrase } from '../scripts/date.js';
+
+interface NextEvent {
+  date: string;
+  title: string;
+  location: string;
+  time?: string;
+  is_all_day?: boolean;
+}
+
+interface Props {
+  /** Omitted on pages that are not the day view (/terms) — brand only. */
+  dateStr?: string;
+  todayStr?: string;
+  count?: number;
+  /** The next event after `dateStr`, shown only when the day itself is empty. */
+  next?: NextEvent | null;
+}
+
+const { dateStr, todayStr, count = 0, next = null } = Astro.props;
+const isDay = Boolean(dateStr && todayStr);
+
+// The band is sized by its own answer. On a day with nothing on there is nothing
+// else to spend the space on and the next real event needs the room; on a busy
+// day the cards are the answer and the band gets out of the way at one line.
+// This is one component in one order, not two layouts — only the size changes.
+const size = !isDay ? 'brand' : count === 0 ? 'xl' : count === 1 ? 'lg' : 'sm';
+
+const answer = isDay ? dayAnswer(count, dayWordFor(dateStr!, todayStr!)) : '';
+
+const longDate = isDay
+  ? new Date(dateStr! + 'T00:00:00').toLocaleDateString('en-IE', {
+      weekday: 'long', day: 'numeric', month: 'long',
+    })
+  : '';
+
+// Only when the day is empty: the band answers "nothing on" and then, in the
+// same breath, what there IS. An empty day that ends at "nothing" is a dead end.
+const showNext = isDay && count === 0 && next;
+// One sentence, not a kicker over a heading. "NEXT IN NAAS" sitting above
+// "Tomorrow, 10am" was a label doing a sentence's job — and this block is on the
+// most-shown screen, so it is the last place to spend a line on chrome.
+const nextWhen = showNext
+  ? nextPhrase({ date: next!.date, time: next!.time, isAllDay: next!.is_all_day }, dateStr!)
+  : '';
+const nextVenue = showNext ? (next!.location.split(',')[0].trim() || next!.location) : '';
+---
+<header class={`band is-${size}`}>
+  <div class="container">
+    <div class="band-top">
+      <span class="band-brand">Naas Today</span>
+      {isDay
+        ? <span class="band-date" id="currentDateDisplay">{longDate}</span>
+        : <span class="band-date">What's on in Naas</span>}
+    </div>
+
+    {isDay && (
+      <p class="band-answer" id="dayAnswer">{answer}</p>
+    )}
+
+    {/* A real link, not a button: it works with JS off, it can be opened in a
+        new tab, and the client intercepts it for speed rather than for function.
+        Hidden rather than absent when the day has events, so the client has a
+        node to fill instead of building one. */}
+    {isDay && (
+      <a
+        class="band-next"
+        id="bandNext"
+        href={showNext ? `?date=${next!.date}` : '#'}
+        hidden={!showNext}
+      >
+        <span class="band-next-w" id="bandNextWhen">{nextWhen}</span>
+        <span class="band-next-t" id="bandNextTitle">{showNext ? next!.title : ''}</span>
+        <span class="band-next-v" id="bandNextVenue">{nextVenue}</span>
+      </a>
+    )}
+  </div>
+</header>

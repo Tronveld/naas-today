@@ -1,5 +1,6 @@
 ---
-import { formatTimeShort } from '../scripts/date.js';
+import { timeRangeLabel } from '../scripts/date.js';
+import { DESCRIPTION_CLAMP } from '../scripts/flags.js';
 
 interface Event {
   id: string;
@@ -33,6 +34,11 @@ function formatDateShort(dateStr: string): string {
 
 const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(event.location + ', Naas, Ireland')}`;
 
+// The card names a place, not an address. Scraped locations arrive as
+// "Naas Potato Market, Church Lane, Naas, Co. Kildare", and the street is not
+// why anyone reads the card. The full string still goes to Maps and to `title`.
+const venue = event.location.split(',')[0].trim() || event.location;
+
 let parsedUrl: URL | null = null;
 if (event.url) {
   try {
@@ -43,53 +49,66 @@ if (event.url) {
   }
 }
 
-// Sidebar content
-const isAllDay = event.is_all_day;
-const desc = event.description ?? '';
-const isLong = desc.length > 220;
+// One line, first, in the accent — the time leads the card now rather than
+// sitting in a pill opposite the title. Every case resolves to a string, so the
+// slot is never empty and a mixed list of timed, all-day and TBC events keeps
+// one shape. `time_end` is shown; the old pill dropped it silently.
 const isMultiDay = event.end_date && event.end_date !== event.date;
-const hasTime = event.time && !isAllDay;
-const sidebarTime = hasTime ? formatTimeShort(event.time!) : null;
+const span = isMultiDay ? `${formatDateShort(event.date)} – ${formatDateShort(event.end_date!)}` : '';
+const clock = event.time ? timeRangeLabel(event.time, event.time_end) : '';
+// A multi-day run with a start time gets both. The old pill could hold one fact
+// in 28px, so a festival running 15–16 August at 12pm showed the dates and threw
+// the time away; a full-width line has room for the answer to "when do I go".
+const when = event.is_all_day
+  ? (span ? `${span} · All day` : 'All day')
+  : span
+    ? (clock ? `${span} · ${clock}` : span)
+    : clock || 'Time TBC';
+
+const desc = event.description ?? '';
+const isLong = desc.length > DESCRIPTION_CLAMP;
 ---
 <article class="event-card" data-event-id={event.id} aria-labelledby={"event-title-" + event.id}>
-  <div class="ev-top">
-    <h3 class="event-title" id={"event-title-" + event.id}>{event.title}</h3>
-    {isAllDay && <span class="ev-allday">ALL DAY</span>}
-    {isMultiDay && !isAllDay && (
-      <span class="ev-allday">{formatDateShort(event.date)} – {formatDateShort(event.end_date!)}</span>
+  <div class="ev-when">{when}</div>
+  <h3 class="event-title" id={"event-title-" + event.id}>{event.title}</h3>
+  {/* Venue and source share one row. Both are links and both owe the 44px touch
+      floor, so as two stacked lines they cost 88px of card for two short
+      strings — on a six-event Saturday that is a screen and a half of nothing.
+      Side by side the row is 44px and the floor is untouched. */}
+  <div class="ev-meta">
+    <a class="event-location" href={mapsUrl} title={event.location} target="_blank" rel="noopener noreferrer">{venue}</a>
+    {parsedUrl && (
+      <a class="event-url" href={parsedUrl.href} target="_blank" rel="noopener noreferrer">
+        {parsedUrl.hostname.replace(/^www\./, '')}
+      </a>
     )}
-    {sidebarTime && !isMultiDay && (
-      <span class="ev-time">{sidebarTime.time} {sidebarTime.ampm}</span>
-    )}
-    {!isAllDay && !isMultiDay && !hasTime && <span class="ev-allday">TBC</span>}
+    {/* Share sits on this row too, as text. It was a bordered 44px box in the
+        bottom-right of every card — the heaviest object on a card whose whole
+        language is hairlines, six times over on a Saturday, and a 6px radius in
+        a world with no radius. It is a secondary action on a listing; it reads
+        as one now, and the card gets a whole row back. */}
+    <button class="share-btn" aria-label={`Share ${event.title}`}>Share</button>
   </div>
-  <a class="event-location" href={mapsUrl} target="_blank" rel="noopener noreferrer"><span aria-hidden="true">📍</span> {event.location}</a>
-  <p
-    class="event-description"
-    data-truncatable={isLong ? 'true' : undefined}
-    style={isLong ? 'margin-bottom: 0;' : undefined}
-  >
-    {desc}
-  </p>
-  {isLong && (
-    <button class="desc-toggle-btn" aria-expanded="false" type="button">
-      Read more <span aria-hidden="true">↓</span>
-    </button>
+  {desc && (
+    <p
+      class="event-description"
+      data-truncatable={isLong ? 'true' : undefined}
+      style={isLong ? 'margin-bottom: 0;' : undefined}
+    >
+      {desc}
+    </p>
   )}
-  {parsedUrl && (
-    <a class="event-url" href={parsedUrl.href} target="_blank" rel="noopener noreferrer">
-      {parsedUrl.hostname.replace(/^www\./, '')} <span aria-hidden="true">↗</span>
-    </a>
+  {isLong && (
+    <button class="desc-toggle-btn" aria-expanded="false" type="button">Read more</button>
   )}
   <div class="card-footer">
     <div class="event-tags">
-      {event.is_free && <span class="tag free">Free</span>}
-      {event.is_for_kids && <span class="tag kids">For kids</span>}
-      {event.is_music && <span class="tag music">Music</span>}
-      {event.is_sport && <span class="tag sport">Sport</span>}
-      {event.is_market && <span class="tag market">Markets</span>}
-      {event.is_theatre && <span class="tag theatre">Theatre</span>}
+      {event.is_free && <span class="tag">Free</span>}
+      {event.is_for_kids && <span class="tag">For kids</span>}
+      {event.is_music && <span class="tag">Music</span>}
+      {event.is_sport && <span class="tag">Sport</span>}
+      {event.is_market && <span class="tag">Market</span>}
+      {event.is_theatre && <span class="tag">Theatre</span>}
     </div>
-    <button class="share-btn" aria-label={`Share ${event.title}`}>Share <span aria-hidden="true">↗</span></button>
   </div>
 </article>

@@ -21,3 +21,8 @@ deno.lock
 
 # macOS
 .DS_Store
+
+# Impeccable decision-server state: pids, ports and heartbeats from a local
+# question page. Transient and machine-specific; the durable record of what was
+# decided lives in .impeccable/mocks/.
+.impeccable/questions/

@@ -62,16 +62,27 @@ The public-facing site is built with Astro (static output). The build fetches ap
 **Source structure:**
 ```
 src/
-  layouts/BaseLayout.astro   — <html> shell, all CSS (global), meta/OG tags, Umami analytics
+  layouts/BaseLayout.astro   — <html> shell, all CSS (global), meta/OG tags, Umami
+                               analytics, and the direction contract comment that
+                               opens <body> (it must survive the production build)
   components/
-    Header.astro             — logo, site title
-    DateNav.astro            — date display + prev/today/change/next buttons
-    FilterControls.astro     — scrolling row of six category filter buttons
-                               (free, kids, music, sport, markets, theatre)
+    Band.astro               — the green band. Brand + date, then the day's answer
+                               as a sentence, then "Next in Naas" when the day is
+                               empty. **Sized by its own answer** via an is-xl /
+                               is-lg / is-sm class. Called with no props by
+                               /terms, where it is brand only
+    WeekStrip.astro          — seven days from today with their real counts; this
+                               is the whole of the date navigation. Sticky. Takes
+                               all events so the counts are right pre-JS
+    FilterControls.astro     — six category filter buttons. **Not rendered** —
+                               index.astro gates it on FILTERS_ENABLED, which is
+                               false. Left intact so the row is one boolean away
     EventCard.astro          — single event card (accepts raw Supabase row as prop)
-    EventsGrid.astro         — grid of EventCards, empty/loading/error states,
-                               and the submit-event area below the list
-    Footer.astro             — copyright + about/contact/terms/submit links
+    EventsGrid.astro         — grid of EventCards, plus loading/error states. Its
+                               empty panel is now only for a *filter*-emptied day;
+                               a genuinely empty day is answered by the band
+    Footer.astro             — pick-a-date (day view only) + about/contact/terms/
+                               submit links + copyright
     AppModals.astro          — About/Contact/Submit modals for pages that are not
                                index.astro; wires the shared script (see below)
     modals/
@@ -82,6 +93,20 @@ src/
   scripts/
     draft.js                 — submit-form draft persistence (sessionStorage)
     modal-form.js            — modal system + submit form, shared by index and AppModals
+    date.js                  — shared date/time formatters **and the day's own
+                               phrasing**: `dayAnswer`, `dayWordFor`, `nextPhrase`,
+                               `clockLabel`, `timeRangeLabel`, `weekAhead`.
+                               Everything the band and the strip say lives here
+                               because Band.astro renders it and index.astro's
+                               client script rewrites it on hydration — two
+                               copies of one sentence is how this project got
+                               "Tomorrow, 10:00 AM" above "10am" for the same
+                               event on the same screen
+    flags.js                 — FILTERS_ENABLED. Imported by both index.astro's
+                               frontmatter and its client script, because Astro
+                               compiles those separately and a shared module is
+                               the only way one constant governs markup and
+                               behaviour together
   pages/
     index.astro              — fetches events at build time, assembles all components, embeds client JS
     terms.astro              — static terms & disclaimer page (own scoped <style>)
@@ -102,8 +127,12 @@ This used to be two copies, the second a TypeScript retype of the first, and CLA
   - **`fetchEvents()`** — calls `/.netlify/functions/get-events`; skips loading spinner if pre-rendered events are already visible.
   - **`renderEvents()`** — filters `events` array by `currentDate`, active filters, then calls `createEventCard()` per event.
   - **`createEventCard(event)`** — builds event cards using DOM methods (`textContent` only — never `innerHTML` with user data).
-  - **`FILTER_CHIPS`** — the six category chips as one array carrying `id`, `slug`, `label`, `match` and `active`. The count badges, the toggle handlers, the `?filters=` round-trip and the filtering all read it; there is no separate per-filter variable.
-  - **Modal system** — imported from `src/scripts/modal-form.js`; `index.astro` calls `openModal`/`closeModal` directly only for the date picker.
+  - **`FILTER_CHIPS`** — the six category chips as one array carrying `id`, `slug`, `label`, `match` and `active`. The count badges, the toggle handlers, the `?filters=` round-trip and the filtering all read it; there is no separate per-filter variable. **Dormant while `FILTERS_ENABLED` is false:** the array and the AND loop stay, the three places that touch chip DOM are gated, and `?filters=` is neither written nor read — honouring an old link would drop a visitor into a filtered day with no visible control to undo it.
+  - **`renderBand(n)`** — writes the day's answer (`Six things on Saturday.` / `Nothing on today.`), sets the band's size class, and fills or hides "Next in Naas". Counts the day, not the filtered result. `Band.astro` pre-renders the identical string from the same `date.js` helper.
+  - **`renderWeekStrip()`** — rebuilds the seven day cells and their counts, marking the current day. Re-run on every render because a `get-events` refresh can change the counts.
+  - **Date navigation is links, not buttons.** Every week-strip cell, every Coming up row and the band's "Next in Naas" is a real `<a href="?date=YYYY-MM-DD">`, and one delegated click handler intercepts them (letting modified clicks through so cmd-click still opens a tab). They therefore work with JS off, and `?date=` was already read on load. There is no prev/next/today button any more.
+  - **The initial render happens before the fetch.** `renderEvents()` runs once from the build-time events as soon as the URL is read, because the pre-rendered HTML is always *today* — following a `?date=` link used to show the requested day's date above today's answer, today's strip marker and today's cards until `get-events` returned.
+  - **Modal system** — imported from `src/scripts/modal-form.js`; `index.astro` calls `openModal`/`closeModal` directly only for the date picker, which now lives in the footer.
 
 `public/admin.html` — password-protected admin interface. On load it calls `admin-auth` with `check_setup` to determine whether to show the first-time setup form or the login form. Once authenticated, it calls `admin-events` to list, approve/reject, edit, or delete events. The password is stored only in `sessionStorage` (cleared on tab close) and sent via the `x-admin-password` header on every admin API request.
 
@@ -326,8 +355,8 @@ Local residents of Naas, County Kildare, Ireland — all ages, checking what's h
 
 ### Aesthetic Direction
 - **Visual tone**: Editorial warmth — newspaper meets community bulletin board. Not slick, not minimal-SaaS, not touristic.
-- **Palette**: Forest green (#2d5a2d) as brand anchor, warm beige/linen backgrounds, DM Mono for timestamps — all intentional and Irish-feeling.
-- **Typography**: Georgia serif for headings (editorial authority), system-ui for body (readable), DM Mono for time/tags (functional contrast).
+- **Palette**: Hedgerow green (#186C42) as brand anchor, carried as a *field* that owns a whole region rather than as an accent; a near-white page; no category palette. Changed 2026-08-10 — see PRODUCT.md's Brand Commitments for what was released and why.
+- **Typography**: The system UI stack, at every size, with `font-variant-numeric: tabular-nums` where figures align. **No webfont at all** — Georgia and DM Mono are both retired, which took two preconnects and a stylesheet off every page.
 - **Anti-references**: No purple gradients or SaaS hero metrics. No Facebook Events clutter. No Airbnb-style aspirational photography. No generic Eventbrite grid.
 - **Theme**: Light mode only. Warm naturals, not clinical whites.
 
@@ -337,3 +366,17 @@ Local residents of Naas, County Kildare, Ireland — all ages, checking what's h
 3. **Warm legibility** — typography and contrast prioritise readability for all ages (WCAG AA minimum).
 4. **Quiet character** — personality through thoughtful details (font choices, colour warmth, small touches), not loud UI tricks.
 5. **Mobile-first scanning** — cards must work at a glance on small screens; info hierarchy is paramount.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as GitHub issues in `Tronveld/naas-today`, managed with the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical roles, each label string equal to its name (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — `CONTEXT.md` and `docs/adr/` at the repo root, created lazily when there is something to record. See `docs/agents/domain.md`.
