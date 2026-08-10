@@ -266,10 +266,11 @@ export function initSubmitForm({ defaultDate }) {
     openModal('submitModal');
   }
 
-  // `/` has all three; `/terms` only the footer button.
+  // `/` has both; `/terms` only the footer button. There used to be a third,
+  // `emptySubmitBtn`, for a second CTA that only appeared on an empty day — the
+  // two collapsed into one when the page order stopped depending on the day.
   document.getElementById('submitEventBtn')?.addEventListener('click', openSubmitModal);
   document.getElementById('submitEventFooterBtn')?.addEventListener('click', openSubmitModal);
-  document.getElementById('emptySubmitBtn')?.addEventListener('click', openSubmitModal);
 
   document.getElementById('closeSubmitModal')?.addEventListener('click', () => closeModal('submitModal'));
 

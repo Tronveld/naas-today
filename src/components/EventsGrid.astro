@@ -49,12 +49,15 @@ const todayEvents = events.filter(e => {
         {todayEvents.map(event => <EventCard event={event} />)}
     </div>
 
-    <!-- Message only. The submit prompt now lives after the upcoming list in
-         index.astro, so an empty day answers the visitor's question before it
-         asks them for anything. -->
-    <div class="empty-state" id="emptyState" class:list={[{ visible: todayEvents.length === 0 }]}>
-        <h3 id="emptyHeading">Quiet day in Naas</h3>
-        <p id="emptyMessage">Nothing listed for today.</p>
+    <!-- Never shown for a genuinely empty day any more: the band above says
+         "Nothing on today." at display size and then names the next real event,
+         so a second panel underneath repeating it in smaller type was the same
+         answer twice. It survives for the one case the band cannot describe —
+         a day whose events exist but are hidden by active filters, which needs
+         different words and an escape. Dormant while FILTERS_ENABLED is false. -->
+    <div id="emptyState" class="empty-state">
+        <h3 id="emptyHeading">No matching events</h3>
+        <p id="emptyMessage"></p>
         <button class="empty-clear-btn" id="clearFiltersBtn" hidden>Show all events</button>
     </div>
 
@@ -69,11 +72,5 @@ const todayEvents = events.filter(e => {
         <h3>Couldn't load events</h3>
         <p>Something went sideways on our end. Give it another go.</p>
         <button class="submit-area-btn" style="margin-top: 1rem;" id="retryBtn">Try again</button>
-    </div>
-
-    <!-- Hidden whenever the empty or error state is showing: both carry their
-         own button, and two stacked green CTAs is worse than one. -->
-    <div class="submit-area" id="submitArea" style={todayEvents.length === 0 ? 'display:none' : ''}>
-        <button class="submit-area-btn" id="submitEventBtn">Submit an event</button>
     </div>
 </div>

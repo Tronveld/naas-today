@@ -1,0 +1,58 @@
+---
+import { weekAhead } from '../scripts/date.js';
+
+interface Props {
+  /** Every approved event; counted per day here so the strip is right pre-JS. */
+  events: { date: string; end_date?: string }[];
+  todayStr: string;
+  /** The day being viewed. Marked only when it falls inside the seven. */
+  currentStr: string;
+}
+
+const { events, todayStr, currentStr } = Astro.props;
+
+const days = weekAhead(todayStr);
+
+// Counted the same way EventsGrid and renderEvents count: a multi-day run is on
+// every day it spans, not only the day it started.
+function countFor(ds: string): number {
+  return events.filter(e => (e.end_date ? e.date <= ds && e.end_date >= ds : e.date === ds)).length;
+}
+---
+{/* The strip is the date navigation. It replaced Previous / Today / Pick a date /
+    Next, four buttons that reflowed under the thumb the moment one was pressed:
+    on today the row was [Pick a date][Next], and one tap of Next added two more
+    buttons *above* them, so Next moved while the finger was still on it.
+
+    Seven fixed days do not move. They also answer "what's on this weekend"
+    without stepping, which is the second of the two questions PRODUCT.md names
+    and the one the interface never answered.
+
+    It covers a week and no further by design; anything beyond is the footer's
+    date picker. */}
+<nav class="weekstrip" aria-label="Choose a day">
+  <div class="container">
+    <span class="weekstrip-k">Week ahead</span>
+    <ul class="weekstrip-r">
+      {days.map(ds => {
+        const n = countFor(ds);
+        const d = new Date(ds + 'T00:00:00');
+        const label = d.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long' });
+        return (
+          <li>
+            <a
+              class:list={['weekstrip-d', { 'is-current': ds === currentStr, 'is-today': ds === todayStr }]}
+              href={ds === todayStr ? '/' : `?date=${ds}`}
+              data-date={ds}
+              aria-current={ds === currentStr ? 'date' : undefined}
+              aria-label={`${label} — ${n === 0 ? 'nothing on' : n === 1 ? '1 event' : `${n} events`}`}
+            >
+              <span class="weekstrip-day" aria-hidden="true">{d.toLocaleDateString('en-IE', { weekday: 'short' })[0]}</span>
+              <span class:list={['weekstrip-n', { 'is-nil': n === 0 }]} aria-hidden="true">{n === 0 ? '–' : n}</span>
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  </div>
+</nav>

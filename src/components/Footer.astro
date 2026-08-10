@@ -1,9 +1,25 @@
 ---
+interface Props {
+  /** The day view can jump to any date; /terms has no date to pick. */
+  datePicker?: boolean;
+}
+
+const { datePicker = false } = Astro.props;
 ---
 <footer>
     <div class="container">
         <div class="footer-content">
             <div class="footer-links">
+                {/* The week strip above covers the next seven days and no further.
+                    Anything beyond it is this one control, deliberately kept out
+                    of the way rather than parked above the fold — going more than
+                    a week out is the rare visit, not the common one. */}
+                {datePicker && (
+                    <>
+                        <button id="changeDateBtn">Pick a date</button>
+                        <span class="footer-dot" aria-hidden="true">·</span>
+                    </>
+                )}
                 <button id="aboutBtn">About</button>
                 <span class="footer-dot" aria-hidden="true">·</span>
                 <button id="contactBtn">Contact</button>
