@@ -54,20 +54,14 @@ jobs:
       # forget, and submissions then sat for weeks. Leaving `pending` to mean
       # "a person wrote this" is what makes the review step small enough to do.
       #
-      # Both sources are third-party and both have been seen to fail
-      # transiently (the library feed returned 503 during development). Retry
-      # before treating it as broken, so a blip doesn't page anyone.
+      # The retry lives inside the script now, per source (fetchWithRetry).
+      # Retrying the whole run needed all five sources healthy in the same
+      # attempt, so a run could fail with every source having succeeded at some
+      # point — that is what turned 2026-08-22 and -23 red.
       - name: Scrape listing sources
         id: scrape
         continue-on-error: true
-        run: |
-          for attempt in 1 2 3; do
-            echo "--- attempt $attempt"
-            if node scripts/scrape-sources.js --auto-approve $DRY; then exit 0; fi
-            sleep $((attempt * 30))
-          done
-          echo "::error::scrape-sources.js failed after 3 attempts"
-          exit 1
+        run: node scripts/scrape-sources.js --auto-approve $DRY
 
       # Library RSS (pull-library-events.js) was moved to a local launchd job
       # on 2026-08-15 — Spydus returns 405 from GitHub Actions' datacenter IPs

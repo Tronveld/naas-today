@@ -42,19 +42,32 @@ const BROWSER_HEADERS = {
   'Accept-Language': 'en-IE,en;q=0.9',
 };
 
+// Retry the *source*, not the run. Two of the five block intermittently:
+// whatsontonight.ie drops the connection from datacenter IPs and intokildare.ie
+// returns 429. The workflow used to retry the whole script three times, which
+// needed all five sources green in the same attempt — on 2026-08-23 every
+// source succeeded at some point and the run still went red, because a
+// different one failed each time. Retrying here makes each source's flakiness
+// its own problem, and leaves the run red only for a source that is really down.
+async function fetchWithRetry(url, headers, attempts = 3, delayMs = 5000) {
+  for (let i = 1; ; i++) {
+    try {
+      const res = await fetch(url, { headers, redirect: 'follow' });
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      return res;
+    } catch (err) {
+      if (i >= attempts) throw err;
+      await new Promise(r => setTimeout(r, i * delayMs));
+    }
+  }
+}
+
 async function fetchPage(url) {
-  const res = await fetch(url, { headers: BROWSER_HEADERS, redirect: 'follow' });
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-  return res.text();
+  return (await fetchWithRetry(url, BROWSER_HEADERS)).text();
 }
 
 async function fetchJson(url) {
-  const res = await fetch(url, {
-    headers: { ...BROWSER_HEADERS, Accept: 'application/json' },
-    redirect: 'follow',
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-  return res.json();
+  return (await fetchWithRetry(url, { ...BROWSER_HEADERS, Accept: 'application/json' })).json();
 }
 
 // ── Extract all JSON-LD Event objects from HTML ───────────────────────────────
@@ -612,9 +625,10 @@ if (require.main === module) {
   });
 }
 
-// Exported for tests — the CLI path above is what actually runs. Only the pure
-// mappers, so the tests never touch the network.
+// Exported for tests — the CLI path above is what actually runs. The mappers
+// are pure; fetchWithRetry is tested against a stubbed global fetch, so no test
+// here touches the network either.
 module.exports = {
   extractJsonLd, isNaasEvent, squarespaceEventToLd, intoKildareToLd, detectFree,
-  jsonLdToEvent,
+  jsonLdToEvent, fetchWithRetry,
 };

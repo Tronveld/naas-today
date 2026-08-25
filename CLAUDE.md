@@ -291,7 +291,7 @@ Notes:
 - **The fetchers pass `--auto-approve`.** Their feeds are vetted and every row is date-validated, Naas-filtered and duplicate-checked before insert. This is a deliberate trust decision: a scraper bug now publishes to the live site with nobody in the loop. `scripts/audit-event-dates.js` is the read-only backstop — run it after any scraper change.
 - Because of that, `status = 'pending'` means a human submission. `notify-pending.js` emails while any remain, every day until they are dealt with. The repetition is the point; a single email is what gets missed.
 - The notify step runs even when a fetcher failed (`if: !cancelled()`) — a broken scrape is no reason to leave a waiting submission unmentioned. It is deliberately *not* `continue-on-error`: an undeliverable reminder must go red.
-- Both fetch steps retry three times with a backoff. The library RSS feed has been observed returning `503` transiently, and a blip should not read as a breakage.
+- **Retries are per source, inside the script** (`fetchWithRetry` in `scrape-sources.js`): three attempts with a 5s/10s backoff on any thrown error or non-OK status. The workflow runs the script once. It used to retry the whole run three times, which required all five sources healthy in the *same* attempt — on 2026-08-23 every source succeeded at some point and the job still went red, because a different one failed each time. whatsontonight.ie drops the connection from datacenter IPs and intokildare.ie returns `429`; a blip should not read as a breakage.
 - A step failure still turns the whole job red — silence is what caused the original problem, so a persistent break must be visible.
 - Both scripts exit non-zero when *any* source errors, not only when the script itself crashes. A single rotting source therefore triggers the retry and, if it stays broken, turns the job red. Before this, `Errors: 1` in the summary still exited 0 and the run went green — the original silent failure one level down.
 - Run it by hand from the Actions tab; the `dry_run` input previews without writing, skips the rebuild, and prints the email instead of sending it.
@@ -307,7 +307,7 @@ A daily unconditional rebuild is 30 deploys — 450 credits — over budget befo
 
 A trailing 30-day window is used rather than the billing month because the team's cycle starts on the 14th, not the 1st, and guessing that boundary optimistically is what pauses the site.
 
-**Known edge case, accepted.** The fetch steps retry up to three times. If attempt 1 inserts rows and then dies, attempt 2 sees them as duplicates and reports `inserted=0`, so no rebuild fires. Those events are still live for visitors — `fetchEvents()` reads `get-events` on every page load — and reach the static HTML on the next rebuild. It fails toward *fewer* deploys, which is the safe direction. The same applies to a submission approved by hand in the admin panel.
+**Known edge case, accepted.** A submission approved by hand in the admin panel inserts nothing through the fetchers, so `inserted=0` and no rebuild fires. It is still live for visitors — `fetchEvents()` reads `get-events` on every page load — and reaches the static HTML on the next rebuild. It fails toward *fewer* deploys, which is the safe direction. (The old whole-run retry had a second version of this: attempt 1 inserting rows and then dying left attempt 2 reporting `inserted=0`. Per-source retry removed it — the script now runs once.)
 
 Nothing here affects what visitors see. The rebuild only refreshes the pre-rendered HTML that first paint and SEO read.
 
