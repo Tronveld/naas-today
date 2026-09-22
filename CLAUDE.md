@@ -95,7 +95,9 @@ src/
     modal-form.js            — modal system + submit form, shared by index and AppModals
     date.js                  — shared date/time formatters **and the day's own
                                phrasing**: `dayAnswer`, `dayWordFor`, `nextPhrase`,
-                               `clockLabel`, `timeRangeLabel`, `weekAhead`.
+                               `clockLabel`, `timeRangeLabel`, `weekAhead`,
+                               and `isOnDay` — the one "does this event run on
+                               this day" check, used at build and on the client.
                                Everything the band and the strip say lives here
                                because Band.astro renders it and index.astro's
                                client script rewrites it on hydration — two
@@ -141,9 +143,9 @@ This used to be two copies, the second a TypeScript retype of the first, and CLA
 | File | Method | Purpose |
 |---|---|---|
 | `get-events.js` | GET | Queries Supabase for `status = 'approved'` events, returns JSON |
-| `submit-event.js` | POST | Inserts a new event with `status = 'pending'`; rate-limited (5/IP/hour) |
+| `submit-event.js` | POST | Inserts a new event with `status = 'pending'`; rate-limited (5/IP/hour, best effort — see below) |
 | `submit-recurring.js` | POST | Submits a recurring event series (weekly/fortnightly/monthly); each occurrence stored as a separate row sharing a `recurring_group_id`; rate-limited (5/IP/hour) |
-| `admin-auth.js` | POST | First-time setup + login. Actions: `check_setup`, `setup`, `login`. Rate-limited (10/IP/15 min) |
+| `admin-auth.js` | POST | First-time setup + login. Actions: `check_setup`, `setup`, `login`. Login rate-limited (10/IP/15 min) |
 | `admin-events.js` | GET / PATCH / DELETE | Protected event management. Requires `x-admin-password` header on every call. Supports bulk update/delete of recurring event groups from a given date forward. **`date` and `end_date` are stripped from both bulk paths** (`stripBulkImmutable`) — see below |
 
 All functions use the Supabase REST API directly (`fetch` to `/rest/v1/`) — no Supabase client library.
@@ -160,7 +162,9 @@ It exists because the three write paths each had their own `validDate` and they 
 
 `stripBulkImmutable` drops `date` and `end_date` in bulk modes and returns them in the response as `ignored`. Dropped rather than rejected because `public/admin.html` always builds `date: editDate.value` into its fields object and passes it straight to `apiPatchGroup` — a 400 would make it impossible to bulk-edit a time or a category flag. Single-event edits are unaffected and can still change a date.
 
-**Admin authentication**: passwords are hashed with PBKDF2-SHA256 (310,000 iterations, OWASP 2023 recommendation) and stored in the `admin_config` table. The password is re-verified on every `admin-events` request (stateless — no session tokens). Only whitelisted fields (`ALLOWED_PATCH_FIELDS`) can be updated via PATCH.
+**Admin authentication**: passwords are hashed with PBKDF2-SHA256 (310,000 iterations, OWASP 2023 recommendation) and stored in the `admin_config` table. The password is re-verified on every `admin-events` request (stateless — no session tokens). Only whitelisted fields (`ALLOWED_PATCH_FIELDS`) can be updated via PATCH. Because every `admin-events` call checks the password, it is a login endpoint too, and it limits *failed* checks to 10/IP/15 min — counting only failures so a working session never locks itself out. Before this, guessing against `admin-events` sidestepped `admin-auth`'s limit.
+
+**Rate limits are best effort.** All four use `lib/rate-limit.js`, an in-memory counter per warm function instance: a cold start resets it and parallel instances count separately. It slows a guesser; the real protection for the admin password is the 12-character minimum and PBKDF2. Move the counts to a Supabase table if a limit ever has to be exact.
 
 ### Database — Supabase
 
@@ -197,10 +201,10 @@ Table: `events`
 |---|---|---|
 | `submit-event.js`, `submit-recurring.js` | `submission` | `pending` |
 | `scrape-sources.js` | the URL's hostname (`moattheatre.com`, `whatsontonight.ie`, `kildareheritage.com`, `intokildare.ie`, `whatsgoingon.ie`) | `approved` in CI |
-| `pull-library-events.js` | `naas-library` | `approved` in CI |
+| `pull-library-events.js` | `naas-library` | `approved` via the local launchd job |
 | `import-events.js` | `csv-import` | `pending` |
 
-The scheduled workflow passes `--auto-approve` to both fetchers, so **`status = 'pending'` now means "a person wrote this and it needs reading"**. That is what `notify-pending.js` relies on. Before this, ~88 scraped rows a week buried the ~1 human submission, and submissions sat unreviewed for weeks.
+Both scheduled fetchers (the workflow's scraper and the launchd library pull) pass `--auto-approve`, so **`status = 'pending'` now means "a person wrote this and it needs reading"**. `notify-pending.js` goes further and asks only for `source = 'submission'` rows that have not ended, so a manual pull run without the flag, or a submission whose day has passed, does not trigger a daily email about nothing — which happened for five weeks until 2026-09-23. Before this, ~88 scraped rows a week buried the ~1 human submission, and submissions sat unreviewed for weeks.
 
 `source` is read-only: it is in the `admin-events` GET select list but deliberately **not** in `ALLOWED_PATCH_FIELDS`. It records what happened and should not be editable.
 
@@ -261,12 +265,12 @@ All scripts `require('./lib')`. Exports:
 
 | File | Purpose |
 |---|---|
-| `pull-library-events.js` | Fetches upcoming events from the Naas Library RSS feed and imports them into Supabase as `pending`. Skips duplicates via fuzzy title matching. Flags: `--auto-approve`, `--dry-run`. |
+| `pull-library-events.js` | Fetches upcoming events from the Naas Library RSS feed and imports them into Supabase (`pending` unless `--auto-approve`). **Runs from a local launchd job, not CI** — Spydus returns `405` to GitHub Actions' datacenter IPs. Plist: `~/Library/LaunchAgents/com.naastoday.pull-library-events.plist`, log: `~/Library/Logs/naas-pull-library.log`. Skips duplicates via fuzzy title matching. Flags: `--auto-approve`, `--dry-run`. |
 | `scrape-sources.js` | Fetches and extracts events from the URLs listed in `event-sources.md`. Three extraction paths: `JSON_ADAPTERS` for sources serving structured JSON from a separate endpoint (Moat Theatre and Kildare Heritage share one Squarespace adapter; IntoKildare has its own); JSON-LD extraction for pages that publish `Event` objects; and `parseWhatsonTonight` for WhatsonTonight, the only remaining HTML scrape. **Prefer an adapter to a parser** — the HTML path cannot extract a time at all, which is what left 81 Moat rows showing "TBC". Adapters map records into schema.org `Event` shapes so all three paths converge on the same `isNaasEvent` → `jsonLdToEvent` → duplicate-check → insert pipeline. Skips past events and duplicates. Exits non-zero if any source fails. Flags: `--auto-approve`, `--dry-run`. **Eventbrite was removed on 2026-08-05 — it blocks scrapers (`HTTP 405`) and its terms prohibit automated collection. Do not add it back;** see the "Removed sources" section of `event-sources.md`. See also the "Evaluated, not used" section there before researching new sources — 30+ candidates were probed on 2026-08-06. |
 | `weekly-post.js` | Generates a social media post for the upcoming week's approved events and copies it to the clipboard. Flags: `--list` (output raw JSON), `--select=id1,id2` (pin specific events). |
 | `import-events.js` | Bulk-imports events from a CSV file into Supabase as `pending`. Usage: `node scripts/import-events.js <file.csv> [--dry-run]`. CSV must have a header row; required columns: `title`, `date` (`YYYY-MM-DD`), `location`. |
 | `check-deploy-budget.js` | **Read-only.** Counts production deploys in the trailing 30 days via the Netlify API and emits `allowed=true\|false` for the workflow's rebuild step. Env: `NETLIFY_AUTH_TOKEN` (optional), `NETLIFY_SITE_ID`, `REBUILD_CAP` (default 15). Fails **open** — no token, or an API error, warns and allows, because the "only rebuild when events arrived" gate is the primary control and a silently disabled rebuild is harder to notice than a warning. |
-| `notify-pending.js` | Emails a reminder while any event is `status = 'pending'` (i.e. a human submission awaiting review). Sends nothing when the queue is empty. Exits non-zero if events are waiting but the mailer is unconfigured or the send fails — an undeliverable reminder must be loud. Flag: `--dry-run` (print the email instead of sending). Env: `RESEND_API_KEY`, `NOTIFY_EMAIL_TO`, optional `NOTIFY_EMAIL_FROM`. |
+| `notify-pending.js` | Emails a reminder while any human submission (`status = 'pending'`, `source = 'submission'`, not yet ended) awaits review. Sends nothing when the queue is empty. Exits non-zero if events are waiting but the mailer is unconfigured or the send fails — an undeliverable reminder must be loud. Flag: `--dry-run` (print the email instead of sending). Env: `RESEND_API_KEY`, `NOTIFY_EMAIL_TO`, optional `NOTIFY_EMAIL_FROM`. |
 | `audit-event-dates.js` | **Read-only.** Checks every row already in `events` against the *current* validators, importing them from `netlify/functions/lib/validate.js` rather than reimplementing them. Answers what tests cannot: whether rows inserted while a validator was wrong are still bad. Never writes to Supabase. **The backstop for auto-approved scraper output** — nobody reads those rows before they publish, so run this after any scraper change. |
 
 Two one-off migrations lived here and were deleted on 2026-08-06 once they had
@@ -278,7 +282,7 @@ add new one-shot migrations to this table** — run them, then delete them.
 
 ## Scheduled fetching
 
-`.github/workflows/scrape-events.yml` runs daily at 05:10 UTC and does three things: fetches both feeds, rebuilds the site, and emails about anything awaiting review. It exists because both scripts were manual and the library went five and a half weeks without a pull — the site quietly showed nothing on most weekdays, with no error to notice.
+`.github/workflows/scrape-events.yml` runs daily at 05:10 UTC and does three things: runs the scraper, rebuilds the site, and emails about anything awaiting review. (The library pull moved to a local launchd job on 2026-08-15 — see `pull-library-events.js` above.) It exists because both fetchers were manual and the library went five and a half weeks without a pull — the site quietly showed nothing on most weekdays, with no error to notice.
 
 **Requires repository secrets** (Settings → Secrets and variables → Actions):
 

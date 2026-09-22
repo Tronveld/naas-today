@@ -9,7 +9,7 @@ import DatePickerModal from '../components/modals/DatePickerModal.astro';
 import SubmitEventModal from '../components/modals/SubmitEventModal.astro';
 import AboutModal from '../components/modals/AboutModal.astro';
 import ContactModal from '../components/modals/ContactModal.astro';
-import { clockLabel } from '../scripts/date.js';
+import { clockLabel, isOnDay } from '../scripts/date.js';
 import { FILTERS_ENABLED } from '../scripts/flags.js';
 // Same query get-events.js serves at runtime — see that module for why it is shared.
 import { approvedEventsQuery, dublinToday } from '../../netlify/functions/lib/events-query.js';
@@ -33,10 +33,7 @@ try {
   // silently fall back to empty array; client-side fetch will populate
 }
 
-const todayEvents = initialEvents.filter(e => {
-  if (e.end_date) return e.date <= todayStr && e.end_date >= todayStr;
-  return e.date === todayStr;
-});
+const todayEvents = initialEvents.filter(e => isOnDay(e.date, e.end_date, todayStr));
 
 // The band names the next real event when today has none, so an empty day ends
 // on something to do rather than on the word "nothing". Only read when the day
@@ -156,7 +153,7 @@ const jsonLd = todayEvents.length > 0 ? {
     import { initModals, initSubmitForm, openModal, closeModal } from '../scripts/modal-form.js';
     import {
       localDateStr, clockLabel, timeRangeLabel,
-      dayAnswer, dayWordFor, nextPhrase, weekAhead,
+      dayAnswer, dayWordFor, nextPhrase, weekAhead, isOnDay,
     } from '../scripts/date.js';
     // Astro compiles the frontmatter and this block separately, so a shared module
     // is the only way one constant governs both the markup and the behaviour.
@@ -221,10 +218,8 @@ const jsonLd = todayEvents.length > 0 ? {
         };
     }
 
-    // One definition of "is this event on this day", used by the card list, the
-    // week strip counts and the band's answer. They disagreed once already, when
-    // only some of them understood a multi-day run.
-    const onDay = (e, ds) => (e.endDate ? e.date <= ds && e.endDate >= ds : e.date === ds);
+    // The build-time components ask the same isOnDay, from date.js.
+    const onDay = (e, ds) => isOnDay(e.date, e.endDate, ds);
 
     const venueOf = e => e.location.split(',')[0].trim() || e.location;
 

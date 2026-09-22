@@ -111,6 +111,17 @@ export function nextPhrase({ date, time, isAllDay }, fromStr) {
   return `Next in Naas is ${day} at ${clockLabel(time)}`;
 }
 
+/**
+ * Whether an event runs on a day. The one definition — the build-time grid, the
+ * week strip counts, the band and the client re-render all ask this, and they
+ * disagreed once already when only some of them understood a multi-day run.
+ * Takes the dates rather than the event because the build reads Supabase's
+ * `end_date` and the client script its own `endDate`.
+ */
+export function isOnDay(date, endDate, dayStr) {
+  return endDate ? date <= dayStr && endDate >= dayStr : date === dayStr;
+}
+
 /** The seven dates the week strip offers, starting today. */
 export function weekAhead(todayStr) {
   const start = new Date(todayStr + 'T00:00:00');

@@ -19,6 +19,7 @@
  */
 
 const { loadEnv, createClient } = require('./lib');
+const { dublinToday } = require('../netlify/functions/lib/events-query.js');
 
 loadEnv();
 
@@ -102,8 +103,15 @@ function formatPendingEmail(events, now) {
   return { subject, text, html };
 }
 
-async function fetchPending(sb) {
-  return sb.get('/events?status=eq.pending&select=id,title,date,location,created_at,source&order=created_at.asc');
+// Only what a person submitted and can still happen. A pending scraped row
+// (a manual pull run without --auto-approve) or a submission whose date has
+// passed is nothing to act on — past days are not shown — and a daily email
+// about it only teaches the reader to skip the email.
+async function fetchPending(sb, today = dublinToday()) {
+  return sb.get(
+    `/events?status=eq.pending&source=eq.submission&or=(date.gte.${today},end_date.gte.${today})`
+    + '&select=id,title,date,location,created_at,source&order=created_at.asc'
+  );
 }
 
 async function sendEmail(mail) {
@@ -189,4 +197,4 @@ if (require.main === module) {
 }
 
 // Exported for tests only — the CLI path above is what actually runs.
-module.exports = { formatPendingEmail, ageInDays, describeAge };
+module.exports = { formatPendingEmail, ageInDays, describeAge, fetchPending };

@@ -8,22 +8,8 @@ const { generateDates, addDays, daysBetween } = require('./lib/recurrence');
 
 const VALID_FREQUENCIES = ['weekly', 'fortnightly', 'monthly'];
 
-// Simple in-memory rate limiter: max 5 submissions per IP per hour
-const rateLimitMap = new Map();
-const RATE_LIMIT = 5;
-const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-
-function isRateLimited(ip) {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now - entry.windowStart > RATE_WINDOW_MS) {
-    rateLimitMap.set(ip, { windowStart: now, count: 1 });
-    return false;
-  }
-  entry.count++;
-  if (entry.count > RATE_LIMIT) return true;
-  return false;
-}
+const { rateLimiter, clientIp } = require('./lib/rate-limit');
+const submissions = rateLimiter(5, 60 * 60 * 1000); // 5 per IP per hour
 
 // Re-exported for tests only — the Netlify runtime uses `handler` below.
 exports.validDate = validDate;
@@ -43,11 +29,7 @@ exports.handler = async function(event) {
     return json(500, { error: 'Server not configured' });
   }
 
-  // Rate limiting
-  const ip = event.headers['x-nf-client-connection-ip']
-    || event.headers['x-forwarded-for']?.split(',')[0].trim()
-    || 'unknown';
-  if (isRateLimited(ip)) {
+  if (submissions.hit(clientIp(event))) {
     return {
       statusCode: 429,
       headers: { 'Content-Type': 'application/json', 'Retry-After': '3600' },
