@@ -1,5 +1,5 @@
 // Netlify function – fetch approved events from Supabase
-const { APPROVED_EVENTS_QUERY } = require('./lib/events-query');
+const { approvedEventsQuery } = require('./lib/events-query');
 
 exports.handler = async function(event, context) {
   const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -16,7 +16,7 @@ exports.handler = async function(event, context) {
 
   try {
     const response = await fetch(
-      `${SUPABASE_URL}${APPROVED_EVENTS_QUERY}`,
+      `${SUPABASE_URL}${approvedEventsQuery()}`,
       {
         headers: {
           'apikey': SUPABASE_ANON_KEY,

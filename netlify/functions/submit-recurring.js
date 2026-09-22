@@ -4,9 +4,9 @@
 
 const crypto = require('crypto');
 const { validDate, validTime, validUrl, json, err400, validateEventBody } = require('./lib/validate');
+const { generateDates, addDays, daysBetween } = require('./lib/recurrence');
 
 const VALID_FREQUENCIES = ['weekly', 'fortnightly', 'monthly'];
-const MAX_OCCURRENCES = 104;
 
 // Simple in-memory rate limiter: max 5 submissions per IP per hour
 const rateLimitMap = new Map();
@@ -23,25 +23,6 @@ function isRateLimited(ip) {
   entry.count++;
   if (entry.count > RATE_LIMIT) return true;
   return false;
-}
-
-function generateDates(startDate, frequency, endDate) {
-  const dates = [];
-  let cur = new Date(startDate + 'T00:00:00');
-  while (true) {
-    const s = cur.toISOString().slice(0, 10);
-    if (s > endDate || dates.length >= MAX_OCCURRENCES) break;
-    dates.push(s);
-    if (frequency === 'weekly') {
-      cur.setDate(cur.getDate() + 7);
-    } else if (frequency === 'fortnightly') {
-      cur.setDate(cur.getDate() + 14);
-    } else {
-      // monthly — same day-of-month
-      cur.setMonth(cur.getMonth() + 1);
-    }
-  }
-  return dates;
 }
 
 // Re-exported for tests only — the Netlify runtime uses `handler` below.
@@ -113,11 +94,15 @@ exports.handler = async function(event) {
   }
 
   // Build rows
+  // A multi-day event keeps its span on every occurrence. Copying the first
+  // occurrence's end_date left every later row ending before it began, and
+  // no day's "date <= X <= end_date" check ever matched it.
+  const span = endDate ? daysBetween(date, endDate) : null;
   const groupId = crypto.randomUUID();
   const rows = dates.map(d => ({
     title,
     date: d,
-    end_date: endDate || null,
+    end_date: span === null ? null : addDays(d, span),
     time: time || null,
     time_end: timeEnd || null,
     is_all_day: isAllDay,

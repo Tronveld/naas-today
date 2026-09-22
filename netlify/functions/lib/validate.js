@@ -93,6 +93,9 @@ function validateEventBody(e) {
 
   if (!validDate(date))                return 'Invalid date format';
   if (endDate && !validDate(endDate))  return 'Invalid end date format';
+  // ISO dates compare correctly as strings. A row ending before it starts
+  // matches no day at all, so it would be approved and never shown.
+  if (endDate && endDate < date)       return 'End date cannot be before the start date';
   if (time    && !validTime(time))     return 'Invalid time format';
   if (timeEnd && !validTime(timeEnd))  return 'Invalid end time format';
   if (url     && !validUrl(url))       return 'Invalid URL (must start with http:// or https://)';

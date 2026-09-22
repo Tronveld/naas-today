@@ -17,6 +17,17 @@ export const EVENT_COLUMNS = [
   'is_sport', 'is_market', 'is_theatre', 'url',
 ].join(',');
 
-// Approved events only, ordered for display. Callers append their own filters.
-export const APPROVED_EVENTS_QUERY =
-  `/rest/v1/events?status=eq.approved&order=date.asc,time.asc&select=${EVENT_COLUMNS}`;
+// "Today" in Naas, not on the server: Netlify runs in UTC, which is still
+// yesterday between midnight and 1am Irish summer time. en-CA gives YYYY-MM-DD.
+export function dublinToday(now = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Dublin' }).format(now);
+}
+
+// Approved events that have not ended, ordered for display. Past days are not
+// viewable, so past rows were pure weight — half the table by 2026-09, sent
+// twice per visit. `end_date` is in the `or` so a multi-day event that began
+// last week is still here on its final day.
+export function approvedEventsQuery(today = dublinToday()) {
+  return `/rest/v1/events?status=eq.approved&or=(date.gte.${today},end_date.gte.${today})`
+    + `&order=date.asc,time.asc&select=${EVENT_COLUMNS}`;
+}
