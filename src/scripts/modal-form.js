@@ -10,7 +10,7 @@
 // `/` is read on `/terms`. This is the rest of it.
 
 import { apply as applyDraft, saveDraft, hasDraft, clearDraft, readDraft } from './draft.js';
-import { localDateStr } from './date.js';
+import { generateDates } from '../../netlify/functions/lib/recurrence.js';
 
 // The address the site actually commits to, in ContactModal, /terms and
 // PRODUCT.md. The relay address that used to be quoted here read like a scam
@@ -156,18 +156,9 @@ function updateRecurrenceHint() {
   const freq      = document.getElementById('recurrenceFrequency').value;
   const hint      = document.getElementById('recurrenceHint');
   if (!startDate || !endDate || endDate <= startDate) { hint.textContent = ''; return; }
-  let count = 0, cur = new Date(startDate + 'T00:00:00');
-  while (count < 104) {
-    // localDateStr, not toISOString: cur is local midnight, so UTC conversion
-    // hands back the previous day west of Greenwich and the count comes out one
-    // short across the Irish summer-time boundary.
-    const s = localDateStr(cur);
-    if (s > endDate) break;
-    count++;
-    if (freq === 'weekly')           cur.setDate(cur.getDate() + 7);
-    else if (freq === 'fortnightly') cur.setDate(cur.getDate() + 14);
-    else                             cur.setMonth(cur.getMonth() + 1);
-  }
+  // The server's own generator, so the hint cannot count a different series
+  // from the one that gets written.
+  const count = generateDates(startDate, freq, endDate).length;
   hint.textContent = count > 0 ? `~${count} occurrence${count !== 1 ? 's' : ''}` : '';
 }
 

@@ -4,45 +4,12 @@
 
 const crypto = require('crypto');
 const { validDate, validTime, validUrl, json, err400, validateEventBody } = require('./lib/validate');
+const { generateDates, addDays, daysBetween } = require('./lib/recurrence');
 
 const VALID_FREQUENCIES = ['weekly', 'fortnightly', 'monthly'];
-const MAX_OCCURRENCES = 104;
 
-// Simple in-memory rate limiter: max 5 submissions per IP per hour
-const rateLimitMap = new Map();
-const RATE_LIMIT = 5;
-const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-
-function isRateLimited(ip) {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now - entry.windowStart > RATE_WINDOW_MS) {
-    rateLimitMap.set(ip, { windowStart: now, count: 1 });
-    return false;
-  }
-  entry.count++;
-  if (entry.count > RATE_LIMIT) return true;
-  return false;
-}
-
-function generateDates(startDate, frequency, endDate) {
-  const dates = [];
-  let cur = new Date(startDate + 'T00:00:00');
-  while (true) {
-    const s = cur.toISOString().slice(0, 10);
-    if (s > endDate || dates.length >= MAX_OCCURRENCES) break;
-    dates.push(s);
-    if (frequency === 'weekly') {
-      cur.setDate(cur.getDate() + 7);
-    } else if (frequency === 'fortnightly') {
-      cur.setDate(cur.getDate() + 14);
-    } else {
-      // monthly — same day-of-month
-      cur.setMonth(cur.getMonth() + 1);
-    }
-  }
-  return dates;
-}
+const { rateLimiter, clientIp } = require('./lib/rate-limit');
+const submissions = rateLimiter(5, 60 * 60 * 1000); // 5 per IP per hour
 
 // Re-exported for tests only — the Netlify runtime uses `handler` below.
 exports.validDate = validDate;
@@ -62,11 +29,7 @@ exports.handler = async function(event) {
     return json(500, { error: 'Server not configured' });
   }
 
-  // Rate limiting
-  const ip = event.headers['x-nf-client-connection-ip']
-    || event.headers['x-forwarded-for']?.split(',')[0].trim()
-    || 'unknown';
-  if (isRateLimited(ip)) {
+  if (submissions.hit(clientIp(event))) {
     return {
       statusCode: 429,
       headers: { 'Content-Type': 'application/json', 'Retry-After': '3600' },
@@ -113,11 +76,15 @@ exports.handler = async function(event) {
   }
 
   // Build rows
+  // A multi-day event keeps its span on every occurrence. Copying the first
+  // occurrence's end_date left every later row ending before it began, and
+  // no day's "date <= X <= end_date" check ever matched it.
+  const span = endDate ? daysBetween(date, endDate) : null;
   const groupId = crypto.randomUUID();
   const rows = dates.map(d => ({
     title,
     date: d,
-    end_date: endDate || null,
+    end_date: span === null ? null : addDays(d, span),
     time: time || null,
     time_end: timeEnd || null,
     is_all_day: isAllDay,

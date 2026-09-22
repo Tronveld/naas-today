@@ -1,21 +1,7 @@
 // Netlify function – submit a new event (saved as 'pending' for review)
 
-// Simple in-memory rate limiter: max 5 submissions per IP per hour
-const rateLimitMap = new Map();
-const RATE_LIMIT = 5;
-const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-
-function isRateLimited(ip) {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now - entry.windowStart > RATE_WINDOW_MS) {
-    rateLimitMap.set(ip, { windowStart: now, count: 1 });
-    return false;
-  }
-  entry.count++;
-  if (entry.count > RATE_LIMIT) return true;
-  return false;
-}
+const { rateLimiter, clientIp } = require('./lib/rate-limit');
+const submissions = rateLimiter(5, 60 * 60 * 1000); // 5 per IP per hour
 
 const { validDate, validTime, validUrl, json, err400, validateEventBody } = require('./lib/validate');
 
@@ -37,11 +23,7 @@ exports.handler = async function(event, context) {
     return json(500, { error: 'Server not configured' });
   }
 
-  // Rate limiting — prefer Netlify's non-spoofable header over x-forwarded-for
-  const ip = event.headers['x-nf-client-connection-ip']
-    || event.headers['x-forwarded-for']?.split(',')[0].trim()
-    || 'unknown';
-  if (isRateLimited(ip)) {
+  if (submissions.hit(clientIp(event))) {
     return {
       statusCode: 429,
       headers: { 'Content-Type': 'application/json', 'Retry-After': '3600' },

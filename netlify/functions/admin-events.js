@@ -8,6 +8,13 @@
 
 const crypto = require('crypto');
 const { validDate, validTime, json, DATE_RE } = require('./lib/validate');
+const { rateLimiter, clientIp } = require('./lib/rate-limit');
+
+// Every request here checks the password, so this is a login endpoint too, and
+// it needs admin-auth's limit — without it, guessing here sidestepped that one.
+// Counts failures only: the admin panel sends a request per action, and a
+// working session must never lock itself out.
+const failedAuth = rateLimiter(10, 15 * 60 * 1000);
 
 const ITERATIONS = 310_000;
 const KEYLEN     = 64;
@@ -324,6 +331,14 @@ exports.handler = async function(event) {
   }
 
   // Verify password on every request
+  const ip = clientIp(event);
+  if (failedAuth.over(ip)) {
+    return {
+      statusCode: 429,
+      headers: { 'Content-Type': 'application/json', 'Retry-After': '900' },
+      body: JSON.stringify({ error: 'Too many failed attempts. Please wait before trying again.' }),
+    };
+  }
   const password = event.headers['x-admin-password'];
   let authed;
   try {
@@ -332,7 +347,10 @@ exports.handler = async function(event) {
     console.error('Auth error:', err);
     return json(500, { error: 'Auth check failed' });
   }
-  if (!authed) return json(401, { error: 'Unauthorized' });
+  if (!authed) {
+    failedAuth.hit(ip);
+    return json(401, { error: 'Unauthorized' });
+  }
 
   try {
     const method = event.httpMethod;

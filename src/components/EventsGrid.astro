@@ -1,5 +1,6 @@
 ---
 import EventCard from './EventCard.astro';
+import { isOnDay } from '../scripts/date.js';
 
 interface Event {
   id: string;
@@ -28,10 +29,7 @@ interface Props {
 const { events, todayStr } = Astro.props;
 
 // Filter to today's events for initial server render
-const todayEvents = events.filter(e => {
-  if (e.end_date) return e.date <= todayStr && e.end_date >= todayStr;
-  return e.date === todayStr;
-}).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+const todayEvents = events.filter(e => isOnDay(e.date, e.end_date, todayStr)).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 ---
 <!-- The status node carries the announcement instead of the container. A live
      region around the whole list made every filter tap re-read each card in

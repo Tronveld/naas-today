@@ -1,5 +1,5 @@
 ---
-import { weekAhead } from '../scripts/date.js';
+import { weekAhead, isOnDay } from '../scripts/date.js';
 
 interface Props {
   /** Every approved event; counted per day here so the strip is right pre-JS. */
@@ -16,7 +16,7 @@ const days = weekAhead(todayStr);
 // Counted the same way EventsGrid and renderEvents count: a multi-day run is on
 // every day it spans, not only the day it started.
 function countFor(ds: string): number {
-  return events.filter(e => (e.end_date ? e.date <= ds && e.end_date >= ds : e.date === ds)).length;
+  return events.filter(e => isOnDay(e.date, e.end_date, ds)).length;
 }
 ---
 {/* The strip is the date navigation. It replaced Previous / Today / Pick a date /

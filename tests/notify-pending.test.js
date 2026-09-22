@@ -103,3 +103,19 @@ describe('formatPendingEmail', () => {
     assert.ok(mail.text.indexOf('Older') < mail.text.indexOf('Newer'), 'newest was listed first');
   });
 });
+
+// On 2026-09-23 the queue held one row: a Naas Library event from a manual
+// pull, dated 2026-09-02. The reminder had mailed about it daily for five
+// weeks — not a person's submission, and past, so approving it did nothing.
+// A reminder that fires about nothing is how a reminder gets ignored.
+describe('fetchPending asks only for live submissions', () => {
+  const { fetchPending } = require('../scripts/notify-pending.js');
+
+  test('filters to source=submission and events that have not ended', async () => {
+    let path;
+    await fetchPending({ get: async (p) => { path = p; return []; } }, '2026-09-23');
+    assert.match(path, /[?&]status=eq\.pending/);
+    assert.match(path, /[?&]source=eq\.submission/);
+    assert.match(path, /[?&]or=\(date\.gte\.2026-09-23,end_date\.gte\.2026-09-23\)/);
+  });
+});
