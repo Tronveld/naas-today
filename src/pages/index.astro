@@ -269,6 +269,10 @@ const jsonLd = todayEvents.length > 0 ? {
             const d = new Date(dateParam + 'T00:00:00');
             if (!isNaN(d.getTime())) currentDate = d;
         }
+        // Rejected, so take it out of the address bar too — otherwise the URL
+        // names a day the page is not showing. Replace, not push: the visitor
+        // did not navigate.
+        if (dateParam && localDateStr(currentDate) !== dateParam) writeUrlState({ replace: true });
         // Ignored while the chips are not rendered. Honouring an old ?filters= link
         // would drop the visitor into a filtered day with no visible control to
         // undo it — a worse outcome than showing them the whole day.
