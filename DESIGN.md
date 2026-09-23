@@ -345,7 +345,7 @@ to stay cheap and light.
   The column caps at 660px, which is roughly 70 characters at this size.
 - **Meta** (400, 0.8125rem, 1.45): Venue, footer, field errors, the stale note. The
   card's leading time line uses this size at 700 in the accent.
-- **Meta SM** (400, 0.75rem): The band's top line, the source hostname, Share,
+- **Meta SM** (400, 0.75rem): The band's top line, Share,
   Read more, character counters, Coming up meta.
 - **Label** (700, 0.6875rem, 0.11em, uppercase): "Coming up", and the band's kicker.
 - **Label SM** (700, 0.65625rem, 0.07em, uppercase): Tag stamps, week strip days,
@@ -428,7 +428,7 @@ two places on the page itself.
 - **Attention** (`box-shadow: 0 4px 14px rgba(20,23,26,0.07)`): A card or Coming up
   row under the cursor, on hover-capable devices only. There is no accompanying
   translate — rising toward the cursor is a click affordance, and a card is not
-  clickable; its title, venue, URL and Share button are.
+  clickable; its title (when there is a URL), venue and Share are.
 - **Stuck** (`box-shadow: 0 2px 8px rgba(20,23,26,0.07)`): The week strip once it
   has reached the top of the viewport. The one authored motion moment in the
   system; it transitions in over 0.2s.
@@ -529,11 +529,13 @@ if the row returns, it returns square.
 The card's order is fixed: the time leads as a full-width accent line at 0.8125rem
 weight 700 (every case — timed, all-day, TBC, a date span, or a span plus a clock —
 resolves to a string, so the slot is never empty and a mixed list keeps one shape);
-then the title; then one 44px row carrying venue, source hostname and Share; then
-the description; then the tag row. A description over 600 characters folds its tail
-behind a "Read more" toggle clamped to three lines — only genuine outliers fold,
-because the page's promise is that you do not have to tap to find out what
-something is.
+then the title, which links to the event's URL when it has one; then the venue on
+its own 44px line; then the description; then a footer row with the tags on the
+left and Share on the right. Share sat on the venue's row for a while and read as a
+fact about the place; it is an action on the whole event, so it closes the card.
+A description over 600 characters folds its tail behind a "Read more" toggle clamped
+to three lines — only genuine outliers fold, because the page's promise is that you
+do not have to tap to find out what something is.
 
 ### Tags
 A single quiet stamp: accent letters on Tag Ground with a 1px Tag Hairline, square,
@@ -592,8 +594,11 @@ are not interchangeable:
 1. **Neutral Pressable Line underline** = a destination whose text gives no other
    clue that it is one (the venue name). Without it, on an audience that skews
    older, the venue simply is not a link.
-2. **No underline, accent text** = an outbound link whose text already announces
-   itself (the source hostname).
+2. **Ink title, accent ↗, underline on hover** = the event's own page. The title is
+   the card's one outbound link to the event, because the title is where everyone
+   clicks first. It was once a bare source hostname in the meta row, on the theory
+   that a domain announces itself; it did not — it read as a credit line — and a
+   "Details" link beside a linked title only repeated it.
 3. **Pale green 2px underline at 4px offset** = an in-page action (Share, the
    submit ask). It thickens to full accent on hover.
 This was arrived at by fixing a real regression. Do not collapse the three.

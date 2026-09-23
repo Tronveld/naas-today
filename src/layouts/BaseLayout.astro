@@ -472,6 +472,32 @@ const {
             letter-spacing: -0.017em;
         }
 
+        /* The title is the card's main link when the event has a URL. Ink, not
+           accent, so the title still reads as a title; the ↗ says it leaves.
+           It is the card's only outbound link to the event: a separate
+           "Details" link on almost every card repeated the title. */
+        .event-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        /* The second declaration hides the arrow from screen readers where
+           supported; the first is the fallback. */
+        .event-title a::after {
+            content: "\00a0\2197";
+            content: "\00a0\2197" / "";
+            color: var(--accent);
+            font-weight: 400;
+        }
+
+        @media (hover: hover) {
+            .event-title a:hover {
+                text-decoration: underline;
+                text-decoration-thickness: 1px;
+                text-underline-offset: 3px;
+            }
+        }
+
         /* The venue as a stamped name, not an address and not an emoji.
            It used to be `📍 Naas Potato Market, Church Lane, Naas, Co. Kildare`
            in a full-width 44px band — the largest tap target on the card, for
@@ -481,26 +507,6 @@ const {
            `width: fit-content` keeps the 44px touch floor (it is a link, and
            that floor is a product constraint) while stopping the target from
            covering the empty half of the row. */
-        /* Venue and source on one 44px row rather than two. See EventCard.astro. */
-        .ev-meta {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            column-gap: 0.75rem;
-        }
-
-        /* Three 44px targets now share this row within about 200px on a phone.
-           They touch but never overlap, so the floor holds — but a mis-tap on
-           the source hostname leaves the site entirely, and the audience skews
-           older, so Share gets a wider moat than the row's default gap. */
-        .ev-meta .event-url + .share-btn { margin-left: 0.75rem; }
-
-        /* Share stays beside the source rather than being pushed to the far end.
-           At `margin-left:auto` it floated ~480px away on desktop as a lone word
-           with nothing tying it to the row, and — sharing the accent, size and
-           row with the source hostname — it read as a third outbound link. */
-        .ev-meta .share-btn { margin-left: 0; }
-
         .event-location {
             color: var(--ink-mid);
             font-size: 0.8125rem;
@@ -556,14 +562,14 @@ const {
             white-space: normal;
         }
         /* Sized to 44px and its margins trimmed to pay for part of the growth.
-           No negative-margin hit-area trick here: .event-url can sit directly
+           No negative-margin hit-area trick here: the footer's Share can sit directly
            below, and two overlapping 44px targets 12px apart means a tap on one
            lands on the other. Adjacent targets may touch; they may not overlap. */
         .desc-toggle-btn {
             display: flex;
             align-items: center;
             /* flex eats the whitespace text node before the ↓ glyph; the gap puts
-               it back. Same reason on .event-url below. */
+               it back. */
             gap: 0.25rem;
             min-height: 44px;
             background: none;
@@ -583,33 +589,13 @@ const {
             }
         }
 
-        .event-url {
-            display: flex;
-            align-items: center;
-            /* flex eats the whitespace text node before the ↗ glyph; the gap
-               puts it back. */
-            gap: 0.25rem;
-            /* Content-width, so the 44px target covers the link and not the empty
-               half of the line — tapping blank space should not open an external
-               site. */
-            width: fit-content;
-            min-height: 44px;
-            color: var(--accent);
-            font-size: 0.75rem;
-            text-decoration: none;
-        }
-
-        @media (hover: hover) {
-            .event-url:hover {
-                color: var(--ink);
-                text-decoration: underline;
-            }
-        }
-
+        /* Tags left, Share right: the card's bottom corner is where an action on
+           the whole event is looked for. The gap keeps a long tag row off it. */
         .card-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 0.75rem;
             margin-top: 0.5rem;
             min-height: 28px;
         }
@@ -655,7 +641,7 @@ const {
             transition: text-decoration-color 0.15s;
             /* The system's one rule for telling an action from a destination:
                an in-page action carries the pale green underline (this and
-               "Tell us"), an outbound link does not (the source hostname). The
+               "Tell us"), an outbound link does not (the event title). The
                venue keeps a neutral underline because it is a destination whose
                text gives no other clue that it is one. */
             text-decoration: underline;

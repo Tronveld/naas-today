@@ -429,15 +429,29 @@ const jsonLd = todayEvents.length > 0 ? {
         when.textContent = whenLabel(event);
         card.appendChild(when);
 
+        let parsed = null;
+        try {
+            const u = new URL(event.url);
+            if (['http:', 'https:'].includes(u.protocol)) parsed = u;
+        } catch {
+            // No URL or an invalid one — no links
+        }
+
+        // The title links out when there is a URL — see EventCard.astro.
         const title = document.createElement('h3');
         title.className = 'event-title';
         title.id = 'event-title-' + event.id;
-        title.textContent = event.title;
+        if (parsed) {
+            const titleLink = document.createElement('a');
+            titleLink.href = parsed.href;
+            titleLink.target = '_blank';
+            titleLink.rel = 'noopener noreferrer';
+            titleLink.textContent = event.title;
+            title.appendChild(titleLink);
+        } else {
+            title.textContent = event.title;
+        }
         card.appendChild(title);
-
-        // Venue and source share one 44px row — see EventCard.astro for why.
-        const meta = document.createElement('div');
-        meta.className = 'ev-meta';
 
         const loc = document.createElement('a');
         loc.className = 'event-location';
@@ -448,34 +462,7 @@ const jsonLd = todayEvents.length > 0 ? {
         // sit in the same list and any difference shows as a flicker on hydration.
         loc.title = event.location;
         loc.textContent = venueOf(event);
-        meta.appendChild(loc);
-
-        if (event.url) {
-            try {
-                const parsed = new URL(event.url);
-                if (['http:', 'https:'].includes(parsed.protocol)) {
-                    const urlEl = document.createElement('a');
-                    urlEl.className = 'event-url';
-                    urlEl.href = parsed.href;
-                    urlEl.target = '_blank';
-                    urlEl.rel = 'noopener noreferrer';
-                    urlEl.textContent = parsed.hostname.replace(/^www\./, '');
-                    meta.appendChild(urlEl);
-                }
-            } catch {
-                // Invalid URL — skip
-            }
-        }
-        // Share is a text action on this row now, not a bordered box in the
-        // card's corner — see EventCard.astro.
-        const shareBtn = document.createElement('button');
-        shareBtn.className = 'share-btn';
-        shareBtn.textContent = 'Share';
-        shareBtn.setAttribute('aria-label', `Share ${event.title}`);
-        shareBtn.addEventListener('click', () => shareEvent(event, shareBtn));
-        meta.appendChild(shareBtn);
-
-        card.appendChild(meta);
+        card.appendChild(loc);
 
         const descText = event.description || '';
         const isLong = descText.length > DESCRIPTION_CLAMP;
@@ -520,6 +507,14 @@ const jsonLd = todayEvents.length > 0 ? {
             }
         });
         footer.appendChild(tags);
+
+        // Share closes the card, opposite the tags — see EventCard.astro.
+        const shareBtn = document.createElement('button');
+        shareBtn.className = 'share-btn';
+        shareBtn.textContent = 'Share';
+        shareBtn.setAttribute('aria-label', `Share ${event.title}`);
+        shareBtn.addEventListener('click', () => shareEvent(event, shareBtn));
+        footer.appendChild(shareBtn);
 
         card.appendChild(footer);
         return card;

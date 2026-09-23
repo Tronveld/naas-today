@@ -70,25 +70,14 @@ const isLong = desc.length > DESCRIPTION_CLAMP;
 ---
 <article class="event-card" data-event-id={event.id} aria-labelledby={"event-title-" + event.id}>
   <div class="ev-when">{when}</div>
-  <h3 class="event-title" id={"event-title-" + event.id}>{event.title}</h3>
-  {/* Venue and source share one row. Both are links and both owe the 44px touch
-      floor, so as two stacked lines they cost 88px of card for two short
-      strings — on a six-event Saturday that is a screen and a half of nothing.
-      Side by side the row is 44px and the floor is untouched. */}
-  <div class="ev-meta">
-    <a class="event-location" href={mapsUrl} title={event.location} target="_blank" rel="noopener noreferrer">{venue}</a>
-    {parsedUrl && (
-      <a class="event-url" href={parsedUrl.href} target="_blank" rel="noopener noreferrer">
-        {parsedUrl.hostname.replace(/^www\./, '')}
-      </a>
-    )}
-    {/* Share sits on this row too, as text. It was a bordered 44px box in the
-        bottom-right of every card — the heaviest object on a card whose whole
-        language is hairlines, six times over on a Saturday, and a 6px radius in
-        a world with no radius. It is a secondary action on a listing; it reads
-        as one now, and the card gets a whole row back. */}
-    <button class="share-btn" aria-label={`Share ${event.title}`}>Share</button>
-  </div>
+  {/* The title is the link when there is somewhere to go: it is where every
+      listing site puts the click, and it was the one tap that did nothing. */}
+  <h3 class="event-title" id={"event-title-" + event.id}>
+    {parsedUrl
+      ? <a href={parsedUrl.href} target="_blank" rel="noopener noreferrer">{event.title}</a>
+      : event.title}
+  </h3>
+  <a class="event-location" href={mapsUrl} title={event.location} target="_blank" rel="noopener noreferrer">{venue}</a>
   {desc && (
     <p
       class="event-description"
@@ -101,6 +90,9 @@ const isLong = desc.length > DESCRIPTION_CLAMP;
   {isLong && (
     <button class="desc-toggle-btn" aria-expanded="false" type="button">Read more</button>
   )}
+  {/* Share closes the card, opposite the tags: it is an action on the whole
+      event, not a fact about where it is. As text, not the bordered box it once
+      was here — see DESIGN.md's Text-Action Rule. */}
   <div class="card-footer">
     <div class="event-tags">
       {event.is_free && <span class="tag">Free</span>}
@@ -110,5 +102,6 @@ const isLong = desc.length > DESCRIPTION_CLAMP;
       {event.is_market && <span class="tag">Market</span>}
       {event.is_theatre && <span class="tag">Theatre</span>}
     </div>
+    <button class="share-btn" aria-label={`Share ${event.title}`}>Share</button>
   </div>
 </article>
