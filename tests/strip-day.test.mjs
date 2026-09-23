@@ -15,3 +15,4 @@ test('other days get three letters, so T and S are no longer ambiguous', () => {
   assert.equal(stripLabel('2026-09-26', '2026-09-23'), 'Sat');
   assert.equal(stripLabel('2026-09-27', '2026-09-23'), 'Sun');
 });
+

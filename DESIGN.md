@@ -18,7 +18,6 @@ colors:
   border-interactive: "#8A918C"
   tag-border: "#CBE0D3"
   action-underline: "#BEE0CC"
-  nil: "#B9BFBB"
   danger: "#A32020"
   danger-tint: "#FBEAEA"
   scrim: "rgba(20,23,26,0.45)"
@@ -148,12 +147,6 @@ components:
     textColor: "{colors.on-accent}"
     rounded: "{rounded.none}"
     padding: "16px 0 18px"
-  band-answer-xl:
-    typography: "{typography.answer-xl}"
-    textColor: "{colors.on-accent}"
-  band-answer-sm:
-    typography: "{typography.answer-sm}"
-    textColor: "{colors.on-accent}"
   event-card:
     backgroundColor: "{colors.card}"
     textColor: "{colors.ink}"
@@ -231,9 +224,9 @@ components:
 **Creative North Star: "The Answer Board"**
 
 The page is a light room with one saturated object in it. A green field runs the
-full width at the top and says, in words, whether anything is on today; below it a
-seven-column strip of numbers shows the week ahead; below that a single column of
-square white cards is the evidence. Nothing else in the interface is loud. There is
+full width at the top and says which day this is; below it a seven-column strip of
+dates is the week ahead; below that a single column of square white cards is the
+answer — or, on an empty day, "Nothing on Monday." and the Coming up list. Nothing else in the interface is loud. There is
 no webfont, no serif, no monospace, no icon set, no photography, no category
 palette and no rounded corner on the page itself — the system UI stack with
 tabular figures carries display, body and every numeral.
@@ -274,8 +267,8 @@ only hue outside the green is a red reserved entirely for form validation.
 - **Tag Ground** (`{colors.accent-wash}`): Tag stamps, the modal header, and the
   stale-data note. A quieter green than the wash, used for a filled block behind text.
 - **Pale Mint** (`{colors.on-accent-dim}`): Type on the green field — the brand
-  line, the date, the kicker and the venue in the next-event block. 4.85:1 on the
-  field, which is what an 11–12px uppercase label owes.
+  line and the brand-only date line on `/terms`. 4.85:1 on the field, which is what
+  an 11–12px uppercase label owes.
 - **Action Underline** (`{colors.action-underline}`): A 2px underline under an
   in-page action's words. Never a fill, never a border.
 - **Tag Hairline** (`{colors.tag-border}`): The 1px boundary of a tag stamp.
@@ -293,7 +286,6 @@ only hue outside the green is a red reserved entirely for form validation.
 - **Pressable Line** (`{colors.border-interactive}`): The boundary of anything whose
   edge *is* the control: bordered buttons, form fields, the venue link's underline.
   3.11:1 on card white and 3.02:1 on the page, which is WCAG 1.4.11's floor.
-- **Nil Grey** (`{colors.nil}`): The week strip's dash on a day with nothing on.
 - **Scrim** (`{colors.scrim}`): The modal backdrop.
 - **Sheet Shadow** (`{colors.sheet-shadow}` / `{colors.sheet-shadow-soft}`): The
   modal sheet's two-layer shadow, and the system's only untinted black. It is the
@@ -334,16 +326,16 @@ preconnects and a render-blocking stylesheet from a site whose stated constraint
 to stay cheap and light.
 
 ### Hierarchy
-- **Answer XL** (700, `clamp(2.5rem, 11vw, 2.75rem)`, 1.04): The band's answer when
-  nothing is on. Deliberately breaks to two lines on a 375px phone and fills the field.
+- **Answer XL** (700, `clamp(2.5rem, 11vw, 2.75rem)`, 1.04): Unused since 2026-09-23,
+  when the empty day's answer left the band. Kept as the family's anchor token.
 - **Document Title** (700, 1.75rem): The `/terms` page heading. The only display size
   outside the band.
 - **Headline** (700, 1.375rem): Modal titles.
-- **Answer SM** (700, 1.25rem, 1.08): The band's answer from two events up, and the
-  success panel's heading.
-- **Subhead** (700, 1.125rem): Empty-state and error-state headings.
-- **Title** (700, 1.0625rem, 1.24): The event card's title, and the next-event
-  when-line in the band.
+- **Answer SM** (700, 1.25rem, 1.08): The success panel's heading. (It was the band's
+  busy-day answer until 2026-09-23; that line is gone.)
+- **Subhead** (700, 1.125rem): Empty-state and error-state headings, including an
+  empty day's "Nothing on Monday.".
+- **Title** (700, 1.0625rem, 1.24): The event card's title, and the band's date.
 - **Numeral** (700, 1rem, tabular): The day of the month in a Coming up row.
 - **Lede** (400, 0.96875rem, 1.3): The next event's title inside the band.
 - **Control** (500, 0.9375rem): Form fields, bordered buttons, loading text, `/terms` body.
@@ -356,24 +348,24 @@ to stay cheap and light.
 - **Meta SM** (400, 0.75rem): The band's top line, the source hostname, Share,
   Read more, character counters, Coming up meta.
 - **Label** (700, 0.6875rem, 0.11em, uppercase): "Coming up", and the band's kicker.
-- **Label SM** (700, 0.65625rem, 0.07em, uppercase): Tag stamps, week strip days
-  and counts, the Coming up date stamp.
-- **Label XS** (700, 0.625rem, 0.1em, uppercase): "Week ahead" below 480px only.
+- **Label SM** (700, 0.65625rem, 0.07em, uppercase): Tag stamps, week strip days,
+  the Coming up date stamp.
+- **Label XS** (700, 0.625rem, 0.1em, uppercase): unused on the public page since the
+  strip's "Week ahead" label went (2026-09-23).
 
 ### Named Rules
 **The Tabular Figures Rule.** Every figure on this site is a time, a date or a
 count, and all three are read down a column. `font-variant-numeric: tabular-nums`
-is set on the band's next-event line, the week strip counts, the card's time line
+is set on the week strip dates, the card's time line
 and the Coming up date and meta. Any new numeral read in a column inherits it.
 
 **The Sentence, Not The Stamp Rule.** Body-level content is set in sentence case.
 Uppercase with tracking is reserved for the three label steps, which name a region
-("Week ahead", "Coming up") or stamp a category ("Free", "For kids"). A venue, a
+("Coming up") or stamp a category ("Free", "For kids"). A venue, a
 title or a description is never tracked uppercase.
 
-**The Answer Outranks The Name Rule.** The brand line sets at 0.75rem beside the
-date; the day's answer sets between 1.25rem and 2.75rem. On a page whose whole job
-is one question, the largest thing is the reply, never the wordmark.
+**The Date Outranks The Name Rule.** The brand line sets at 0.75rem beside the
+date at 1.0625rem. The wordmark is never the largest thing in the band.
 
 ## Layout
 
@@ -391,20 +383,19 @@ up rows 6px apart, and the footer is separated by 48px of margin above a soft
 hairline.
 
 The week strip is `position: sticky; top: 0` at z-index 100, laid out as a
-`repeat(7, 1fr)` grid beside its label. The modal layer sits at z-index 1000 and
+`repeat(7, minmax(0, 1fr))` grid followed by the Later slot. The modal layer sits at z-index 1000 and
 the skip link at 9999.
 
-Above-the-fold budget on a 375×812 phone: about 110px before the first card on a
-day with events. An empty day deliberately costs more, because there are no cards
-to push down and the space buys the next real event instead of blank screen.
+Above-the-fold budget on a 375×812 phone: about 123px (band 55, strip 68) before
+the first card or the empty day's sentence, on every day.
 
 ### Named Rules
-**The Sized-By-Its-Answer Rule.** The band is one component in one order, sized by
-its own content and never by its own importance: `is-xl` when nothing is on (the
-answer fills the field and hands over the next real event), and `is-sm` as soon as
-there is one event, where the cards are the answer and the band gets out of their
-way in a single line. This is the system's signature move; anything new that
-occupies the band obeys it.
+**The One Row Rule.** The band is one row on every day: brand left, the date right
+at Title size in white. It carried the day's answer until 2026-09-23, sized by that
+answer — "Four things on today." repeated the strip's count 30px below it, and an
+empty day's display-size "Nothing on Monday." plus the next event filled most of
+the first screen to say what the empty state says in place. The day's answer
+belongs where the cards are.
 
 **The Seven Days Rule.** The week strip is the entire date navigation: seven fixed
 days from today, and no further. Fixed columns cannot reflow under a thumb the way
@@ -421,9 +412,10 @@ checkbox. This is a product constraint from an audience that skews older, not a
 style choice, and it is not negotiable against density. Adjacent targets may touch;
 they may never overlap.
 
-**The Dash, Not The Zero Rule.** A day with nothing on prints `–` in Nil Grey at
-weight 400, not `0`. A column of numerals containing zeroes reads as data; a dash
-reads as "nothing", which is the answer.
+**The Date, Not The Count Rule.** A strip column's numeral is its day of the month.
+Under a weekday, a count ("Sat 6") reads as a date. The strip shows no count and
+no event mark (dots were tried and dropped the same day: they added nothing a
+reader could use); the exact count is in the column's `aria-label`.
 
 ## Elevation & Depth
 
@@ -564,12 +556,13 @@ all six categories.
 
 ### Navigation
 The week strip is the navigation. A card-white sticky bar with a hairline base,
-carrying a tracked uppercase "Week ahead" label beside seven equal columns. Each
-column is a link stacking an uppercase three-letter day over its count, centred,
+carrying seven equal columns (`minmax(0, 1fr)`, about 39px each at 375px) and no
+label: the label took 80px and left the days 24px wide. Each column is a link
+stacking an uppercase three-letter day over the date numeral, centred,
 4px radius, and it reflows to nothing — the grid is fixed. The first column says
 "Today" instead: the strip starts on today, not Monday, so single initials were
 ambiguous (T/T, S/S) with nothing to anchor the order. The current
-day fills with Green Wash and turns both its day and its count accent green;
+day fills with Green Wash and turns both its day and its date accent green;
 hover-capable devices get a Hairline Soft fill. Each link carries a full
 `aria-label` ("Saturday, 16 August — 6 events") because the visible day and
 numeral are `aria-hidden`.
@@ -584,13 +577,14 @@ The footer is the secondary navigation: Ink Mid text links at 0.8125rem separate
 by middots, each 44px tall, hovering to the accent.
 
 ### The Band
-The signature component. A full-bleed Hedgerow Green field carrying, in order: a
-0.75rem uppercase Pale Mint line with the brand name left and the long date right;
-the day's answer in white; and, on an empty day only, a hairline-ruled block in
-`{colors.rule-on-accent}` giving the next real event's relative day and time,
-title, and venue. It is one component in one order at three sizes — see the
-Sized-By-Its-Answer Rule. An empty day that ends at "nothing" is a dead end, so the
-band says what there *is* in the same breath.
+A full-bleed Hedgerow Green field, one row: the brand name at 0.75rem uppercase in
+white on the left, the long date at Title size in white on the right (`is-day`).
+On `/terms` the right side is "What's on in Naas" in Pale Mint. See the One Row Rule.
+
+An empty day's answer is the empty state under the strip: "Nothing on Monday." at
+Subhead size, centred, with Coming up directly under it as what is on instead.
+There is no separate "next event" line — the first Coming up row is that event,
+by its date, which the old "Next in Naas is tomorrow" phrasing got confusing.
 
 ### Named Rules
 **The Three Treatments Rule.** A link's treatment states what it is, and the three

@@ -93,7 +93,7 @@ const {
         /* Every figure on this page is a time, a date or a count, and all three
            are read in columns down a list. Tabular figures are what the mono
            face used to be here for. */
-        .band-next-w, .weekstrip-n, .ev-when, .upcoming-time, .upcoming-date {
+        .weekstrip-n, .ev-when, .upcoming-time, .upcoming-date {
             font-variant-numeric: tabular-nums;
         }
 
@@ -104,15 +104,10 @@ const {
         }
 
         /* ── Band ─────────────────────────────────────────────────────────
-           The day's answer, at the size the answer deserves. It is one element
-           in one order, sized by its own content: `is-xl` when nothing is on,
-           because there is nothing else to spend the space on and the next real
-           event needs the room; `is-sm` from two events up, because the cards
-           are the answer and the band should get out of their way in one line.
-
-           This is what replaced the nameplate. A wordmark is what a site is
-           called; on a page whose whole job is one question, the largest thing
-           should be the reply. */
+           One row: brand left, the day's date right. It carried the day's answer
+           until 2026-09-23 — "Four things on today." restated the strip's count,
+           and an empty day's display-size "Nothing on Monday." pushed the page
+           down to say what the empty state below can say in place. */
         .band {
             background: var(--accent);
             color: #fff;
@@ -141,75 +136,15 @@ const {
             text-align: right;
         }
 
-        .band-answer {
-            margin: 0;
-            font-weight: 700;
-            letter-spacing: -0.028em;
-            line-height: 1.08;
-        }
-
-        .band.is-sm { padding-bottom: 0.9375rem; }
-        .band.is-sm .band-answer {
-            margin-top: 0.5625rem;
-            font-size: 1.25rem;
-            letter-spacing: -0.02em;
-        }
-        .band.is-xl { padding-top: 1.25rem; padding-bottom: 1.375rem; }
-        .band.is-xl .band-answer {
-            margin-top: 1.25rem;
-            /* 11vw, not 9vw: at 9vw this resolved to 34px on a 375px phone and
-               set on one line, so the signature move was full size on desktop
-               and undersized on the primary device. It now breaks to two lines
-               and fills the band, as approved. */
-            font-size: clamp(2.5rem, 11vw, 2.75rem);
-            line-height: 1.04;
-        }
-
-        /* An empty day that ends at "nothing" is a dead end. This says what there
-           IS, in the same breath, without the visitor stepping a day at a time
-           to find it. */
-        .band-next {
-            display: block;
-            margin-top: 1.25rem;
-            padding-top: 0.9375rem;
-            border-top: 1px solid rgba(255,255,255,0.3);
-            text-decoration: none;
-            color: #fff;
-        }
-        .band-next[hidden] { display: none; }
-        .band-next-k {
-            display: block;
-            font-size: 0.6875rem;
-            letter-spacing: 0.11em;
-            text-transform: uppercase;
-            color: var(--on-accent-dim);
-            font-weight: 700;
-        }
-        .band-next-w {
-            display: block;
-            margin-top: 0.4375rem;
+        /* The date is the band's heading: the one fact nothing else on the page
+           gives, since the strip shows weekdays and dates but not the month. */
+        .band.is-day { padding-top: 0.875rem; padding-bottom: 0.875rem; }
+        .band.is-day .band-date {
             font-size: 1.0625rem;
             font-weight: 700;
-            letter-spacing: -0.015em;
-        }
-        .band-next-t {
-            display: block;
-            margin-top: 0.25rem;
-            font-size: 0.96875rem;
-            line-height: 1.3;
-        }
-        .band-next-v {
-            display: block;
-            margin-top: 0.3125rem;
-            font-size: 0.8125rem;
-            color: var(--on-accent-dim);
-        }
-        @media (hover: hover) {
-            .band-next:hover .band-next-t { text-decoration: underline; }
-        }
-        .band-next:focus-visible {
-            outline: 2px solid #fff;
-            outline-offset: 3px;
+            letter-spacing: -0.017em;
+            text-transform: none;
+            color: #fff;
         }
 
         /* ── Week strip ───────────────────────────────────────────────────
@@ -242,18 +177,9 @@ const {
             padding-bottom: 0.5rem;
         }
 
-        .weekstrip-k {
-            font-size: 0.65625rem;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            color: var(--ink-mid);
-            font-weight: 700;
-            flex-shrink: 0;
-        }
-
         .weekstrip-r {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: repeat(7, minmax(0, 1fr));
             flex: 1;
             gap: 0.125rem;
             list-style: none;
@@ -286,10 +212,6 @@ const {
             font-size: 0.9375rem;
             font-weight: 700;
         }
-
-        /* Zero prints as a dash rather than a 0. A column of numerals with 0s in
-           it reads as data; a dash reads as "nothing", which is the answer. */
-        .weekstrip-n.is-nil { color: #B9BFBB; font-weight: 400; }
 
         /* The eighth slot, past the seven. Not a link: it holds the date
            picker. Fixed width so a date like "30 Sept" cannot reflow it. */
@@ -1507,21 +1429,11 @@ const {
                masthead + date + filters at ~277px of a 375×812 viewport; the
                nameplate redesign brought it to ~152px on today.
 
-               The band is sized by its answer instead of by its own importance,
-               so the number is now two numbers. On a day with events the band is
-               one line and the strip is 44px — about 110px before the first card,
-               which is less than either predecessor while showing the count, the
-               date and seven days of navigation. On an empty day it deliberately
-               costs more, because there are no cards to push down and the space
-               buys the next real event instead of a blank screen. */
+               Since 2026-09-23 the band is one row on every day: 55px band plus
+               the strip, about 125px before the first card or the empty day's
+               sentence. */
             .band { padding: 0.875rem 0 1rem; }
-            .band.is-xl { padding-top: 1rem; padding-bottom: 1.25rem; }
             .band-top { font-size: 0.6875rem; }
-            /* The label stays. Seven columns do fit beside it at 375px — the
-               approved comp proves it — and it is the strip's only name for an
-               audience that skews older and may not read seven short days
-               and seven numerals as a week on sight. */
-            .weekstrip-k { font-size: 0.625rem; }
             .weekstrip .container { gap: 0.5rem; }
             .modal-content {
                 border-radius: 16px 16px 0 0;
@@ -1549,7 +1461,7 @@ const {
             .skeleton-line,
             .deep-link-highlight { animation: none !important; }
             .modal, .modal-content { transition: none !important; }
-            .event-card, .weekstrip, .weekstrip-d, .band-next, .filter-btn,
+            .event-card, .weekstrip, .weekstrip-d, .filter-btn,
             .submit-area-btn, .btn-primary, .btn-secondary, .share-btn,
             .upcoming-item, .modal-close, .empty-clear-btn, .footer-links a,
             .footer-links button, .form-actions button, .form-group input,
@@ -1578,14 +1490,14 @@ const {
     no serif, no mono, no icon, no radius, no category palette — the system
     stack with tabular figures, one accent, one green tag stamp.
 
-    STORY: A resident on a phone reads the answer in one line, sees the seven
-    days ahead as counts, and either finds today's events with the description
-    visible without a tap — only the tail of a very long one folded away — or is
-    handed the next real event by name.
+    STORY: A resident on a phone sees the date and the seven days ahead, and
+    either finds today's events with the description visible without a tap —
+    only the tail of a very long one folded away — or reads "Nothing on today."
+    with what is coming up right under it.
 
-    FIRST VIEWPORT: Green band, brand left and date right at 12px; the answer
-    beneath at 20px when there are events and up to 44px when there are none,
-    where it is followed by the next event's day, time, title and venue. Then a
+    FIRST VIEWPORT: Green band, one row on every day: brand left, date right at
+    17px. An empty day says "Nothing on <day>." where the cards would be, with
+    Coming up directly under it. Then a
     seven-column week strip, sticky, then the cards. The submit ask is one line
     at the very end, after Coming up.
 

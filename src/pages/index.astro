@@ -34,11 +34,6 @@ try {
 
 const todayEvents = initialEvents.filter(e => isOnDay(e.date, e.end_date, todayStr));
 
-// The band names the next real event when today has none, so an empty day ends
-// on something to do rather than on the word "nothing". Only read when the day
-// is empty, but computed unconditionally — it is one array scan.
-const nextEvent = initialEvents.find(e => e.date > todayStr) ?? null;
-
 // "Coming up" is replaced client-side by renderUpcoming(), but the static HTML
 // shipped a heading over an empty <ul> before this existed. First paint, no-JS
 // visitors and anything slow enough to see the pre-rendered page got a promise
@@ -88,7 +83,7 @@ const jsonLd = todayEvents.length > 0 ? {
 
 <BaseLayout jsonLd={jsonLd}>
   <a href="#main-content" class="skip-link">Skip to main content</a>
-  <Band dateStr={todayStr} todayStr={todayStr} count={todayEvents.length} next={nextEvent} />
+  <Band dateStr={todayStr} />
   {/* WeekStrip is inside <main> so the skip link lands above the date controls
       rather than past them — the same reason DateNav was moved in before it. */}
   <main id="main-content" role="main">
@@ -151,7 +146,7 @@ const jsonLd = todayEvents.length > 0 ? {
     import { initModals, initSubmitForm, openModal, closeModal } from '../scripts/modal-form.js';
     import {
       localDateStr, clockLabel, timeRangeLabel,
-      dayAnswer, dayWordFor, nextPhrase, weekAhead, isOnDay, stripLabel,
+      dayAnswer, dayWordFor, weekAhead, isOnDay, stripLabel,
     } from '../scripts/date.js';
     // Astro compiles the frontmatter and this block separately, so a shared module
     // is the only way one constant governs both the markup and the behaviour.
@@ -530,38 +525,6 @@ const jsonLd = todayEvents.length > 0 ? {
         return card;
     }
 
-    // ── The band ────────────────────────────────────────────────────────
-    // The day's answer and the band's own size, which is a function of it. The
-    // sentence is built by the same helper Band.astro uses, so hydration does
-    // not rewrite the largest words on the page.
-    function renderBand(dayCount) {
-        const dateStr = localDateStr(currentDate);
-        const todayStr = localDateStr(new Date());
-        const band = document.querySelector('.band');
-        const answerEl = document.getElementById('dayAnswer');
-        if (answerEl) answerEl.textContent = dayAnswer(dayCount, dayWordFor(dateStr, todayStr));
-        if (band) {
-            band.classList.remove('is-xl', 'is-sm');
-            band.classList.add(dayCount === 0 ? 'is-xl' : 'is-sm');
-        }
-
-        // "Next in Naas" belongs to the empty day only. On a day with events the
-        // cards are the answer and this would be a second one.
-        const next = dayCount === 0
-            ? events.filter(e => e.date > dateStr)
-                    .sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''))[0]
-            : null;
-        const link = document.getElementById('bandNext');
-        if (!link) return;
-        if (!next) { link.hidden = true; return; }
-        link.hidden = false;
-        link.href = `?date=${next.date}`;
-        link.dataset.date = next.date;
-        document.getElementById('bandNextWhen').textContent = nextPhrase(next, dateStr);
-        document.getElementById('bandNextTitle').textContent = next.title;
-        document.getElementById('bandNextVenue').textContent = venueOf(next);
-    }
-
     // ── The week strip ──────────────────────────────────────────────────
     // Seven days from today, always. It is the whole of the date navigation, and
     // it deliberately stops at a week: anything further out is the Later slot,
@@ -590,12 +553,12 @@ const jsonLd = todayEvents.length > 0 ? {
             day.setAttribute('aria-hidden', 'true');
             day.textContent = stripLabel(ds, todayStr);
 
-            const count = document.createElement('span');
-            count.className = 'weekstrip-n' + (n === 0 ? ' is-nil' : '');
-            count.setAttribute('aria-hidden', 'true');
-            count.textContent = n === 0 ? '–' : String(n);
+            const num = document.createElement('span');
+            num.className = 'weekstrip-n';
+            num.setAttribute('aria-hidden', 'true');
+            num.textContent = String(d.getDate());
 
-            a.append(day, count);
+            a.append(day, num);
             li.appendChild(a);
             return li;
         }));
@@ -628,11 +591,6 @@ const jsonLd = todayEvents.length > 0 ? {
             emptyState.classList.remove('visible');
             errorState.classList.add('visible');
             if (submitArea) submitArea.style.display = 'none';
-            // Nothing loaded, so the band cannot claim a count either way.
-            const answerEl = document.getElementById('dayAnswer');
-            if (answerEl) answerEl.textContent = '';
-            const bandNext = document.getElementById('bandNext');
-            if (bandNext) bandNext.hidden = true;
             updateJsonLd([]);
             renderUpcoming();
             renderWeekStrip();
@@ -651,9 +609,6 @@ const jsonLd = todayEvents.length > 0 ? {
         // "nothing is on today" from "your filters hid everything". Only one of those
         // is the visitor's to fix, and saying the wrong one reads as a broken site.
         const dayEvents = filteredEvents;
-        // Counts the day, not the filtered result: the band answers "is anything
-        // on?", which a filter does not change.
-        renderBand(dayEvents.length);
         renderWeekStrip();
 
         // Count badges. Every chip shows its count, zero included. Counts are
@@ -677,11 +632,7 @@ const jsonLd = todayEvents.length > 0 ? {
 
         if (filteredEvents.length === 0) {
             grid.style.display = 'none';
-            // A genuinely empty day is already answered by the band, at display
-            // size, with the next real event under it. Only a day emptied *by
-            // filters* needs a panel — that is a different sentence and it needs
-            // an escape hatch.
-            emptyState.classList.toggle('visible', dayEvents.length > 0);
+            emptyState.classList.add('visible');
             setEmptyState(dayEvents.length);
             updateJsonLd([]);
             renderUpcoming();
@@ -706,15 +657,17 @@ const jsonLd = todayEvents.length > 0 ? {
         if (status) status.textContent = text;
     }
 
-    // Only reached with events hidden behind filters, or with none at all. The
-    // second case renders nothing — the band said it — but still announces, so a
-    // screen reader is told the day is empty rather than left in silence.
+    // Only reached with events hidden behind filters, or with none at all. An
+    // empty day says so where the cards would be, and Coming up right below it
+    // is what to do instead — so it needs no message of its own.
     function setEmptyState(dayCount) {
         const heading  = document.getElementById('emptyHeading');
         const message  = document.getElementById('emptyMessage');
         const clearBtn = document.getElementById('clearFiltersBtn');
 
         if (dayCount === 0) {
+            heading.textContent = dayAnswer(0, dayWordFor(localDateStr(currentDate), localDateStr(new Date())));
+            message.textContent = '';
             clearBtn.hidden = true;
             announce('No events on this day.');
             return;

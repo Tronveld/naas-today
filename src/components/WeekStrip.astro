@@ -33,10 +33,13 @@ function countFor(ds: string): number {
     was the footer's "Pick a date" until 2026-09-23 — below Coming up, a
     planner never found it, and the sticky strip read as the whole calendar.
     Server-side it is always at rest; the client marks it when the day being
-    viewed is past the seven. */}
+    viewed is past the seven.
+
+    Each column is weekday over date. The numeral was the count until
+    2026-09-23, which read as a date ("Sat 6"); the exact count stays in the
+    aria-label. A "Week ahead" label took 80px and left the days 24px wide. */}
 <nav class="weekstrip" aria-label="Choose a day">
   <div class="container">
-    <span class="weekstrip-k">Week ahead</span>
     <ul class="weekstrip-r">
       {days.map(ds => {
         const n = countFor(ds);
@@ -52,7 +55,7 @@ function countFor(ds: string): number {
               aria-label={`${label} — ${n === 0 ? 'nothing on' : n === 1 ? '1 event' : `${n} events`}`}
             >
               <span class="weekstrip-day" aria-hidden="true">{stripLabel(ds, todayStr)}</span>
-              <span class:list={['weekstrip-n', { 'is-nil': n === 0 }]} aria-hidden="true">{n === 0 ? '–' : n}</span>
+              <span class="weekstrip-n" aria-hidden="true">{d.getDate()}</span>
             </a>
           </li>
         );

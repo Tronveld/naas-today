@@ -32,16 +32,15 @@ src/
   layouts/BaseLayout.astro   <html> shell, all global CSS, meta/OG, Umami, and the
                              direction contract comment opening <body> (must survive the build)
   components/
-    Band.astro               green band: brand, date, the day's answer, "Next in Naas" when
-                             empty. Sized by its answer (is-xl / is-lg / is-sm). Brand-only on /terms
-    WeekStrip.astro          seven days from today with counts, plus a Later slot that opens
+    Band.astro               green band, one row: brand and date. Brand-only on /terms
+    WeekStrip.astro          seven days from today with their dates, plus a Later slot that opens
                              the date picker — the whole date navigation
     EventsGrid / EventCard   pre-rendered cards (EventCard takes a raw Supabase row)
     FilterControls.astro     not rendered: gated on FILTERS_ENABLED (false) in flags.js
     Footer.astro             about/contact/terms/submit
     AppModals.astro          modals for pages other than index
   scripts/
-    date.js                  formatting, the day's phrasing (dayAnswer, nextPhrase…), isOnDay
+    date.js                  formatting, the day's phrasing (dayAnswer, stripLabel…), isOnDay
     modal-form.js, draft.js  modal system + submit form + draft persistence, shared by all pages
     flags.js                 FILTERS_ENABLED, DESCRIPTION_CLAMP — read by frontmatter and client
   pages/index.astro          build-time fetch + all client JS; pages/terms.astro static

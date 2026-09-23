@@ -1,6 +1,6 @@
 ---
 import EventCard from './EventCard.astro';
-import { isOnDay } from '../scripts/date.js';
+import { isOnDay, dayAnswer } from '../scripts/date.js';
 
 interface Event {
   id: string;
@@ -47,14 +47,13 @@ const todayEvents = events.filter(e => isOnDay(e.date, e.end_date, todayStr)).so
         {todayEvents.map(event => <EventCard event={event} />)}
     </div>
 
-    <!-- Never shown for a genuinely empty day any more: the band above says
-         "Nothing on today." at display size and then names the next real event,
-         so a second panel underneath repeating it in smaller type was the same
-         answer twice. It survives for the one case the band cannot describe —
-         a day whose events exist but are hidden by active filters, which needs
-         different words and an escape. Dormant while FILTERS_ENABLED is false. -->
-    <div id="emptyState" class="empty-state">
-        <h3 id="emptyHeading">No matching events</h3>
+    <!-- An empty day's answer, where the cards would be: "Nothing on Monday.",
+         with Coming up directly under it as what is on instead. It sat in the
+         band at display size until 2026-09-23. The same panel also covers a day
+         whose events are hidden by filters (different words, and an escape);
+         that case is dormant while FILTERS_ENABLED is false. -->
+    <div id="emptyState" class:list={['empty-state', { visible: todayEvents.length === 0 }]}>
+        <h3 id="emptyHeading">{todayEvents.length === 0 ? dayAnswer(0, 'today') : 'No matching events'}</h3>
         <p id="emptyMessage"></p>
         <button class="empty-clear-btn" id="clearFiltersBtn" hidden>Show all events</button>
     </div>
