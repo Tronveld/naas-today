@@ -1,5 +1,5 @@
 ---
-import { weekAhead, isOnDay } from '../scripts/date.js';
+import { weekAhead, isOnDay, stripLabel } from '../scripts/date.js';
 
 interface Props {
   /** Every approved event; counted per day here so the strip is right pre-JS. */
@@ -28,11 +28,18 @@ function countFor(ds: string): number {
     without stepping, which is the second of the two questions PRODUCT.md names
     and the one the interface never answered.
 
-    It covers a week and no further by design; anything beyond is the footer's
-    date picker. */}
+    It covers a week and no further by design. Anything beyond is the Later
+    slot at the end: fixed width, always there, so it cannot reflow either. It
+    was the footer's "Pick a date" until 2026-09-23 — below Coming up, a
+    planner never found it, and the sticky strip read as the whole calendar.
+    Server-side it is always at rest; the client marks it when the day being
+    viewed is past the seven.
+
+    Each column is weekday over date. The numeral was the count until
+    2026-09-23, which read as a date ("Sat 6"); the exact count stays in the
+    aria-label. A "Week ahead" label took 80px and left the days 24px wide. */}
 <nav class="weekstrip" aria-label="Choose a day">
   <div class="container">
-    <span class="weekstrip-k">Week ahead</span>
     <ul class="weekstrip-r">
       {days.map(ds => {
         const n = countFor(ds);
@@ -47,12 +54,20 @@ function countFor(ds: string): number {
               aria-current={ds === currentStr ? 'date' : undefined}
               aria-label={`${label} — ${n === 0 ? 'nothing on' : n === 1 ? '1 event' : `${n} events`}`}
             >
-              <span class="weekstrip-day" aria-hidden="true">{d.toLocaleDateString('en-IE', { weekday: 'short' })[0]}</span>
-              <span class:list={['weekstrip-n', { 'is-nil': n === 0 }]} aria-hidden="true">{n === 0 ? '–' : n}</span>
+              <span class="weekstrip-day" aria-hidden="true">{stripLabel(ds, todayStr)}</span>
+              <span class="weekstrip-n" aria-hidden="true">{d.getDate()}</span>
             </a>
           </li>
         );
       })}
     </ul>
+    {/* The date field itself, invisible, laid over the slot: a tap on a phone
+        opens the native picker in one step with no script. It replaced a
+        button that opened a modal holding the same field — two taps. */}
+    <div class="weekstrip-d weekstrip-later" id="later">
+      <span class="weekstrip-day" aria-hidden="true">Later</span>
+      <span class="weekstrip-n" id="laterN" aria-hidden="true">›</span>
+      <input type="date" id="laterInput" min={todayStr} value={currentStr} aria-label="Pick a later date">
+    </div>
   </div>
 </nav>

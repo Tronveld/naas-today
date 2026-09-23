@@ -247,7 +247,9 @@ function jsonLdToEvent(ldEvent, sourceUrl) {
   const { date, time }         = parseIsoDateTime(ldEvent.startDate);
   const { date: endDate, time: timeEnd } = parseIsoDateTime(ldEvent.endDate);
 
-  let title = stripHtml(ldEvent.name || '');
+  // Moat titles per-night shows "Show (Thursday 24th Sept 2026 - 7:30pm)"; the card shows the date already.
+  let title = stripHtml(ldEvent.name || '')
+    .replace(/\s*\((?:mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?\s+[a-z]{3}[^)]*\)\s*$/i, '');
   if (title.length > 150) title = title.slice(0, 147) + '…';
 
   let description = stripHtml(

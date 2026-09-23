@@ -5,7 +5,6 @@ import WeekStrip from '../components/WeekStrip.astro';
 import FilterControls from '../components/FilterControls.astro';
 import EventsGrid from '../components/EventsGrid.astro';
 import Footer from '../components/Footer.astro';
-import DatePickerModal from '../components/modals/DatePickerModal.astro';
 import SubmitEventModal from '../components/modals/SubmitEventModal.astro';
 import AboutModal from '../components/modals/AboutModal.astro';
 import ContactModal from '../components/modals/ContactModal.astro';
@@ -34,11 +33,6 @@ try {
 }
 
 const todayEvents = initialEvents.filter(e => isOnDay(e.date, e.end_date, todayStr));
-
-// The band names the next real event when today has none, so an empty day ends
-// on something to do rather than on the word "nothing". Only read when the day
-// is empty, but computed unconditionally — it is one array scan.
-const nextEvent = initialEvents.find(e => e.date > todayStr) ?? null;
 
 // "Coming up" is replaced client-side by renderUpcoming(), but the static HTML
 // shipped a heading over an empty <ul> before this existed. First paint, no-JS
@@ -89,7 +83,7 @@ const jsonLd = todayEvents.length > 0 ? {
 
 <BaseLayout jsonLd={jsonLd}>
   <a href="#main-content" class="skip-link">Skip to main content</a>
-  <Band dateStr={todayStr} todayStr={todayStr} count={todayEvents.length} next={nextEvent} />
+  <Band dateStr={todayStr} />
   {/* WeekStrip is inside <main> so the skip link lands above the date controls
       rather than past them — the same reason DateNav was moved in before it. */}
   <main id="main-content" role="main">
@@ -138,8 +132,7 @@ const jsonLd = todayEvents.length > 0 ? {
     </div>
     </div>
   </main>
-  <Footer datePicker={true} />
-  <DatePickerModal />
+  <Footer />
   <SubmitEventModal />
   <AboutModal />
   <ContactModal />
@@ -153,7 +146,7 @@ const jsonLd = todayEvents.length > 0 ? {
     import { initModals, initSubmitForm, openModal, closeModal } from '../scripts/modal-form.js';
     import {
       localDateStr, clockLabel, timeRangeLabel,
-      dayAnswer, dayWordFor, nextPhrase, weekAhead, isOnDay,
+      dayAnswer, dayWordFor, weekAhead, isOnDay, stripLabel,
     } from '../scripts/date.js';
     // Astro compiles the frontmatter and this block separately, so a shared module
     // is the only way one constant governs both the markup and the behaviour.
@@ -436,15 +429,29 @@ const jsonLd = todayEvents.length > 0 ? {
         when.textContent = whenLabel(event);
         card.appendChild(when);
 
+        let parsed = null;
+        try {
+            const u = new URL(event.url);
+            if (['http:', 'https:'].includes(u.protocol)) parsed = u;
+        } catch {
+            // No URL or an invalid one — no links
+        }
+
+        // The title links out when there is a URL — see EventCard.astro.
         const title = document.createElement('h3');
         title.className = 'event-title';
         title.id = 'event-title-' + event.id;
-        title.textContent = event.title;
+        if (parsed) {
+            const titleLink = document.createElement('a');
+            titleLink.href = parsed.href;
+            titleLink.target = '_blank';
+            titleLink.rel = 'noopener noreferrer';
+            titleLink.textContent = event.title;
+            title.appendChild(titleLink);
+        } else {
+            title.textContent = event.title;
+        }
         card.appendChild(title);
-
-        // Venue and source share one 44px row — see EventCard.astro for why.
-        const meta = document.createElement('div');
-        meta.className = 'ev-meta';
 
         const loc = document.createElement('a');
         loc.className = 'event-location';
@@ -455,34 +462,7 @@ const jsonLd = todayEvents.length > 0 ? {
         // sit in the same list and any difference shows as a flicker on hydration.
         loc.title = event.location;
         loc.textContent = venueOf(event);
-        meta.appendChild(loc);
-
-        if (event.url) {
-            try {
-                const parsed = new URL(event.url);
-                if (['http:', 'https:'].includes(parsed.protocol)) {
-                    const urlEl = document.createElement('a');
-                    urlEl.className = 'event-url';
-                    urlEl.href = parsed.href;
-                    urlEl.target = '_blank';
-                    urlEl.rel = 'noopener noreferrer';
-                    urlEl.textContent = parsed.hostname.replace(/^www\./, '');
-                    meta.appendChild(urlEl);
-                }
-            } catch {
-                // Invalid URL — skip
-            }
-        }
-        // Share is a text action on this row now, not a bordered box in the
-        // card's corner — see EventCard.astro.
-        const shareBtn = document.createElement('button');
-        shareBtn.className = 'share-btn';
-        shareBtn.textContent = 'Share';
-        shareBtn.setAttribute('aria-label', `Share ${event.title}`);
-        shareBtn.addEventListener('click', () => shareEvent(event, shareBtn));
-        meta.appendChild(shareBtn);
-
-        card.appendChild(meta);
+        card.appendChild(loc);
 
         const descText = event.description || '';
         const isLong = descText.length > DESCRIPTION_CLAMP;
@@ -528,46 +508,22 @@ const jsonLd = todayEvents.length > 0 ? {
         });
         footer.appendChild(tags);
 
+        // Share closes the card, opposite the tags — see EventCard.astro.
+        const shareBtn = document.createElement('button');
+        shareBtn.className = 'share-btn';
+        shareBtn.textContent = 'Share';
+        shareBtn.setAttribute('aria-label', `Share ${event.title}`);
+        shareBtn.addEventListener('click', () => shareEvent(event, shareBtn));
+        footer.appendChild(shareBtn);
+
         card.appendChild(footer);
         return card;
     }
 
-    // ── The band ────────────────────────────────────────────────────────
-    // The day's answer and the band's own size, which is a function of it. The
-    // sentence is built by the same helper Band.astro uses, so hydration does
-    // not rewrite the largest words on the page.
-    function renderBand(dayCount) {
-        const dateStr = localDateStr(currentDate);
-        const todayStr = localDateStr(new Date());
-        const band = document.querySelector('.band');
-        const answerEl = document.getElementById('dayAnswer');
-        if (answerEl) answerEl.textContent = dayAnswer(dayCount, dayWordFor(dateStr, todayStr));
-        if (band) {
-            band.classList.remove('is-xl', 'is-lg', 'is-sm');
-            band.classList.add(dayCount === 0 ? 'is-xl' : dayCount === 1 ? 'is-lg' : 'is-sm');
-        }
-
-        // "Next in Naas" belongs to the empty day only. On a day with events the
-        // cards are the answer and this would be a second one.
-        const next = dayCount === 0
-            ? events.filter(e => e.date > dateStr)
-                    .sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''))[0]
-            : null;
-        const link = document.getElementById('bandNext');
-        if (!link) return;
-        if (!next) { link.hidden = true; return; }
-        link.hidden = false;
-        link.href = `?date=${next.date}`;
-        link.dataset.date = next.date;
-        document.getElementById('bandNextWhen').textContent = nextPhrase(next, dateStr);
-        document.getElementById('bandNextTitle').textContent = next.title;
-        document.getElementById('bandNextVenue').textContent = venueOf(next);
-    }
-
     // ── The week strip ──────────────────────────────────────────────────
     // Seven days from today, always. It is the whole of the date navigation, and
-    // it deliberately stops at a week: anything further out is the footer's date
-    // picker, which is the rarer visit.
+    // it deliberately stops at a week: anything further out is the Later slot,
+    // which shows the day being viewed when it is past the seven.
     function renderWeekStrip() {
         const list = document.querySelector('.weekstrip-r');
         if (!list) return;
@@ -590,17 +546,29 @@ const jsonLd = todayEvents.length > 0 ? {
             const day = document.createElement('span');
             day.className = 'weekstrip-day';
             day.setAttribute('aria-hidden', 'true');
-            day.textContent = d.toLocaleDateString('en-IE', { weekday: 'short' })[0];
+            day.textContent = stripLabel(ds, todayStr);
 
-            const count = document.createElement('span');
-            count.className = 'weekstrip-n' + (n === 0 ? ' is-nil' : '');
-            count.setAttribute('aria-hidden', 'true');
-            count.textContent = n === 0 ? '–' : String(n);
+            const num = document.createElement('span');
+            num.className = 'weekstrip-n';
+            num.setAttribute('aria-hidden', 'true');
+            num.textContent = String(d.getDate());
 
-            a.append(day, count);
+            a.append(day, num);
             li.appendChild(a);
             return li;
         }));
+
+        const isLater = !weekAhead(todayStr).includes(currentStr);
+        document.getElementById('later').classList.toggle('is-current', isLater);
+        document.getElementById('laterN').textContent = isLater
+            ? currentDate.toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })
+            : '›';
+        const input = document.getElementById('laterInput');
+        input.min = todayStr;
+        input.value = currentStr;
+        input.setAttribute('aria-label', isLater
+            ? `Showing ${currentDate.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long' })} — pick another date`
+            : 'Pick a later date');
     }
 
     function renderEvents() {
@@ -618,11 +586,6 @@ const jsonLd = todayEvents.length > 0 ? {
             emptyState.classList.remove('visible');
             errorState.classList.add('visible');
             if (submitArea) submitArea.style.display = 'none';
-            // Nothing loaded, so the band cannot claim a count either way.
-            const answerEl = document.getElementById('dayAnswer');
-            if (answerEl) answerEl.textContent = '';
-            const bandNext = document.getElementById('bandNext');
-            if (bandNext) bandNext.hidden = true;
             updateJsonLd([]);
             renderUpcoming();
             renderWeekStrip();
@@ -641,9 +604,6 @@ const jsonLd = todayEvents.length > 0 ? {
         // "nothing is on today" from "your filters hid everything". Only one of those
         // is the visitor's to fix, and saying the wrong one reads as a broken site.
         const dayEvents = filteredEvents;
-        // Counts the day, not the filtered result: the band answers "is anything
-        // on?", which a filter does not change.
-        renderBand(dayEvents.length);
         renderWeekStrip();
 
         // Count badges. Every chip shows its count, zero included. Counts are
@@ -667,11 +627,7 @@ const jsonLd = todayEvents.length > 0 ? {
 
         if (filteredEvents.length === 0) {
             grid.style.display = 'none';
-            // A genuinely empty day is already answered by the band, at display
-            // size, with the next real event under it. Only a day emptied *by
-            // filters* needs a panel — that is a different sentence and it needs
-            // an escape hatch.
-            emptyState.classList.toggle('visible', dayEvents.length > 0);
+            emptyState.classList.add('visible');
             setEmptyState(dayEvents.length);
             updateJsonLd([]);
             renderUpcoming();
@@ -696,15 +652,17 @@ const jsonLd = todayEvents.length > 0 ? {
         if (status) status.textContent = text;
     }
 
-    // Only reached with events hidden behind filters, or with none at all. The
-    // second case renders nothing — the band said it — but still announces, so a
-    // screen reader is told the day is empty rather than left in silence.
+    // Only reached with events hidden behind filters, or with none at all. An
+    // empty day says so where the cards would be, and Coming up right below it
+    // is what to do instead — so it needs no message of its own.
     function setEmptyState(dayCount) {
         const heading  = document.getElementById('emptyHeading');
         const message  = document.getElementById('emptyMessage');
         const clearBtn = document.getElementById('clearFiltersBtn');
 
         if (dayCount === 0) {
+            heading.textContent = dayAnswer(0, dayWordFor(localDateStr(currentDate), localDateStr(new Date())));
+            message.textContent = '';
             clearBtn.hidden = true;
             announce('No events on this day.');
             return;
@@ -853,18 +811,18 @@ const jsonLd = todayEvents.length > 0 ? {
         renderEvents();
     });
 
-    document.getElementById('changeDateBtn')?.addEventListener('click', () => {
-        const dateInput = document.getElementById('dateInput');
-        dateInput.min = localDateStr(new Date());
-        dateInput.value = localDateStr(currentDate);
-        openModal('dateModal');
+    // A tap on a phone opens the picker natively. A mouse click on a date field
+    // only focuses its text, so desktop asks for the picker explicitly.
+    // ponytail: pre-2022 desktop browsers lack showPicker and get an invisible
+    // focused field; bring back a visible fallback if anyone reports it.
+    const laterInput = document.getElementById('laterInput');
+    laterInput.addEventListener('click', () => {
+        if (!matchMedia('(pointer: fine)').matches) return;
+        try { laterInput.showPicker(); } catch {}
     });
-
-    document.getElementById('closeDateModal').addEventListener('click', () => closeModal('dateModal'));
-
-    document.getElementById('dateInput').addEventListener('change', (e) => {
-        goToDate(e.target.value, { scroll: false });
-        closeModal('dateModal');
+    laterInput.addEventListener('change', () => {
+        // iOS's Reset empties the field; that is not a date to go to.
+        if (laterInput.value) goToDate(laterInput.value, { scroll: false });
     });
 
     if (FILTERS_ENABLED) FILTER_CHIPS.forEach(chip => {
