@@ -74,6 +74,11 @@ exports.handler = async function(event) {
   if (dates.length === 0) {
     return err400('No occurrences generated — check recurrence.endDate');
   }
+  // An occurrence that lasts until the next one starts is the series' end typed
+  // into the event's end date: every row then covers every day of the series.
+  if (endDate && dates[1] && endDate >= dates[1]) {
+    return err400('The end date is for one occurrence; it must be before the next one starts');
+  }
 
   // Build rows
   // A multi-day event keeps its span on every occurrence. Copying the first

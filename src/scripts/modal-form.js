@@ -353,6 +353,13 @@ export function initSubmitForm({ defaultDate }) {
       return;
     }
 
+    // Mirrors submit-recurring.js: the end date is one occurrence's, not the series'.
+    const next = isRecurring && generateDates(baseEvent.date, frequency, recEndDate)[1];
+    if (next && baseEvent.endDate && baseEvent.endDate >= next) {
+      setFieldError('eventEndDate', 'For a repeating event, this is when one session ends. Leave it blank for a single day.');
+      return;
+    }
+
     submitBtn.textContent = 'Submitting...';
     submitBtn.disabled = true;
 

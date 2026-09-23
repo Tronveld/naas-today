@@ -65,6 +65,18 @@ describe('multi-day recurring events', () => {
     ]);
   });
 
+  test('an end date that runs into the next occurrence is refused', async () => {
+    // A 10-week Thursday course submitted with the course's last day as the
+    // event's end date: every row spanned the whole course, so it showed daily.
+    const { res, rows } = await submit(
+      { date: '2026-09-24', endDate: '2026-11-26' },
+      { frequency: 'weekly', endDate: '2026-11-26' },
+    );
+    assert.equal(res.statusCode, 400);
+    assert.match(JSON.parse(res.body).error, /end date/i);
+    assert.equal(rows, null);
+  });
+
   test('a single-day series still stores no end date', async () => {
     const { rows } = await submit(
       { date: '2026-10-03' },
