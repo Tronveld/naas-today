@@ -1,5 +1,5 @@
 ---
-import { weekAhead, isOnDay } from '../scripts/date.js';
+import { weekAhead, isOnDay, stripLabel } from '../scripts/date.js';
 
 interface Props {
   /** Every approved event; counted per day here so the strip is right pre-JS. */
@@ -47,7 +47,7 @@ function countFor(ds: string): number {
               aria-current={ds === currentStr ? 'date' : undefined}
               aria-label={`${label} — ${n === 0 ? 'nothing on' : n === 1 ? '1 event' : `${n} events`}`}
             >
-              <span class="weekstrip-day" aria-hidden="true">{d.toLocaleDateString('en-IE', { weekday: 'short' })[0]}</span>
+              <span class="weekstrip-day" aria-hidden="true">{stripLabel(ds, todayStr)}</span>
               <span class:list={['weekstrip-n', { 'is-nil': n === 0 }]} aria-hidden="true">{n === 0 ? '–' : n}</span>
             </a>
           </li>

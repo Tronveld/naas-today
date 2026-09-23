@@ -153,7 +153,7 @@ const jsonLd = todayEvents.length > 0 ? {
     import { initModals, initSubmitForm, openModal, closeModal } from '../scripts/modal-form.js';
     import {
       localDateStr, clockLabel, timeRangeLabel,
-      dayAnswer, dayWordFor, nextPhrase, weekAhead, isOnDay,
+      dayAnswer, dayWordFor, nextPhrase, weekAhead, isOnDay, stripLabel,
     } from '../scripts/date.js';
     // Astro compiles the frontmatter and this block separately, so a shared module
     // is the only way one constant governs both the markup and the behaviour.
@@ -543,8 +543,8 @@ const jsonLd = todayEvents.length > 0 ? {
         const answerEl = document.getElementById('dayAnswer');
         if (answerEl) answerEl.textContent = dayAnswer(dayCount, dayWordFor(dateStr, todayStr));
         if (band) {
-            band.classList.remove('is-xl', 'is-lg', 'is-sm');
-            band.classList.add(dayCount === 0 ? 'is-xl' : dayCount === 1 ? 'is-lg' : 'is-sm');
+            band.classList.remove('is-xl', 'is-sm');
+            band.classList.add(dayCount === 0 ? 'is-xl' : 'is-sm');
         }
 
         // "Next in Naas" belongs to the empty day only. On a day with events the
@@ -590,7 +590,7 @@ const jsonLd = todayEvents.length > 0 ? {
             const day = document.createElement('span');
             day.className = 'weekstrip-day';
             day.setAttribute('aria-hidden', 'true');
-            day.textContent = d.toLocaleDateString('en-IE', { weekday: 'short' })[0];
+            day.textContent = stripLabel(ds, todayStr);
 
             const count = document.createElement('span');
             count.className = 'weekstrip-n' + (n === 0 ? ' is-nil' : '');

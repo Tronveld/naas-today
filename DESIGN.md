@@ -33,12 +33,6 @@ typography:
     fontWeight: 700
     lineHeight: 1.04
     letterSpacing: "-0.028em"
-  answer-lg:
-    fontFamily: "{typography.answer-xl.fontFamily}"
-    fontSize: "1.6875rem"
-    fontWeight: 700
-    lineHeight: 1.08
-    letterSpacing: "-0.028em"
   document-title:
     fontFamily: "{typography.answer-xl.fontFamily}"
     fontSize: "1.75rem"
@@ -156,9 +150,6 @@ components:
     padding: "16px 0 18px"
   band-answer-xl:
     typography: "{typography.answer-xl}"
-    textColor: "{colors.on-accent}"
-  band-answer-lg:
-    typography: "{typography.answer-lg}"
     textColor: "{colors.on-accent}"
   band-answer-sm:
     typography: "{typography.answer-sm}"
@@ -345,7 +336,6 @@ to stay cheap and light.
 ### Hierarchy
 - **Answer XL** (700, `clamp(2.5rem, 11vw, 2.75rem)`, 1.04): The band's answer when
   nothing is on. Deliberately breaks to two lines on a 375px phone and fills the field.
-- **Answer LG** (700, 1.6875rem, 1.08): The band's answer on a one-event day.
 - **Document Title** (700, 1.75rem): The `/terms` page heading. The only display size
   outside the band.
 - **Headline** (700, 1.375rem): Modal titles.
@@ -366,8 +356,8 @@ to stay cheap and light.
 - **Meta SM** (400, 0.75rem): The band's top line, the source hostname, Share,
   Read more, character counters, Coming up meta.
 - **Label** (700, 0.6875rem, 0.11em, uppercase): "Coming up", and the band's kicker.
-- **Label SM** (700, 0.65625rem, 0.07em, uppercase): Tag stamps, week strip day
-  letters and counts, the Coming up date stamp.
+- **Label SM** (700, 0.65625rem, 0.07em, uppercase): Tag stamps, week strip days
+  and counts, the Coming up date stamp.
 - **Label XS** (700, 0.625rem, 0.1em, uppercase): "Week ahead" below 480px only.
 
 ### Named Rules
@@ -411,8 +401,8 @@ to push down and the space buys the next real event instead of blank screen.
 ### Named Rules
 **The Sized-By-Its-Answer Rule.** The band is one component in one order, sized by
 its own content and never by its own importance: `is-xl` when nothing is on (the
-answer fills the field and hands over the next real event), `is-lg` at one event,
-`is-sm` from two up, where the cards are the answer and the band gets out of their
+answer fills the field and hands over the next real event), and `is-sm` as soon as
+there is one event, where the cards are the answer and the band gets out of their
 way in a single line. This is the system's signature move; anything new that
 occupies the band obeys it.
 
@@ -573,11 +563,14 @@ all six categories.
 ### Navigation
 The week strip is the navigation. A card-white sticky bar with a hairline base,
 carrying a tracked uppercase "Week ahead" label beside seven equal columns. Each
-column is a link stacking a single day-initial over its count, centred, 4px radius,
-and it reflows to nothing — the grid is fixed. The current day fills with Green
-Wash and turns both its letter and its count accent green; hover-capable devices
-get a Hairline Soft fill. Each link carries a full `aria-label` ("Saturday, 16
-August — 6 events") because the visible letter and numeral are `aria-hidden`.
+column is a link stacking an uppercase three-letter day over its count, centred,
+4px radius, and it reflows to nothing — the grid is fixed. The first column says
+"Today" instead: the strip starts on today, not Monday, so single initials were
+ambiguous (T/T, S/S) with nothing to anchor the order. The current
+day fills with Green Wash and turns both its day and its count accent green;
+hover-capable devices get a Hairline Soft fill. Each link carries a full
+`aria-label` ("Saturday, 16 August — 6 events") because the visible day and
+numeral are `aria-hidden`.
 
 The footer is the secondary navigation: Ink Mid text links at 0.8125rem separated
 by middots, each 44px tall, hovering to the accent.

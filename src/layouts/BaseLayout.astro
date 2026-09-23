@@ -154,7 +154,6 @@ const {
             font-size: 1.25rem;
             letter-spacing: -0.02em;
         }
-        .band.is-lg .band-answer { margin-top: 0.875rem; font-size: 1.6875rem; }
         .band.is-xl { padding-top: 1.25rem; padding-bottom: 1.375rem; }
         .band.is-xl .band-answer {
             margin-top: 1.25rem;
@@ -277,6 +276,8 @@ const {
             font-size: 0.65625rem;
             color: var(--ink-mid);
             letter-spacing: 0.03em;
+            text-transform: uppercase;
+            white-space: nowrap;
         }
 
         .weekstrip-n {
@@ -476,6 +477,9 @@ const {
             border: 1px solid var(--border);
             transition: box-shadow 0.15s ease;
             padding: 0.8125rem 0.9375rem 0.875rem;
+            /* A bare URL as a description has no break points; without this it
+               set the card's min width and widened every card in the grid. */
+            overflow-wrap: anywhere;
         }
 
         @media (hover: hover) {
@@ -1477,8 +1481,8 @@ const {
             .band-top { font-size: 0.6875rem; }
             /* The label stays. Seven columns do fit beside it at 375px — the
                approved comp proves it — and it is the strip's only name for an
-               audience that skews older and may not read seven letters and
-               seven numerals as a week on sight. */
+               audience that skews older and may not read seven short days
+               and seven numerals as a week on sight. */
             .weekstrip-k { font-size: 0.625rem; }
             .weekstrip .container { gap: 0.5rem; }
             .modal-content {

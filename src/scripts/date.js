@@ -131,3 +131,14 @@ export function weekAhead(todayStr) {
     return localDateStr(d);
   });
 }
+
+/**
+ * What a week-strip column says above its count. The strip starts on today, not
+ * Monday, so single initials lost the order that makes T/T and S/S readable:
+ * three letters, and "Today" on the first so the run has an anchor. Shared by
+ * WeekStrip.astro and the client re-render in index.astro.
+ */
+export function stripLabel(ds, todayStr) {
+  if (ds === todayStr) return 'Today';
+  return new Date(ds + 'T00:00:00').toLocaleDateString('en-IE', { weekday: 'short' });
+}

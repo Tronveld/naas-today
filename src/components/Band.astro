@@ -30,7 +30,7 @@ const isDay = Boolean(dateStr && todayStr);
 // else to spend the space on and the next real event needs the room; on a busy
 // day the cards are the answer and the band gets out of the way at one line.
 // This is one component in one order, not two layouts — only the size changes.
-const size = !isDay ? 'brand' : count === 0 ? 'xl' : count === 1 ? 'lg' : 'sm';
+const size = !isDay ? 'brand' : count === 0 ? 'xl' : 'sm';
 
 const answer = isDay ? dayAnswer(count, dayWordFor(dateStr!, todayStr!)) : '';
 
