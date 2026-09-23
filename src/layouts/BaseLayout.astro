@@ -291,6 +291,33 @@ const {
            it reads as data; a dash reads as "nothing", which is the answer. */
         .weekstrip-n.is-nil { color: #B9BFBB; font-weight: 400; }
 
+        /* The eighth slot, past the seven. Not a link: it holds the date
+           picker. Fixed width so a date like "30 Sept" cannot reflow it. */
+        .weekstrip-later {
+            position: relative;
+            flex-shrink: 0;
+            width: 3rem;
+            align-self: stretch;
+            cursor: pointer;
+        }
+        /* The real control, stretched invisibly over the slot. 16px, or iOS
+           zooms the page when it takes focus. */
+        .weekstrip-later input {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .weekstrip-later:has(input:focus-visible) {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+        .weekstrip-later .weekstrip-n { white-space: nowrap; line-height: 1.25rem; }
+        .weekstrip-later.is-current .weekstrip-n { font-size: 0.75rem; }
+
         .weekstrip-d.is-current { background: var(--accent-light); }
         .weekstrip-d.is-current .weekstrip-day { color: var(--accent); font-weight: 700; }
         .weekstrip-d.is-current .weekstrip-n { color: var(--accent); }
@@ -1391,10 +1418,21 @@ const {
         }
 
         /* ── Date / Time inputs ── */
+        /* iOS Safari draws these as a native pill with an intrinsic minimum
+           width that ignores width: 100%, so in a phone-width modal the field
+           ran into the screen edge. Dropping the native appearance lets it
+           take the box like every other field; the picker still opens on tap. */
         input[type="date"],
         input[type="time"] {
             font-family: system-ui, sans-serif;
+            -webkit-appearance: none;
+            appearance: none;
+            display: block;
+            min-width: 0;
         }
+
+        /* Without the native appearance iOS centres the value. */
+        input::-webkit-date-and-time-value { text-align: left; }
 
         /* ── Visually hidden (screen reader only) ── */
         .visually-hidden {

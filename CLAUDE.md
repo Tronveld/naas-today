@@ -34,10 +34,11 @@ src/
   components/
     Band.astro               green band: brand, date, the day's answer, "Next in Naas" when
                              empty. Sized by its answer (is-xl / is-lg / is-sm). Brand-only on /terms
-    WeekStrip.astro          seven days from today with counts — the whole date navigation
+    WeekStrip.astro          seven days from today with counts, plus a Later slot that opens
+                             the date picker — the whole date navigation
     EventsGrid / EventCard   pre-rendered cards (EventCard takes a raw Supabase row)
     FilterControls.astro     not rendered: gated on FILTERS_ENABLED (false) in flags.js
-    Footer.astro             date picker link, about/contact/terms/submit
+    Footer.astro             about/contact/terms/submit
     AppModals.astro          modals for pages other than index
   scripts/
     date.js                  formatting, the day's phrasing (dayAnswer, nextPhrase…), isOnDay

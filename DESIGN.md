@@ -408,9 +408,11 @@ occupies the band obeys it.
 
 **The Seven Days Rule.** The week strip is the entire date navigation: seven fixed
 days from today, and no further. Fixed columns cannot reflow under a thumb the way
-the previous four-button row did. Anything beyond the seventh day is the footer's
-date picker, kept deliberately out of the way because going more than a week out is
-the rare visit.
+the previous four-button row did. Anything beyond the seventh day is the Later
+slot at the strip's end: a fixed-width eighth target that opens the native date picker in one tap, and
+that fills with Green Wash and shows the date ("3 Oct") when the day being viewed is
+past the seven. It moved there from the footer on 2026-09-23 because a planner never
+found it below Coming up, and the sticky strip read as the whole calendar.
 
 **The 44px Floor Rule.** Every interactive element clears a 44px minimum dimension
 — by `min-height` on text actions, by `padding` where a border would otherwise
@@ -572,6 +574,12 @@ hover-capable devices get a Hairline Soft fill. Each link carries a full
 `aria-label` ("Saturday, 16 August — 6 events") because the visible day and
 numeral are `aria-hidden`.
 
+After the seven sits the Later slot, 3rem wide in the same two-line shape, with the
+date field itself laid invisibly over it so one tap opens the native picker:
+"Later" over a `›` at rest; over the viewed date at 0.75rem when that date is past
+the seven, with the current-day fill. Its width is fixed so "30 Sept" fits without
+moving anything.
+
 The footer is the secondary navigation: Ink Mid text links at 0.8125rem separated
 by middots, each 44px tall, hovering to the accent.
 
@@ -660,5 +668,5 @@ and unbroken; it just doesn't have to match the noticeboard.
 - **Don't** let two 44px targets overlap. Touching is fine; overlapping means a tap
   on one lands on the other.
 - **Don't** set body-level content in tracked uppercase.
-- **Don't** extend the week strip past seven days, or reintroduce a stepping date
-  control that reflows under the thumb.
+- **Don't** extend the week strip past seven days (the Later slot is a way out, not
+  an eighth day), or reintroduce a stepping date control that reflows under the thumb.

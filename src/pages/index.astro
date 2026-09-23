@@ -5,7 +5,6 @@ import WeekStrip from '../components/WeekStrip.astro';
 import FilterControls from '../components/FilterControls.astro';
 import EventsGrid from '../components/EventsGrid.astro';
 import Footer from '../components/Footer.astro';
-import DatePickerModal from '../components/modals/DatePickerModal.astro';
 import SubmitEventModal from '../components/modals/SubmitEventModal.astro';
 import AboutModal from '../components/modals/AboutModal.astro';
 import ContactModal from '../components/modals/ContactModal.astro';
@@ -138,8 +137,7 @@ const jsonLd = todayEvents.length > 0 ? {
     </div>
     </div>
   </main>
-  <Footer datePicker={true} />
-  <DatePickerModal />
+  <Footer />
   <SubmitEventModal />
   <AboutModal />
   <ContactModal />
@@ -566,8 +564,8 @@ const jsonLd = todayEvents.length > 0 ? {
 
     // ── The week strip ──────────────────────────────────────────────────
     // Seven days from today, always. It is the whole of the date navigation, and
-    // it deliberately stops at a week: anything further out is the footer's date
-    // picker, which is the rarer visit.
+    // it deliberately stops at a week: anything further out is the Later slot,
+    // which shows the day being viewed when it is past the seven.
     function renderWeekStrip() {
         const list = document.querySelector('.weekstrip-r');
         if (!list) return;
@@ -601,6 +599,18 @@ const jsonLd = todayEvents.length > 0 ? {
             li.appendChild(a);
             return li;
         }));
+
+        const isLater = !weekAhead(todayStr).includes(currentStr);
+        document.getElementById('later').classList.toggle('is-current', isLater);
+        document.getElementById('laterN').textContent = isLater
+            ? currentDate.toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })
+            : '›';
+        const input = document.getElementById('laterInput');
+        input.min = todayStr;
+        input.value = currentStr;
+        input.setAttribute('aria-label', isLater
+            ? `Showing ${currentDate.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long' })} — pick another date`
+            : 'Pick a later date');
     }
 
     function renderEvents() {
@@ -853,18 +863,18 @@ const jsonLd = todayEvents.length > 0 ? {
         renderEvents();
     });
 
-    document.getElementById('changeDateBtn')?.addEventListener('click', () => {
-        const dateInput = document.getElementById('dateInput');
-        dateInput.min = localDateStr(new Date());
-        dateInput.value = localDateStr(currentDate);
-        openModal('dateModal');
+    // A tap on a phone opens the picker natively. A mouse click on a date field
+    // only focuses its text, so desktop asks for the picker explicitly.
+    // ponytail: pre-2022 desktop browsers lack showPicker and get an invisible
+    // focused field; bring back a visible fallback if anyone reports it.
+    const laterInput = document.getElementById('laterInput');
+    laterInput.addEventListener('click', () => {
+        if (!matchMedia('(pointer: fine)').matches) return;
+        try { laterInput.showPicker(); } catch {}
     });
-
-    document.getElementById('closeDateModal').addEventListener('click', () => closeModal('dateModal'));
-
-    document.getElementById('dateInput').addEventListener('change', (e) => {
-        goToDate(e.target.value, { scroll: false });
-        closeModal('dateModal');
+    laterInput.addEventListener('change', () => {
+        // iOS's Reset empties the field; that is not a date to go to.
+        if (laterInput.value) goToDate(laterInput.value, { scroll: false });
     });
 
     if (FILTERS_ENABLED) FILTER_CHIPS.forEach(chip => {
