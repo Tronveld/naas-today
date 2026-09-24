@@ -22,14 +22,18 @@ Add a listing page for a venue or aggregator, not a link to tonight's gig.
 
 | Host | Method |
 |---|---|
-| `whatsontonight.ie` | Custom listing parser (`parseListingPage`) |
+| `whatsontonight.ie` | Custom listing parser (`parseWhatsonTonight`) |
+| `punchestown.com` | HTML adapter — fixture blocks, plus each fixture's page for the first-race time |
+| `naasracecourse.com` | HTML adapter — month blocks with "Saturday 10th" rows |
+| `lawlors.ie` | HTML adapter — `<h3>Title - date</h3>` headings |
+| `ospreyhotel.ie` | HTML adapter — bold title, italic hand-written dates |
 | `moattheatre.com` | JSON adapter — Squarespace `?format=json` → `upcoming[]` |
 | `kildareheritage.com` | JSON adapter — same Squarespace feed, same code |
 | `intokildare.ie` | JSON adapter — The Events Calendar REST API |
 | anything else | JSON-LD extraction — works when the page publishes `Event` objects, including inside a schema.org `ItemList` |
 
-A new host without JSON-LD needs a parser adding to `scrape-sources.js` (see
-`classifyUrl()` near the top). Checked on 2026-08-04: `allevents.in` and
+A new host without JSON-LD needs an entry in `JSON_ADAPTERS` or, failing that,
+`HTML_ADAPTERS` in `scrape-sources.js`. Checked on 2026-08-04: `allevents.in` and
 `intokildare.ie` listing *pages* publish no usable JSON-LD `Event` data.
 
 The two JSON adapters are the way around that. Both sources serve structured JSON
@@ -38,6 +42,12 @@ from a separate endpoint, so instead of parsing their pages, `JSON_ADAPTERS` in
 them to the same pipeline the JSON-LD sources use — the same Naas filter, the same
 duplicate check, the same insert. Adding another JSON-backed source means writing
 one mapper, not another script.
+
+`HTML_ADAPTERS` does the same for four venues with no JSON at all: each parses
+its one page into `Event` shapes and joins the same pipeline. They are the
+fallback, not the pattern — a layout change breaks them quietly, returning no
+events and a warning rather than an error. If a venue's count drops to zero, look
+at its page before assuming it has nothing on.
 
 Past events are skipped automatically. Duplicates are skipped by fuzzy title
 match within a date.
@@ -93,6 +103,52 @@ Publishes JSON-LD `Event` objects on its homepage, so it needs no adapter at all
 
 https://www.whatsgoingon.ie/
 
+## Venue pages — HTML adapters
+
+Surveyed and added 2026-09-25. Each was previously entered by hand or not at all.
+
+### Punchestown Racecourse — fixtures
+
+The 2026-08-06 survey dismissed it for having no API or JSON-LD, but the fixture
+list is server-rendered in regular blocks, and each fixture's own page states the
+first race ("First race 1.45pm", "around 12noon"), so these rows carry a time.
+16 fixtures ahead on 2026-09-25, several midweek (Mon 9 Nov, Mon/Tue 18–19 Jan).
+Punchestown has a Naas address and is already in `NAAS_VENUES`. The weekend pass,
+listed as a "fixture" of its own, is skipped.
+
+https://punchestown.com/fixtures/
+
+### Naas Racecourse — fixtures
+
+The date the 2026-08-06 survey could not read is split between a month block
+("October 2026") and a row ("Saturday 10th"); the adapter joins them. Titles are
+"Racing at Naas: {event}", the form the hand-entered rows already used, so the
+duplicate check recognises most of them. The fixture pages publish no times.
+Naas parkrun, also held here, is still listed nowhere machine-readable.
+
+https://naasracecourse.com/fixtures/
+
+### Lawlor's of Naas — ballroom shows
+
+Each show is one `<h3>` of "Title - [Weekday] 25th October 2026" with its blurb
+below. Only 3 shows ahead at the time, and the markup is pasted from Word, so this
+is the most fragile source here. No times are published. The Friday and Saturday
+bar music is mentioned only as prose with no acts named, so it is not listed.
+
+https://www.lawlors.ie/live-music-events.html
+
+### Osprey Hotel — events guide
+
+Marketing prose with hand-written dates: "Saturday – 19th June 2026 / 15th August
+2026 / 26th September / 13th November". The parser ignores weekdays (the page
+called Friday 13 November a Saturday), skips dates with no day ("April, 2026"),
+and gives a year-less date the last year written *above it* — never the next
+occurrence — so a page left stale resolves to the past and drops out instead of
+republishing a year on. Links go to the guide itself: its ticket links were wrong
+at least once (a Bingo Loco date pointed at DAREcon).
+
+https://www.ospreyhotel.ie/events-guide
+
 ## Removed sources
 
 ### Eventbrite — removed 2026-08-05
@@ -115,31 +171,25 @@ A survey on 2026-08-06 probed 30+ candidate sites directly for JSON-LD, REST API
 iCal and RSS. The three added above were the only ones with usable structured data.
 The rest are recorded here so the same ground is not covered twice.
 
-### Possible, but needs a hand-written parser
-
-- **Naas Racecourse fixtures** — `https://www.naasracecourse.com/fixtures/`. Clean
-  `race-event-block` markup, and a genuinely Naas source. The blocker is the date:
-  it is split across a `race-month` header ("August 2026") and a `race-date` cell
-  ("Sunday 23rd"), which `parseDateText()` cannot read. Roughly 7 fixtures visible
-  ahead. Note Naas parkrun also runs here weekly, and is not listed anywhere
-  machine-readable.
-- **Lawlor's of Naas** — `https://www.lawlors.ie/live-music-events.html`. A real
-  Naas gig venue running country and tribute acts, but the page has almost no
-  markup to anchor a parser to.
-
-### Dead ends — checked 2026-08-06, do not re-try without new evidence
+### Dead ends — do not re-try without new evidence
 
 | Source | Why not |
 |---|---|
-| Naas GAA fixtures | No fixture data in the HTML at all, and no embedded widget |
+| Naas GAA fixtures | No fixture data in the HTML at all, and no embedded widget. Rechecked 2026-09-25: the feed's only post is "Hello world!" from 2020 |
 | Naas Parish | Runs The Events Calendar, but publishes **0** events |
 | Kildare PPN | Same — plugin present, 0 events |
 | `mytown.ie` | No event content in the page |
-| `allevents.in` | Still no JSON-LD, confirming the 2026-08-04 finding |
+| `allevents.in` | Still no JSON-LD, confirming the 2026-08-04 finding. Rechecked 2026-09-25: `/naas` redirects to a generic search page |
 | Leinster Leader / Kildare Live | HTTP 403 to scrapers |
-| Bandsintown | HTTP 403 |
+| Bandsintown | HTTP 403; a Cloudflare challenge on 2026-09-25 |
 | Songkick | HTTP 406 |
-| Punchestown, Mondello Park | WordPress, but no events API and no JSON-LD |
+| Mondello Park | WordPress, but no events API and no JSON-LD |
+| Hayden's Bar (2026-09-25) | Only weekly nights ("Friday: bring your own vinyl"); specifics are on Facebook |
+| Fletcher's, 33 South Main (2026-09-25) | HTTP 403 to any fetch, identical from both — a hosting-level block |
+| KildareNow (2026-09-25) | robots.txt disallows AI crawlers, behind a Cloudflare challenge. Off limits |
+| Monread Community Centre (2026-09-25) | Squarespace, but no events collection — room booking and 2018 news only |
+| Kildare Sports Partnership (2026-09-25) | `/kildaresp/events/` is empty |
+| Kildare County Council (2026-09-25) | No events listing |
 | Riverbank Arts Centre | Has a working Events Calendar API — but it is Newbridge, not Naas |
 
 Riverbank is the one to revisit if the site's scope ever widens beyond Naas; the
@@ -163,3 +213,6 @@ GAA publishes no machine-readable fixtures at all, and Naas Parish has the softw
 to publish events but has never used it. **Adding more aggregators will not fix
 this** — the material genuinely is not online in a form anything can read. Direct
 submission, or a person entering it, remains the route.
+
+Punchestown, added 2026-09-25, is the one exception found so far: a Naas venue
+racing on Mondays, Tuesdays and Wednesdays through the winter.

@@ -14,7 +14,9 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { loadEnv, stripHtml, KIDS_RE, createClient, exitCode, sourceForUrl, setOutput, printSummary } = require('./lib');
+const {
+  loadEnv, stripHtml, KIDS_RE, createClient, exitCode, sourceForUrl, setOutput, printSummary, fetchWithRetry,
+} = require('./lib');
 
 loadEnv();
 
@@ -41,26 +43,6 @@ const BROWSER_HEADERS = {
   'Accept':          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Accept-Language': 'en-IE,en;q=0.9',
 };
-
-// Retry the *source*, not the run. Two of the five block intermittently:
-// whatsontonight.ie drops the connection from datacenter IPs and intokildare.ie
-// returns 429. The workflow used to retry the whole script three times, which
-// needed all five sources green in the same attempt — on 2026-08-23 every
-// source succeeded at some point and the run still went red, because a
-// different one failed each time. Retrying here makes each source's flakiness
-// its own problem, and leaves the run red only for a source that is really down.
-async function fetchWithRetry(url, headers, attempts = 3, delayMs = 5000) {
-  for (let i = 1; ; i++) {
-    try {
-      const res = await fetch(url, { headers, redirect: 'follow' });
-      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-      return res;
-    } catch (err) {
-      if (i >= attempts) throw err;
-      await new Promise(r => setTimeout(r, i * delayMs));
-    }
-  }
-}
 
 async function fetchPage(url) {
   return (await fetchWithRetry(url, BROWSER_HEADERS)).text();
@@ -396,16 +378,17 @@ const MONTH_MAP = {
   september:'09', october:'10', november:'11', december:'12',
 };
 
+// Also reads the "25th October 2026" and "24th April, 2026" the HTML adapters meet.
 function parseDateText(text) {
-  const m = text.match(/(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})/i);
+  const m = text.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December),?\s+(\d{4})/i);
   if (!m) return null;
   const mo = MONTH_MAP[m[2].toLowerCase()];
   return mo ? `${m[3]}-${mo}-${m[1].padStart(2, '0')}` : null;
 }
 
 // ── WhatsonTonight.ie listing page parser ─────────────────────────────────────
-// The last remaining HTML scrape. Tries JSON-LD first, then falls back to
-// matching `class="…event…"` blocks and reading a heading and a date out of each.
+// The one generic HTML scrape (the venue parsers below each read one page).
+// Tries JSON-LD first, then falls back to matching `class="…event…"` blocks and reading a heading and a date out of each.
 //
 // This used to be a `parseListingPage(html, url, opts)` taking five options, from
 // when several sources were scraped this way. One caller and one option set were
@@ -463,9 +446,208 @@ function parseWhatsonTonight(html, sourceUrl) {
   return events;
 }
 
+// ── HTML source adapters ─────────────────────────────────────────────────────
+// Four Naas venues publish no JSON-LD and no API, but lay their listings out
+// regularly enough to read. Each adapter turns its page into the same schema.org
+// Event shapes as JSON_ADAPTERS, so the Naas filter, row building and duplicate
+// check stay shared. The parse half is pure and exported; tests never fetch.
+//
+// Surveyed 2026-09-25 — see event-sources.md. When a layout changes, a parser
+// returns nothing and the source warns rather than inventing events.
+
+// Punchestown: one `fixtures-block` per race day, an <h3> title and a <p> date.
+function parsePunchestown(html, sourceUrl) {
+  const events = [];
+  for (const block of html.split(/class="[^"]*\bfixtures-block\b/).slice(1)) {
+    const title = stripHtml((block.match(/<h3[^>]*>([\s\S]*?)<\/h3>/i) || [])[1]);
+    const date  = parseDateText(stripHtml((block.match(/<p[^>]*>([\s\S]*?)<\/p>/i) || [])[1]));
+    const href  = (block.match(/<a[^>]+href="([^"]+)"/i) || [])[1];
+    // The weekend pass is listed as a fixture of its own on its final day.
+    if (!title || !date || /\bticket$/i.test(title)) continue;
+    events.push({
+      '@type':    'Event',
+      name:       title,
+      startDate:  date,
+      location:   { '@type': 'Place', name: 'Punchestown Racecourse, Naas' },
+      categories: ['sport'],
+      url:        href ? new URL(href, sourceUrl).href : sourceUrl,
+    });
+  }
+  return events;
+}
+
+// A fixture's own page carries the only time published: "First race 1.45pm",
+// or "First race around 12noon".
+function punchestownDetails(html) {
+  const body = (html.match(/Event details<\/p>([\s\S]*?)<p[^>]*>\s*Date\s*<\/p>/i) || [])[1] || '';
+  const text = stripHtml(body);
+  let time = null;
+  const m = text.match(/first race\s+(?:(?:around|at|approx\.?)\s+)?(?:(\d{1,2})(?:[.:](\d{2}))?\s*(am|pm)|12\s*noon|noon)/i);
+  if (m) {
+    let h = m[1] ? +m[1] % 12 + (m[3].toLowerCase() === 'pm' ? 12 : 0) : 12;
+    time = `${String(h).padStart(2, '0')}:${m[2] || '00'}`;
+  }
+  const description = text.replace(/\s*Click\s+HERE for Frequently Asked Questions\.?/i, '').trim();
+  return { time, description };
+}
+
+async function fetchPunchestown(url) {
+  const events = parsePunchestown(await fetchPage(url), url);
+  for (const e of events) {
+    // A missing detail page costs the time, not the fixture.
+    try {
+      const { time, description } = punchestownDetails(await fetchPage(e.url));
+      if (time) e.startDate += `T${time}`;
+      e.description = description;
+    } catch { /* keep the fixture as all day */ }
+  }
+  return events;
+}
+
+// Naas Racecourse: one `race-event-block` per month ("October 2026"), holding a
+// row per fixture whose date cell reads only "Saturday 10th". Titled "Racing at
+// Naas: …" to match the rows entered by hand before this parser existed, so the
+// duplicate check recognises them. The fixture pages publish no race times.
+function parseNaasRacecourse(html, sourceUrl) {
+  const cell = (s, name) => stripHtml((s.match(new RegExp(`class="${name}"[^>]*>([\\s\\S]*?)</div>`, 'i')) || [])[1]);
+  const events = [];
+  for (const block of html.split(/class="race-event-block\b/).slice(1)) {
+    const monthYear = cell(block, 'race-month');
+    for (const row of block.split(/class="rc-right-block"/).slice(1)) {
+      const day   = (cell(row, 'race-date').match(/\d{1,2}/) || [])[0];
+      const date  = day && parseDateText(`${day} ${monthYear}`);
+      const event = cell(row, 'race-event');
+      if (!date || !event) continue;
+      const race  = cell(row, 'race-name');
+      const href  = (row.match(/<a[^>]+href="(https?:[^"]+)"/i) || [])[1];
+      events.push({
+        '@type':     'Event',
+        name:        `Racing at Naas: ${event}`,
+        startDate:   date,
+        location:    { '@type': 'Place', name: 'Naas Racecourse' },
+        description: race ? `Feature race: ${race}.` : '',
+        categories:  ['sport'],
+        url:         href || sourceUrl,
+      });
+    }
+  }
+  return events;
+}
+
+// Lawlor's: `<h3>Title - [Weekday] 25th October 2026</h3>`, then paragraphs up to
+// the next heading. The last " - " before the date splits title from date,
+// because titles contain dashes of their own ("Cash Returns … - The Man In Black Tour").
+function parseLawlors(html, sourceUrl) {
+  const events = [];
+  for (const part of html.split(/<h3[^>]*>/i).slice(1)) {
+    const [head, body = ''] = part.split(/<\/h3>/i);
+    const m = stripHtml(head).match(/^(.+)\s[-–]\s+(?:[a-z]+day,?\s+)?(\d{1,2}(?:st|nd|rd|th)?\s+[a-z]+,?\s+\d{4})$/i);
+    const date = m && parseDateText(m[2]);
+    if (!date) continue;
+    const ticket = (body.match(/<a[^>]+href="(https?:[^"]+)"/i) || [])[1];
+    events.push({
+      '@type':     'Event',
+      name:        m[1].trim(),
+      startDate:   date,
+      location:    { '@type': 'Place', name: "Lawlor's of Naas" },
+      description: stripHtml(body).replace(/\s*Tickets (?:now )?available[\s\S]*$/i, ''),
+      categories:  ['music'],   // the page is the hotel's live music listing
+      url:         ticket || sourceUrl,
+    });
+  }
+  return events;
+}
+
+// Osprey: a bold title, then an italic line of dates written by hand —
+// "Saturday – 19th June 2026 / 15th August 2026 / 26th September", "5th & 12th
+// December 2026", "27th April – 1st May 2026", "April, 2026". Weekdays are
+// ignored: on 2026-09-25 the page gave 13 November as a Saturday; it is a Friday.
+//
+// A date with no year takes the last year written above it on the page, never
+// the next occurrence. A page left stale then resolves to the past and is
+// dropped, instead of republishing last year's dates a year on — this source is
+// auto-approved and nobody reads it before it goes live.
+const OSPREY_DATE_RE = /(\d{1,2})(?:st|nd|rd|th)?(?:\s*&\s*(\d{1,2})(?:st|nd|rd|th)?)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)(?:,?\s+(\d{4}))?/gi;
+
+function ospreyDates(text, year) {
+  const iso = (y, month, d) => `${y}-${MONTH_MAP[month.toLowerCase()]}-${String(d).padStart(2, '0')}`;
+  const ms  = [...text.matchAll(OSPREY_DATE_RE)];
+  const out = [];
+  for (let i = 0; i < ms.length; i++) {
+    const m = ms[i], next = ms[i + 1];
+    const range = next && /^\s*[–-]\s*$/.test(text.slice(m.index + m[0].length, next.index));
+    if (range) {
+      const endYear = next[4] ? +next[4] : year;
+      if (!endYear) continue;
+      let start = iso(m[4] || endYear, m[3], m[1]);
+      const end = iso(endYear, next[3], next[1]);
+      if (start > end) start = iso(endYear - 1, m[3], m[1]);   // 27th December – 2nd January 2027
+      out.push({ date: start, end });
+      year = endYear;
+      i++;
+      continue;
+    }
+    if (m[4]) year = +m[4];
+    if (!year) continue;
+    for (const d of [m[1], m[2]].filter(Boolean)) out.push({ date: iso(year, m[3], d) });
+  }
+  return { dates: out, year };
+}
+
+function parseOsprey(html, sourceUrl) {
+  const start  = html.indexOf('Events Guide at');
+  const end    = html.indexOf('</main>', start);
+  const region = html.slice(Math.max(start, 0), end > 0 ? end : undefined);
+
+  // Bold runs are titles and italic runs are dates, except that a title can be
+  // followed by a date in bold italic — so a run is a date if it reads as one.
+  const runs = [...region.matchAll(/<(b|strong|em|i)\b[^>]*>([\s\S]*?)<\/\1>/gi)];
+  const events = [];
+  let year = null, title = null;
+  runs.forEach((run, k) => {
+    const text = stripHtml(run[2]);
+    const got  = ospreyDates(text, year);
+    year = got.year;
+    if (got.dates.length) {
+      if (title) {
+        // Description: what follows the date, up to the next title or heading —
+        // the last entry otherwise runs on into the spa and dining promos.
+        const next = runs.slice(k + 1).find(r => /^(b|strong)$/i.test(r[1]) && !ospreyDates(stripHtml(r[2]), year).dates.length);
+        const tail = region.slice(run.index + run[0].length, next ? next.index : undefined).split(/<h[1-6]\b/i)[0];
+        const description = stripHtml(tail)
+          .replace(/\s*\b(?:Buy Your Tickets Here|Get [\w ]*?Tickets|Learn More|Book Now)\b\.?/gi, '').trim();
+        for (const d of got.dates) {
+          events.push({
+            '@type':     'Event',
+            name:        title,
+            startDate:   d.date,
+            endDate:     d.end,
+            location:    { '@type': 'Place', name: 'Osprey Hotel, Naas' },
+            description,
+            // The page, not the ticket link: on 2026-09-25 a Bingo Loco date linked to DAREcon.
+            url:         sourceUrl,
+          });
+        }
+      }
+      title = null;
+    } else if (/^(b|strong)$/i.test(run[1]) && text) {
+      title = text;
+    }
+  });
+  return events;
+}
+
+const HTML_ADAPTERS = {
+  'punchestown.com':    fetchPunchestown,
+  'naasracecourse.com': async (url) => parseNaasRacecourse(await fetchPage(url), url),
+  'lawlors.ie':         async (url) => parseLawlors(await fetchPage(url), url),
+  'ospreyhotel.ie':     async (url) => parseOsprey(await fetchPage(url), url),
+};
+
 // ── Extract events from one URL ───────────────────────────────────────────────
 async function extractEvents(url) {
-  const adapter = JSON_ADAPTERS[sourceForUrl(url)];
+  const host    = sourceForUrl(url);
+  const adapter = JSON_ADAPTERS[host] || HTML_ADAPTERS[host];
 
   let events  = [];
   let warning = null;
@@ -473,7 +655,8 @@ async function extractEvents(url) {
 
   // A JSON adapter produces the same schema.org Event shapes the JSON-LD path
   // yields, so the two share everything downstream — the Naas filter, the
-  // off-town count and jsonLdToEvent. WhatsonTonight is the one HTML scrape.
+  // off-town count and jsonLdToEvent. So do the HTML_ADAPTERS; only
+  // WhatsonTonight still builds rows directly.
   if (!adapter && url.includes('whatsontonight.ie')) {
     events = parseWhatsonTonight(await fetchPage(url), url);
   } else {
@@ -628,9 +811,8 @@ if (require.main === module) {
 }
 
 // Exported for tests — the CLI path above is what actually runs. The mappers
-// are pure; fetchWithRetry is tested against a stubbed global fetch, so no test
-// here touches the network either.
+// are pure, so no test here touches the network either.
 module.exports = {
   extractJsonLd, isNaasEvent, squarespaceEventToLd, intoKildareToLd, detectFree,
-  jsonLdToEvent, fetchWithRetry,
+  jsonLdToEvent, parsePunchestown, punchestownDetails, parseNaasRacecourse, parseLawlors, parseOsprey,
 };

@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { fetchWithRetry } = require('../scripts/scrape-sources');
+const { fetchWithRetry } = require('../scripts/lib');
 
 // Replace the global fetch for one call. delayMs is passed as 0 throughout so
 // the backoff does not make the suite sleep.
