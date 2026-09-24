@@ -14,7 +14,9 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { loadEnv, stripHtml, KIDS_RE, createClient, exitCode, sourceForUrl, setOutput, printSummary } = require('./lib');
+const {
+  loadEnv, stripHtml, KIDS_RE, createClient, exitCode, sourceForUrl, setOutput, printSummary, fetchWithRetry,
+} = require('./lib');
 
 loadEnv();
 
@@ -41,26 +43,6 @@ const BROWSER_HEADERS = {
   'Accept':          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Accept-Language': 'en-IE,en;q=0.9',
 };
-
-// Retry the *source*, not the run. Two of the five block intermittently:
-// whatsontonight.ie drops the connection from datacenter IPs and intokildare.ie
-// returns 429. The workflow used to retry the whole script three times, which
-// needed all five sources green in the same attempt — on 2026-08-23 every
-// source succeeded at some point and the run still went red, because a
-// different one failed each time. Retrying here makes each source's flakiness
-// its own problem, and leaves the run red only for a source that is really down.
-async function fetchWithRetry(url, headers, attempts = 3, delayMs = 5000) {
-  for (let i = 1; ; i++) {
-    try {
-      const res = await fetch(url, { headers, redirect: 'follow' });
-      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-      return res;
-    } catch (err) {
-      if (i >= attempts) throw err;
-      await new Promise(r => setTimeout(r, i * delayMs));
-    }
-  }
-}
 
 async function fetchPage(url) {
   return (await fetchWithRetry(url, BROWSER_HEADERS)).text();
@@ -628,9 +610,8 @@ if (require.main === module) {
 }
 
 // Exported for tests — the CLI path above is what actually runs. The mappers
-// are pure; fetchWithRetry is tested against a stubbed global fetch, so no test
-// here touches the network either.
+// are pure, so no test here touches the network either.
 module.exports = {
   extractJsonLd, isNaasEvent, squarespaceEventToLd, intoKildareToLd, detectFree,
-  jsonLdToEvent, fetchWithRetry,
+  jsonLdToEvent,
 };

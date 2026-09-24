@@ -11,7 +11,9 @@
  * Usage: node scripts/pull-library-events.js
  */
 
-const { loadEnv, stripHtml, KIDS_RE, createClient, exitCode, setOutput, printSummary } = require('./lib');
+const {
+  loadEnv, stripHtml, KIDS_RE, createClient, exitCode, setOutput, printSummary, fetchWithRetry,
+} = require('./lib');
 
 loadEnv();
 
@@ -83,6 +85,14 @@ function parseRss(xml) {
     });
   }
   return items;
+}
+
+// Spydus cancels a session by renaming it ("Story Time - Storytime Cancelled on
+// September 25th 2026") rather than removing it. Title only: descriptions
+// mention "cancellation" policies on sessions that are going ahead.
+const CANCELLED_RE = /\b(cancell?ed|postponed)\b/i;
+function isCancelled(title) {
+  return CANCELLED_RE.test(title);
 }
 
 // ── Convert one RSS item → event record ──────────────────────────────────────
@@ -159,8 +169,10 @@ async function main() {
   console.log('Fetching Naas Library RSS feed…');
   let xml;
   try {
-    const res = await fetch(RSS_URL, { headers: { 'User-Agent': 'naas-today-importer/1.0' } });
-    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    // launchd runs a missed 07:00 job the moment the Mac wakes, often before the
+    // network is up — "fetch failed" on 2026-09-23 and 24. Five tries over
+    // 2.5 minutes outlasts that.
+    const res = await fetchWithRetry(RSS_URL, { 'User-Agent': 'naas-today-importer/1.0' }, 5, 15000);
     xml = await res.text();
   } catch (err) {
     console.error('Failed to fetch RSS feed:', err.message);
@@ -170,9 +182,11 @@ async function main() {
   const rawItems = parseRss(xml);
   console.log(`Found ${rawItems.length} item(s) in feed.\n`);
 
-  // Parse; drop any event with no parseable date or title
-  const events  = rawItems.map(itemToEvent).filter(e => e.title && e.date);
-  const skipped = rawItems.length - events.length;
+  // Parse; drop any event with no parseable date or title, and cancelled ones
+  const parsed    = rawItems.map(itemToEvent).filter(e => e.title && e.date);
+  const events    = parsed.filter(e => !isCancelled(e.title));
+  const skipped   = rawItems.length - parsed.length;
+  const cancelled = parsed.length - events.length;
 
   const sb = createClient(SUPABASE_URL, SECRET_KEY);
   let inserted = 0, dupes = 0, errors = 0;
@@ -214,7 +228,8 @@ async function main() {
   // ── Summary ────────────────────────────────────────────────────────────────
   printSummary('NAAS LIBRARY EVENT IMPORT — SUMMARY', {
     'RSS items found':   rawItems.length,
-    'Parseable events':  `${events.length}  (${skipped} skipped — no date found)`,
+    'Parseable events':  `${parsed.length}  (${skipped} skipped — no date found)`,
+    'Cancelled':         cancelled,
     [dryRun ? 'Would insert' : `Inserted (${insertStatus})`]: inserted,
     'Skipped (dupes)':   dupes,
     'Errors':            errors,
@@ -246,7 +261,11 @@ async function main() {
   process.exitCode = code;
 }
 
-main().catch(err => {
-  console.error('Unexpected error:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch(err => {
+    console.error('Unexpected error:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = { isCancelled };
