@@ -60,6 +60,15 @@ describe('punchestownDetails', () => {
     assert.equal(punchestownDetails(page('<p>First race around 12noon. (subject to change)</p>')).time, '12:00');
   });
 
+  // Phrasings found on 2026-09-25 that "first race" alone missed.
+  test('reads "racing gets underway 1.00pm"', () => {
+    assert.equal(punchestownDetails(page('<p>A Monday of jump racing, racing gets underway 1.00pm.</p>')).time, '13:00');
+  });
+
+  test('reads "First 1.00pm" with the word race missing', () => {
+    assert.equal(punchestownDetails(page('<p>First 1.00pm (subject to change)</p>')).time, '13:00');
+  });
+
   test('no stated time leaves the fixture all day', () => {
     assert.equal(punchestownDetails(page('<p>Racing returns.</p>')).time, null);
   });

@@ -477,12 +477,13 @@ function parsePunchestown(html, sourceUrl) {
 }
 
 // A fixture's own page carries the only time published: "First race 1.45pm",
-// or "First race around 12noon".
+// "First race around 12noon", "racing gets underway 1.00pm", or — the word
+// dropped — "First 1.00pm".
 function punchestownDetails(html) {
   const body = (html.match(/Event details<\/p>([\s\S]*?)<p[^>]*>\s*Date\s*<\/p>/i) || [])[1] || '';
   const text = stripHtml(body);
   let time = null;
-  const m = text.match(/first race\s+(?:(?:around|at|approx\.?)\s+)?(?:(\d{1,2})(?:[.:](\d{2}))?\s*(am|pm)|12\s*noon|noon)/i);
+  const m = text.match(/(?:first(?:\s+race)?|gets underway)\s+(?:(?:around|at|approx\.?)\s+)?(?:(\d{1,2})(?:[.:](\d{2}))?\s*(am|pm)|12\s*noon|noon)/i);
   if (m) {
     let h = m[1] ? +m[1] % 12 + (m[3].toLowerCase() === 'pm' ? 12 : 0) : 12;
     time = `${String(h).padStart(2, '0')}:${m[2] || '00'}`;
