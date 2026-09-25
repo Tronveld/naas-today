@@ -28,17 +28,17 @@ Events for the town are scattered across individual Facebook pages, venue websit
 
 The specificity is the position. Naas Today covers one town, curates it, and moderates it — where the alternatives are either too broad (Eventbrite, AllEvents.in, IntoKildare cover the county or the country and bury Naas in noise) or too fragmented (individual Facebook pages, each holding one venue's events).
 
-A general aggregator cannot truthfully claim this, because the value comes from a human deciding what belongs to Naas and what does not. Every event is moderated before publication; nothing appears automatically.
+A general aggregator cannot truthfully claim this, because the value comes from a human deciding what belongs to Naas and what does not. That decision is made per source for the feeds (a person chose each one, and its rows are Naas-filtered and validated) and per event for submissions (a person reads each one before it goes up).
 
 ## Operating Context
 
-**How events reach the site (three paths, all converging on a moderation queue):**
+**How events reach the site (three paths):**
 
-1. **Automated scraping** — `scripts/scrape-sources.js` pulls from a maintained URL list in `event-sources.md` (Moat Theatre, WhatsonTonight.ie, Kildare Heritage, IntoKildare.ie, WhatsGoingOn.ie). `scripts/pull-library-events.js` pulls the Naas Library RSS feed. Eventbrite and AllEvents.in were removed on 2026-08-05 — see the "Removed sources" section of `event-sources.md`.
-2. **Community submission** — a public form on the site, including a recurring-series option (weekly/fortnightly/monthly).
-3. **Bulk CSV import** — `scripts/import-events.js`, operator-run.
+1. **Automated scraping** — `scripts/scrape-sources.js` pulls the sources listed in `event-sources.md` (the list, and what was removed or rejected, lives there). `scripts/pull-library-events.js` pulls the Naas Library RSS feed. Both **auto-approve**: their rows publish without a person reading them ([ADR 0002](docs/adr/0002-pending-means-a-person-wrote-it.md)). The backstop is `scripts/audit-event-dates.js`, run after any scraper change.
+2. **Community submission** — a public form on the site, including a recurring-series option (weekly/fortnightly/monthly). Lands as `pending`; a daily email flags it until the operator approves or rejects it in the password-protected admin page.
+3. **Bulk CSV import** — `scripts/import-events.js`, operator-run. Lands as `pending`.
 
-Everything lands as `pending`. The operator approves or rejects via a password-protected admin page. Nothing is published unmoderated.
+So `pending` means a person wrote it and a person must read it. Scraped events are vetted at the source, not one by one.
 
 **Today the supply is mostly operator-driven** — scrapers plus manual curation, with the public submit form used comparatively little. **Shifting that balance toward community submission is an explicit goal.** This is the central product tension and future work should be read against it: more community submission is wanted *because* it should reduce operator effort, so any change that grows submissions while growing the moderation burden proportionally has not actually helped. Submission quality and moderation speed matter as much as submission volume.
 
@@ -109,7 +109,7 @@ Design system detail beyond these commitments lives in `DESIGN.md` and its sidec
 2. **Low maintenance is a design constraint, not just an ops preference.** Prefer solutions that survive neglect. A feature that needs weekly operator attention costs more than it looks.
 3. **Grow submissions by lowering friction on both sides.** The goal is more community-supplied events *and* less operator work. Submission ease and moderation ease are one problem, not two.
 4. **Rooted in Naas.** The product's credibility comes from being unmistakably about one town. Generic-aggregator patterns dilute the only thing that cannot be copied.
-5. **Moderated, therefore trustworthy.** Nothing publishes itself. Anything that appears on the site carries an implicit human endorsement, and the design should not undermine that by making unvetted content look published.
+5. **Curated, therefore trustworthy.** Nothing a stranger writes publishes itself, and no feed runs unless a person chose it. Anything that appears on the site carries an implicit human endorsement — of the event, or of the source it came from — so the design should not make unvetted content look published, and public copy should not claim every event was read by hand.
 
 ## Accessibility & Inclusion
 
