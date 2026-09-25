@@ -660,6 +660,7 @@ async function extractEvents(url) {
   // WhatsonTonight still builds rows directly.
   if (!adapter && url.includes('whatsontonight.ie')) {
     events = parseWhatsonTonight(await fetchPage(url), url);
+    if (events.length === 0) warning = 'Listing parsed no events';
   } else {
     const ldEvents = adapter ? await adapter(url) : extractJsonLd(await fetchPage(url));
     if (ldEvents.length > 0) {
@@ -700,7 +701,7 @@ async function main() {
   // Source errors and per-event errors are counted apart: a dead source means
   // the whole listing is missing, which is the one worth naming in the summary.
   let totalFound = 0, totalInserted = 0, totalSkipped = 0, totalOffTown = 0;
-  let sourceErrors = 0, eventErrors = 0;
+  let sourceErrors = 0, emptySources = 0, eventErrors = 0;
   const log = [];
 
   for (const url of urls) {
@@ -719,7 +720,9 @@ async function main() {
     }
 
     if (result.warning) {
-      console.log(`WARN (${result.warning})`);
+      console.log(`EMPTY (${result.warning})`);
+      emptySources++;
+      log.push({ status: 'EMPTY', url: shortUrl, note: `${result.warning} — check whether the page layout changed` });
     } else {
       const offTownNote = result.offTown ? `, ${result.offTown} not Naas` : '';
       console.log(`OK (${result.events.length} event(s)${offTownNote})`);
@@ -771,6 +774,7 @@ async function main() {
     'Skipped (dupes)':       totalSkipped,
     'Dropped (not Naas)':    totalOffTown,
     'Sources failed':        `${sourceErrors} of ${urls.length}`,
+    'Sources empty':         `${emptySources} of ${urls.length}`,
     'Event errors':          eventErrors,
   }, log);
 
@@ -792,10 +796,11 @@ async function main() {
 
   // process.exitCode rather than process.exit(): the summary above still has to
   // reach the log. process.exit() would truncate it mid-write.
-  const code = exitCode({ sourceErrors, eventErrors });
+  const code = exitCode({ sourceErrors, emptySources, eventErrors });
   if (code !== 0) {
     console.error(
-      `\nFAILED: ${sourceErrors} source(s) unreachable, ${eventErrors} event error(s). ` +
+      `\nFAILED: ${sourceErrors} source(s) unreachable, ${emptySources} empty, ${eventErrors} event error(s). ` +
+      'An empty source usually means its page layout changed and its parser needs updating. ' +
       'A source that stays broken needs removing from event-sources.md or fixing.'
     );
   }

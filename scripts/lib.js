@@ -175,10 +175,12 @@ function printSummary(title, counters, log) {
 // half weeks without a pull. Non-zero makes the workflow retry, and makes a
 // persistent break red.
 //
-// Finding nothing is deliberately not an error: a run where every event is a
-// duplicate is what a healthy second pull of the day looks like.
-function exitCode({ sourceErrors = 0, eventErrors = 0 } = {}) {
-  return sourceErrors > 0 || eventErrors > 0 ? 1 : 0;
+// Inserting nothing is deliberately not an error: a run where every event is a
+// duplicate is what a healthy second pull of the day looks like. A source whose
+// page yields no events at all is — that is what a redesign looks like to a
+// parser, and as a warning in a green run nobody saw it.
+function exitCode({ sourceErrors = 0, emptySources = 0, eventErrors = 0 } = {}) {
+  return sourceErrors > 0 || emptySources > 0 || eventErrors > 0 ? 1 : 0;
 }
 
 // Where a scraped row came from, for the `source` column. Bare host, so the

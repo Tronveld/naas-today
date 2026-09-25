@@ -15,6 +15,8 @@ const {
   loadEnv, stripHtml, KIDS_RE, createClient, exitCode, setOutput, printSummary, fetchWithRetry,
 } = require('./lib');
 
+const { execFileSync } = require('child_process');
+
 loadEnv();
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -151,6 +153,17 @@ function itemToEvent(item) {
   };
 }
 
+// launchd runs this with nobody watching, and its log is a file nobody opens —
+// so a failure has to come and find the user. A macOS notification needs no
+// credentials and no service; anywhere else this is a no-op.
+function notifyFailure(message) {
+  if (process.platform !== 'darwin') return;
+  try {
+    execFileSync('osascript', ['-e',
+      `display notification ${JSON.stringify(message)} with title "Naas Today" subtitle "Library pull failed"`]);
+  } catch { /* the log still has it */ }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
   const autoApprove  = process.argv.includes('--auto-approve');
@@ -176,6 +189,7 @@ async function main() {
     xml = await res.text();
   } catch (err) {
     console.error('Failed to fetch RSS feed:', err.message);
+    notifyFailure(`Couldn't reach the library feed after 5 tries: ${err.message}. Log: ~/Library/Logs/naas-pull-library.log`);
     process.exit(1);
   }
 
@@ -257,6 +271,7 @@ async function main() {
   const code = exitCode({ eventErrors: errors });
   if (code !== 0) {
     console.error(`\nFAILED: ${errors} event error(s) — see the details above.`);
+    notifyFailure(`${errors} event(s) failed to save. Log: ~/Library/Logs/naas-pull-library.log`);
   }
   process.exitCode = code;
 }
@@ -264,6 +279,7 @@ async function main() {
 if (require.main === module) {
   main().catch(err => {
     console.error('Unexpected error:', err);
+    notifyFailure(`Unexpected error: ${err.message}. Log: ~/Library/Logs/naas-pull-library.log`);
     process.exit(1);
   });
 }

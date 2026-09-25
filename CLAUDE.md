@@ -99,7 +99,7 @@ Events appear on the site only when `approved` — set it in the admin panel or 
 | `check-deploy-budget.js` | Read-only deploy count for the rebuild gate. |
 | `import-events.js`, `weekly-post.js` | CSV import; weekly social post. |
 
-Fetchers take `--auto-approve` and `--dry-run`, and exit non-zero when any source errors. An importer using `createClient().isDuplicate` calls `cacheInserted(title, date)` after each insert, or the per-date cache misses rows written earlier in the same run.
+Fetchers take `--auto-approve` and `--dry-run`, and exit non-zero when any source errors or comes back empty (a red run is how a broken parser reaches you). The library pull also posts a macOS notification when it fails. An importer using `createClient().isDuplicate` calls `cacheInserted(title, date)` after each insert, or the per-date cache misses rows written earlier in the same run.
 
 ## Schedule and deploy
 
