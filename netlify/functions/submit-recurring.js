@@ -4,6 +4,7 @@
 
 const crypto = require('crypto');
 const { validDate, validTime, validUrl, json, err400, validateEventBody } = require('./lib/validate');
+const { saveContact } = require('./lib/contacts');
 const { generateDates, addDays, daysBetween } = require('./lib/recurrence');
 
 const VALID_FREQUENCIES = ['weekly', 'fortnightly', 'monthly'];
@@ -87,6 +88,7 @@ exports.handler = async function(event) {
   const span = endDate ? daysBetween(date, endDate) : null;
   const groupId = crypto.randomUUID();
   const rows = dates.map(d => ({
+    id: crypto.randomUUID(),
     title,
     date: d,
     end_date: span === null ? null : addDays(d, span),
@@ -123,6 +125,10 @@ exports.handler = async function(event) {
       const errText = await response.text();
       throw new Error(errText);
     }
+
+    // One contact row, keyed to the first occurrence. Approval deletes it.
+    const { email } = baseEvent;
+    if (email && email.trim()) await saveContact(SUPABASE_URL, SUPABASE_ANON_KEY, rows[0].id, email.trim());
 
     return json(200, { success: true, count: rows.length, recurring_group_id: groupId });
   } catch (error) {

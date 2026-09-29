@@ -1185,6 +1185,13 @@
                 sourceBadge.textContent = ev.source === 'submission' ? '✉ Submitted' : ev.source;
                 tdTitle.appendChild(sourceBadge);
             }
+            if (ev.contact_email) {
+                const contact = document.createElement('a');
+                contact.className = 'badge-source';
+                contact.href = 'mailto:' + ev.contact_email;
+                contact.textContent = '✉ ' + ev.contact_email;
+                tdTitle.appendChild(contact);
+            }
             tr.appendChild(tdTitle);
 
             // Date

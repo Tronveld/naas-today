@@ -60,7 +60,11 @@ function err400(msg) {
 
 const BOOL_KEYS = ['isAllDay', 'isFree', 'isForKids', 'isMusic', 'isSport', 'isMarket', 'isTheatre'];
 
-const MAX_LENGTHS = { title: 150, location: 150, description: 2000, url: 500 };
+const MAX_LENGTHS = { title: 150, location: 150, description: 2000, url: 500, email: 254 };
+
+// Roughly x@y.z — the operator reads the address by hand, so this only has to
+// catch typos, not prove deliverability.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Checks the event fields shared by submit-event and submit-recurring.
@@ -70,7 +74,7 @@ const MAX_LENGTHS = { title: 150, location: 150, description: 2000, url: 500 };
  * first thing actually wrong rather than a downstream consequence of it.
  */
 function validateEventBody(e) {
-  const { title, date, endDate, time, timeEnd, isAllDay, location, description, url } = e;
+  const { title, date, endDate, time, timeEnd, isAllDay, location, description, url, email } = e;
 
   // Title, date and location are what make a row an event. Time is not:
   // a missing time is a real state the whole stack already handles — the column
@@ -85,11 +89,14 @@ function validateEventBody(e) {
   }
   if (BOOL_KEYS.some(k => typeof e[k] !== 'boolean')) return 'Invalid boolean fields';
   if (description !== undefined && typeof description !== 'string') return 'Invalid field types';
+  if (email != null && typeof email !== 'string') return 'Invalid field types';
 
   if (title.length       > MAX_LENGTHS.title)       return 'Title too long (max 150 characters)';
   if (location.length    > MAX_LENGTHS.location)    return 'Location too long (max 150 characters)';
   if (description && description.length > MAX_LENGTHS.description) return 'Description too long (max 2000 characters)';
   if (url && url.length  > MAX_LENGTHS.url)         return 'URL too long (max 500 characters)';
+
+  if (email && email.trim().length > MAX_LENGTHS.email) return 'Email too long (max 254 characters)';
 
   if (!validDate(date))                return 'Invalid date format';
   if (endDate && !validDate(endDate))  return 'Invalid end date format';
@@ -99,6 +106,7 @@ function validateEventBody(e) {
   if (time    && !validTime(time))     return 'Invalid time format';
   if (timeEnd && !validTime(timeEnd))  return 'Invalid end time format';
   if (url     && !validUrl(url))       return 'Invalid URL (must start with http:// or https://)';
+  if (email && !EMAIL_RE.test(email.trim())) return 'Invalid email address';
 
   return null;
 }
