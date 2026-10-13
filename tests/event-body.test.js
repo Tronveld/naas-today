@@ -74,4 +74,23 @@ describe('validateEventBody', () => {
   test('still rejects a description over 2000 characters', () => {
     assert.match(validateEventBody(base({ description: 'x'.repeat(2001) })), /Description too long/);
   });
+  describe('email', () => {
+    test('is optional', () => {
+      assert.equal(validateEventBody(base()), null);
+      assert.equal(validateEventBody(base({ email: null })), null);
+      assert.equal(validateEventBody(base({ email: '' })), null);
+    });
+    test('accepts an address, trimmed', () => {
+      assert.equal(validateEventBody(base({ email: '  a@b.ie ' })), null);
+    });
+    test('rejects a malformed address', () => {
+      for (const email of ['nope', 'a@b', '@b.ie', 'a b@c.ie']) {
+        assert.equal(validateEventBody(base({ email })), 'Invalid email address', email);
+      }
+    });
+    test('rejects a non-string and an over-long one', () => {
+      assert.equal(validateEventBody(base({ email: 5 })), 'Invalid field types');
+      assert.equal(validateEventBody(base({ email: 'a'.repeat(250) + '@b.ie' })), 'Email too long (max 254 characters)');
+    });
+  });
 });

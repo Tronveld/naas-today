@@ -513,6 +513,7 @@ const jsonLd = todayEvents.length > 0 ? {
         shareBtn.className = 'share-btn';
         shareBtn.textContent = 'Share';
         shareBtn.setAttribute('aria-label', `Share ${event.title}`);
+        shareBtn.dataset.umamiEvent = 'share';
         shareBtn.addEventListener('click', () => shareEvent(event, shareBtn));
         footer.appendChild(shareBtn);
 

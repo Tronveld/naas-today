@@ -38,4 +38,11 @@ describe('exitCode', () => {
   test('is 0 when no events were inserted but nothing errored', () => {
     assert.equal(exitCode({ sourceErrors: 0, eventErrors: 0, inserted: 0 }), 0);
   });
+
+  // But a source whose page yields no events at all — not even past or
+  // off-town ones — has almost certainly changed its layout. That used to be a
+  // warning in a green run, which nobody reads.
+  test('is 1 when a source loaded but yielded nothing', () => {
+    assert.equal(exitCode({ emptySources: 1 }), 1);
+  });
 });

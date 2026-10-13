@@ -578,14 +578,20 @@ const {
             margin-top: 0;
             margin-bottom: 0.25rem;
             color: var(--accent);
-            font-size: 0.75rem;
+            font-size: 0.8125rem;
             font-weight: 500;
             cursor: pointer;
             text-align: left;
+            /* An in-page action, so it wears Share's underline — see .share-btn. */
+            text-decoration: underline;
+            text-decoration-thickness: 2px;
+            text-decoration-color: #BEE0CC;
+            text-underline-offset: 4px;
+            transition: text-decoration-color 0.15s;
         }
         @media (hover: hover) {
             .desc-toggle-btn:hover {
-                color: var(--ink);
+                text-decoration-color: var(--accent);
             }
         }
 
@@ -633,7 +639,7 @@ const {
             padding: 0;
             min-height: 44px;
             font-family: inherit;
-            font-size: 0.75rem;
+            font-size: 0.8125rem;
             font-weight: 400;
             color: var(--accent);
             cursor: pointer;

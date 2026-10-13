@@ -343,10 +343,12 @@ to stay cheap and light.
   step below a card title, because it is another day.
 - **Body** (400, 0.875rem, 1.55): Event descriptions, form labels, the submit ask.
   The column caps at 660px, which is roughly 70 characters at this size.
-- **Meta** (400, 0.8125rem, 1.45): Venue, footer, field errors, the stale note. The
+- **Meta** (400, 0.8125rem, 1.45): Venue, Share, Read more, footer, field errors,
+  the stale note. The
   card's leading time line uses this size at 700 in the accent.
-- **Meta SM** (400, 0.75rem): The band's top line, Share,
-  Read more, character counters, Coming up meta.
+- **Meta SM** (400, 0.75rem): The band's top line, character counters, Coming up
+  meta. Share and Read more sat here until 2026-09-25, the smallest text on the
+  card, and read as footnotes.
 - **Label** (700, 0.6875rem, 0.11em, uppercase): "Coming up", and the band's kicker.
 - **Label SM** (700, 0.65625rem, 0.07em, uppercase): Tag stamps, week strip days,
   the Coming up date stamp.
@@ -599,8 +601,8 @@ are not interchangeable:
    clicks first. It was once a bare source hostname in the meta row, on the theory
    that a domain announces itself; it did not — it read as a credit line — and a
    "Details" link beside a linked title only repeated it.
-3. **Pale green 2px underline at 4px offset** = an in-page action (Share, the
-   submit ask). It thickens to full accent on hover.
+3. **Pale green 2px underline at 4px offset** = an in-page action (Share, Read
+   more, the submit ask). It thickens to full accent on hover.
 This was arrived at by fixing a real regression. Do not collapse the three.
 
 **The Text-Action Rule.** A secondary action on a listing is text, not a box. A

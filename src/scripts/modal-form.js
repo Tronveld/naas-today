@@ -188,6 +188,7 @@ function readForm() {
     isMarket:    checked('isMarket'),
     isTheatre:   checked('isTheatre'),
     url:         val('eventUrl').trim() || null,
+    email:       val('eventEmail').trim() || null,
   };
 }
 
@@ -202,7 +203,9 @@ export function initSubmitForm({ defaultDate }) {
   const form = document.getElementById('eventForm');
   if (!form) return;
 
-  const draftFields = () => form.querySelectorAll('input, textarea, select');
+  // The email is deliberately not drafted: it is the one field that is personal
+  // data, and a draft would keep it in storage after the tab is left idle.
+  const draftFields = () => form.querySelectorAll('input:not(#eventEmail), textarea, select');
 
   // ── Draft persistence ──────────────────────────────────────────────────────
   //

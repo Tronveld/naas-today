@@ -1,8 +1,10 @@
 // Netlify function – submit a new event (saved as 'pending' for review)
 
+const crypto = require('crypto');
 const { rateLimiter, clientIp } = require('./lib/rate-limit');
 const submissions = rateLimiter(5, 60 * 60 * 1000); // 5 per IP per hour
 
+const { saveContact } = require('./lib/contacts');
 const { validDate, validTime, validUrl, json, err400, validateEventBody } = require('./lib/validate');
 
 // Re-exported for tests only — the Netlify runtime uses `handler` below.
@@ -38,12 +40,16 @@ exports.handler = async function(event, context) {
     return err400('Invalid JSON');
   }
 
-  const { title, date, endDate, time, timeEnd, isAllDay, location, description, isFree, isForKids, isMusic, isSport, isMarket, isTheatre, url } = data;
+  const { title, date, endDate, time, timeEnd, isAllDay, location, description, isFree, isForKids, isMusic, isSport, isMarket, isTheatre, url, email } = data;
 
   const invalid = validateEventBody(data);
   if (invalid) return err400(invalid);
 
   try {
+    // Generated here because return=minimal means we can't read the id back,
+    // and the contact row needs it. The email lives in its own table — the
+    // anon key can read every approved `events` row, so a column there is public.
+    const id = crypto.randomUUID();
     const response = await fetch(`${SUPABASE_URL}/rest/v1/events`, {
       method: 'POST',
       headers: {
@@ -53,6 +59,7 @@ exports.handler = async function(event, context) {
         'Prefer': 'return=minimal'
       },
       body: JSON.stringify({
+        id,
         title,
         date,
         end_date: endDate || null,
@@ -80,6 +87,8 @@ exports.handler = async function(event, context) {
       const err = await response.text();
       throw new Error(err);
     }
+
+    if (email && email.trim()) await saveContact(SUPABASE_URL, SUPABASE_ANON_KEY, id, email.trim());
 
     return json(200, { success: true, message: 'Event submitted for review' });
   } catch (error) {

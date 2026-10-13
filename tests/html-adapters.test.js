@@ -1,7 +1,7 @@
 // HTML source adapters for the scraper — scripts/scrape-sources.js
 // Run with: node --test
 //
-// Punchestown, Naas Racecourse, Lawlor's and the Osprey publish no JSON-LD and no API, so each
+// Naas Racecourse, Lawlor's and the Osprey publish no JSON-LD and no API, so each
 // has a parser that turns its page into schema.org Event shapes for the shared
 // isNaasEvent → jsonLdToEvent → isDuplicate pipeline. The fixtures below are
 // trimmed from the live pages as fetched on 2026-09-25.
@@ -10,60 +10,9 @@ const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
-  parsePunchestown, punchestownDetails, parseNaasRacecourse, parseLawlors, parseOsprey,
+  parseNaasRacecourse, parseLawlors, parseOsprey,
   isNaasEvent, jsonLdToEvent,
 } = require('../scripts/scrape-sources.js');
-
-describe('parsePunchestown', () => {
-  const SRC = 'https://punchestown.com/fixtures/';
-  const block = (title, date, pid) => `
-    <div class="relative group mb-4 border-b-8 overflow-hidden flex items-end border-tertiary fixtures-block">
-      <div class=""> <h3 class="text-sm lg:text-3xl font-bold uppercase text-white">${title}</h3>
-      <p class="text-xs lg:text-lg text-white mb-2">${date}</p> </div>
-      <a href="/events?pid=${pid}" class="hidden lg:inline-block">Tickets & Info</a>
-    </div>`;
-  const html = `<div class="year fixture-bar"><h2 class='text-fourth'>November</h2><div class="month">2026</div></div>
-    ${block('Mid-Week Winter Racing', '9th November 2026', 426)}
-    ${block('Punchestown Premiere Weekend - Day 2', '22nd November 2026', 428)}
-    ${block('Punchestown Premiere Weekend Ticket', '22nd November 2026', 429)}`;
-
-  test('reads each fixture block into an event at Punchestown', () => {
-    const [first] = parsePunchestown(html, SRC);
-    assert.equal(first.name, 'Mid-Week Winter Racing');
-    assert.equal(first.startDate, '2026-11-09');
-    assert.equal(first.url, 'https://punchestown.com/events?pid=426');
-    assert.deepEqual(first.categories, ['sport']);
-    assert.ok(isNaasEvent(first), 'Punchestown counts as Naas');
-  });
-
-  test('skips the weekend ticket, which is a product not a race day', () => {
-    assert.deepEqual(parsePunchestown(html, SRC).map(e => e.name),
-      ['Mid-Week Winter Racing', 'Punchestown Premiere Weekend - Day 2']);
-  });
-});
-
-describe('punchestownDetails', () => {
-  const page = (body) => `<div> <p>Event details</p> <div> ${body} </div> </div>
-    <div> <img src="/app/uploads/2022/09/date.svg" alt="icon"> <p>Date</p> <p>13th October 2026</p> </div>`;
-
-  test('reads the first race time and the description', () => {
-    const d = punchestownDetails(page(
-      '<p><span>People make Punchestown. Welcome back for the first of our two day season opener.</span></p>' +
-      '<p><span> First race 1.45pm. (subject to change)<br></span></p>' +
-      '<p>Click&nbsp;<a href="https://punchestown.com/frequently-asked-questions/"><span>HERE</span></a>&nbsp;for Frequently Asked Questions.&nbsp;</p>'));
-    assert.equal(d.time, '13:45');
-    assert.match(d.description, /^People make Punchestown\./);
-    assert.doesNotMatch(d.description, /Frequently Asked/);
-  });
-
-  test('reads "around 12noon"', () => {
-    assert.equal(punchestownDetails(page('<p>First race around 12noon. (subject to change)</p>')).time, '12:00');
-  });
-
-  test('no stated time leaves the fixture all day', () => {
-    assert.equal(punchestownDetails(page('<p>Racing returns.</p>')).time, null);
-  });
-});
 
 describe('parseNaasRacecourse', () => {
   const SRC = 'https://naasracecourse.com/fixtures/';

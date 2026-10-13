@@ -447,62 +447,13 @@ function parseWhatsonTonight(html, sourceUrl) {
 }
 
 // ── HTML source adapters ─────────────────────────────────────────────────────
-// Four Naas venues publish no JSON-LD and no API, but lay their listings out
+// Three Naas venues publish no JSON-LD and no API, but lay their listings out
 // regularly enough to read. Each adapter turns its page into the same schema.org
 // Event shapes as JSON_ADAPTERS, so the Naas filter, row building and duplicate
 // check stay shared. The parse half is pure and exported; tests never fetch.
 //
 // Surveyed 2026-09-25 — see event-sources.md. When a layout changes, a parser
 // returns nothing and the source warns rather than inventing events.
-
-// Punchestown: one `fixtures-block` per race day, an <h3> title and a <p> date.
-function parsePunchestown(html, sourceUrl) {
-  const events = [];
-  for (const block of html.split(/class="[^"]*\bfixtures-block\b/).slice(1)) {
-    const title = stripHtml((block.match(/<h3[^>]*>([\s\S]*?)<\/h3>/i) || [])[1]);
-    const date  = parseDateText(stripHtml((block.match(/<p[^>]*>([\s\S]*?)<\/p>/i) || [])[1]));
-    const href  = (block.match(/<a[^>]+href="([^"]+)"/i) || [])[1];
-    // The weekend pass is listed as a fixture of its own on its final day.
-    if (!title || !date || /\bticket$/i.test(title)) continue;
-    events.push({
-      '@type':    'Event',
-      name:       title,
-      startDate:  date,
-      location:   { '@type': 'Place', name: 'Punchestown Racecourse, Naas' },
-      categories: ['sport'],
-      url:        href ? new URL(href, sourceUrl).href : sourceUrl,
-    });
-  }
-  return events;
-}
-
-// A fixture's own page carries the only time published: "First race 1.45pm",
-// or "First race around 12noon".
-function punchestownDetails(html) {
-  const body = (html.match(/Event details<\/p>([\s\S]*?)<p[^>]*>\s*Date\s*<\/p>/i) || [])[1] || '';
-  const text = stripHtml(body);
-  let time = null;
-  const m = text.match(/first race\s+(?:(?:around|at|approx\.?)\s+)?(?:(\d{1,2})(?:[.:](\d{2}))?\s*(am|pm)|12\s*noon|noon)/i);
-  if (m) {
-    let h = m[1] ? +m[1] % 12 + (m[3].toLowerCase() === 'pm' ? 12 : 0) : 12;
-    time = `${String(h).padStart(2, '0')}:${m[2] || '00'}`;
-  }
-  const description = text.replace(/\s*Click\s+HERE for Frequently Asked Questions\.?/i, '').trim();
-  return { time, description };
-}
-
-async function fetchPunchestown(url) {
-  const events = parsePunchestown(await fetchPage(url), url);
-  for (const e of events) {
-    // A missing detail page costs the time, not the fixture.
-    try {
-      const { time, description } = punchestownDetails(await fetchPage(e.url));
-      if (time) e.startDate += `T${time}`;
-      e.description = description;
-    } catch { /* keep the fixture as all day */ }
-  }
-  return events;
-}
 
 // Naas Racecourse: one `race-event-block` per month ("October 2026"), holding a
 // row per fixture whose date cell reads only "Saturday 10th". Titled "Racing at
@@ -638,7 +589,6 @@ function parseOsprey(html, sourceUrl) {
 }
 
 const HTML_ADAPTERS = {
-  'punchestown.com':    fetchPunchestown,
   'naasracecourse.com': async (url) => parseNaasRacecourse(await fetchPage(url), url),
   'lawlors.ie':         async (url) => parseLawlors(await fetchPage(url), url),
   'ospreyhotel.ie':     async (url) => parseOsprey(await fetchPage(url), url),
@@ -659,6 +609,7 @@ async function extractEvents(url) {
   // WhatsonTonight still builds rows directly.
   if (!adapter && url.includes('whatsontonight.ie')) {
     events = parseWhatsonTonight(await fetchPage(url), url);
+    if (events.length === 0) warning = 'Listing parsed no events';
   } else {
     const ldEvents = adapter ? await adapter(url) : extractJsonLd(await fetchPage(url));
     if (ldEvents.length > 0) {
@@ -699,7 +650,7 @@ async function main() {
   // Source errors and per-event errors are counted apart: a dead source means
   // the whole listing is missing, which is the one worth naming in the summary.
   let totalFound = 0, totalInserted = 0, totalSkipped = 0, totalOffTown = 0;
-  let sourceErrors = 0, eventErrors = 0;
+  let sourceErrors = 0, emptySources = 0, eventErrors = 0;
   const log = [];
 
   for (const url of urls) {
@@ -718,7 +669,9 @@ async function main() {
     }
 
     if (result.warning) {
-      console.log(`WARN (${result.warning})`);
+      console.log(`EMPTY (${result.warning})`);
+      emptySources++;
+      log.push({ status: 'EMPTY', url: shortUrl, note: `${result.warning} — check whether the page layout changed` });
     } else {
       const offTownNote = result.offTown ? `, ${result.offTown} not Naas` : '';
       console.log(`OK (${result.events.length} event(s)${offTownNote})`);
@@ -770,6 +723,7 @@ async function main() {
     'Skipped (dupes)':       totalSkipped,
     'Dropped (not Naas)':    totalOffTown,
     'Sources failed':        `${sourceErrors} of ${urls.length}`,
+    'Sources empty':         `${emptySources} of ${urls.length}`,
     'Event errors':          eventErrors,
   }, log);
 
@@ -791,10 +745,11 @@ async function main() {
 
   // process.exitCode rather than process.exit(): the summary above still has to
   // reach the log. process.exit() would truncate it mid-write.
-  const code = exitCode({ sourceErrors, eventErrors });
+  const code = exitCode({ sourceErrors, emptySources, eventErrors });
   if (code !== 0) {
     console.error(
-      `\nFAILED: ${sourceErrors} source(s) unreachable, ${eventErrors} event error(s). ` +
+      `\nFAILED: ${sourceErrors} source(s) unreachable, ${emptySources} empty, ${eventErrors} event error(s). ` +
+      'An empty source usually means its page layout changed and its parser needs updating. ' +
       'A source that stays broken needs removing from event-sources.md or fixing.'
     );
   }
@@ -814,5 +769,5 @@ if (require.main === module) {
 // are pure, so no test here touches the network either.
 module.exports = {
   extractJsonLd, isNaasEvent, squarespaceEventToLd, intoKildareToLd, detectFree,
-  jsonLdToEvent, parsePunchestown, punchestownDetails, parseNaasRacecourse, parseLawlors, parseOsprey,
+  jsonLdToEvent, parseNaasRacecourse, parseLawlors, parseOsprey,
 };

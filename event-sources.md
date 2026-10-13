@@ -23,7 +23,6 @@ Add a listing page for a venue or aggregator, not a link to tonight's gig.
 | Host | Method |
 |---|---|
 | `whatsontonight.ie` | Custom listing parser (`parseWhatsonTonight`) |
-| `punchestown.com` | HTML adapter — fixture blocks, plus each fixture's page for the first-race time |
 | `naasracecourse.com` | HTML adapter — month blocks with "Saturday 10th" rows |
 | `lawlors.ie` | HTML adapter — `<h3>Title - date</h3>` headings |
 | `ospreyhotel.ie` | HTML adapter — bold title, italic hand-written dates |
@@ -43,7 +42,7 @@ them to the same pipeline the JSON-LD sources use — the same Naas filter, the 
 duplicate check, the same insert. Adding another JSON-backed source means writing
 one mapper, not another script.
 
-`HTML_ADAPTERS` does the same for four venues with no JSON at all: each parses
+`HTML_ADAPTERS` does the same for three venues with no JSON at all: each parses
 its one page into `Event` shapes and joins the same pipeline. They are the
 fallback, not the pattern — a layout change breaks them quietly, returning no
 events and a warning rather than an error. If a venue's count drops to zero, look
@@ -107,17 +106,6 @@ https://www.whatsgoingon.ie/
 
 Surveyed and added 2026-09-25. Each was previously entered by hand or not at all.
 
-### Punchestown Racecourse — fixtures
-
-The 2026-08-06 survey dismissed it for having no API or JSON-LD, but the fixture
-list is server-rendered in regular blocks, and each fixture's own page states the
-first race ("First race 1.45pm", "around 12noon"), so these rows carry a time.
-16 fixtures ahead on 2026-09-25, several midweek (Mon 9 Nov, Mon/Tue 18–19 Jan).
-Punchestown has a Naas address and is already in `NAAS_VENUES`. The weekend pass,
-listed as a "fixture" of its own, is skipped.
-
-https://punchestown.com/fixtures/
-
 ### Naas Racecourse — fixtures
 
 The date the 2026-08-06 survey could not read is split between a month block
@@ -164,6 +152,19 @@ the technical one — working around the block would be the wrong fix.
 It was the only source reaching community classes, training and meetups, so its
 removal widens the midweek gap below. Direct submission is the route back to
 that material.
+
+### Punchestown Racecourse — removed 2026-10-13
+
+`https://punchestown.com/fixtures/` — **do not add back** unless the block is lifted.
+
+Scraped from 2026-09-25 with an HTML adapter: fixture blocks, plus each fixture's own
+page for the first-race time. On 2026-10-13 it began answering `HTTP 403` with
+`cf-mitigated: challenge`, a Cloudflare bot check, from CI and from a home
+connection alike. Like Eventbrite, that is the site asking not to be scraped, so the
+adapter was removed rather than worked around.
+
+Its fixtures run to 31 Dec 2027 in the table (`source = 'punchestown.com'`). Later
+fixtures go in by hand from the admin panel; the list is published a season ahead.
 
 ## Evaluated, not used
 
@@ -214,5 +215,6 @@ to publish events but has never used it. **Adding more aggregators will not fix
 this** — the material genuinely is not online in a form anything can read. Direct
 submission, or a person entering it, remains the route.
 
-Punchestown, added 2026-09-25, is the one exception found so far: a Naas venue
-racing on Mondays, Tuesdays and Wednesdays through the winter.
+Punchestown, scraped 2026-09-25 to 2026-10-13, was the one exception found: a Naas
+venue racing on Mondays, Tuesdays and Wednesdays through the winter. It now blocks
+scrapers, so its fixtures are entered by hand.

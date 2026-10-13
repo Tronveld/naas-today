@@ -102,6 +102,6 @@ const isLong = desc.length > DESCRIPTION_CLAMP;
       {event.is_market && <span class="tag">Market</span>}
       {event.is_theatre && <span class="tag">Theatre</span>}
     </div>
-    <button class="share-btn" aria-label={`Share ${event.title}`}>Share</button>
+    <button class="share-btn" data-umami-event="share" aria-label={`Share ${event.title}`}>Share</button>
   </div>
 </article>

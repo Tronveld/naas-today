@@ -9,6 +9,7 @@
 const crypto = require('crypto');
 const { validDate, validTime, json, DATE_RE } = require('./lib/validate');
 const { rateLimiter, clientIp } = require('./lib/rate-limit');
+const { deleteContacts } = require('./lib/contacts');
 
 // Every request here checks the password, so this is a login endpoint too, and
 // it needs admin-auth's limit — without it, guessing here sidestepped that one.
@@ -80,7 +81,19 @@ async function handleGet(event, supabaseUrl, secretKey) {
     headers: { 'apikey': secretKey },
   });
   if (!res.ok) throw new Error(`Supabase ${res.status}`);
-  return json(200, await res.json());
+  const events = await res.json();
+
+  // Only pending rows can have a contact (approval deletes it). Read-only:
+  // `email` is not in ALLOWED_PATCH_FIELDS.
+  if (status !== 'approved') {
+    const cRes = await fetch(`${supabaseUrl}/rest/v1/submission_contacts?select=event_id,email`, {
+      headers: { 'apikey': secretKey },
+    });
+    if (!cRes.ok) throw new Error(`Supabase ${cRes.status}`);
+    const emails = new Map((await cRes.json()).map(c => [c.event_id, c.email]));
+    for (const ev of events) if (emails.has(ev.id)) ev.contact_email = emails.get(ev.id);
+  }
+  return json(200, events);
 }
 
 // Cap on a single bulk operation. Every id is interpolated into a PostgREST
@@ -208,6 +221,7 @@ async function handlePatch(event, supabaseUrl, secretKey) {
     if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
 
     const updated = await res.json();
+    if (safeFields.status === 'approved') await deleteContacts(supabaseUrl, secretKey, updated.map(e => e.id));
     return json(200, { success: true, count: updated.length, ignored });
   }
 
@@ -241,6 +255,7 @@ async function handlePatch(event, supabaseUrl, secretKey) {
     if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
 
     const updated = await res.json();
+    if (safeFields.status === 'approved') await deleteContacts(supabaseUrl, secretKey, updated.map(e => e.id));
     return json(200, { success: true, count: updated.length, ignored });
   }
 
@@ -273,6 +288,7 @@ async function handlePatch(event, supabaseUrl, secretKey) {
   if (!updated || updated.length === 0) {
     return json(404, { error: 'Event not found' });
   }
+  if (safeFields.status === 'approved') await deleteContacts(supabaseUrl, secretKey, [updated[0].id]);
   return json(200, { success: true, event: updated[0] });
 }
 
