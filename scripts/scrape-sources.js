@@ -447,63 +447,13 @@ function parseWhatsonTonight(html, sourceUrl) {
 }
 
 // ── HTML source adapters ─────────────────────────────────────────────────────
-// Four Naas venues publish no JSON-LD and no API, but lay their listings out
+// Three Naas venues publish no JSON-LD and no API, but lay their listings out
 // regularly enough to read. Each adapter turns its page into the same schema.org
 // Event shapes as JSON_ADAPTERS, so the Naas filter, row building and duplicate
 // check stay shared. The parse half is pure and exported; tests never fetch.
 //
 // Surveyed 2026-09-25 — see event-sources.md. When a layout changes, a parser
 // returns nothing and the source warns rather than inventing events.
-
-// Punchestown: one `fixtures-block` per race day, an <h3> title and a <p> date.
-function parsePunchestown(html, sourceUrl) {
-  const events = [];
-  for (const block of html.split(/class="[^"]*\bfixtures-block\b/).slice(1)) {
-    const title = stripHtml((block.match(/<h3[^>]*>([\s\S]*?)<\/h3>/i) || [])[1]);
-    const date  = parseDateText(stripHtml((block.match(/<p[^>]*>([\s\S]*?)<\/p>/i) || [])[1]));
-    const href  = (block.match(/<a[^>]+href="([^"]+)"/i) || [])[1];
-    // The weekend pass is listed as a fixture of its own on its final day.
-    if (!title || !date || /\bticket$/i.test(title)) continue;
-    events.push({
-      '@type':    'Event',
-      name:       title,
-      startDate:  date,
-      location:   { '@type': 'Place', name: 'Punchestown Racecourse, Naas' },
-      categories: ['sport'],
-      url:        href ? new URL(href, sourceUrl).href : sourceUrl,
-    });
-  }
-  return events;
-}
-
-// A fixture's own page carries the only time published: "First race 1.45pm",
-// "First race around 12noon", "racing gets underway 1.00pm", or — the word
-// dropped — "First 1.00pm".
-function punchestownDetails(html) {
-  const body = (html.match(/Event details<\/p>([\s\S]*?)<p[^>]*>\s*Date\s*<\/p>/i) || [])[1] || '';
-  const text = stripHtml(body);
-  let time = null;
-  const m = text.match(/(?:first(?:\s+race)?|gets underway)\s+(?:(?:around|at|approx\.?)\s+)?(?:(\d{1,2})(?:[.:](\d{2}))?\s*(am|pm)|12\s*noon|noon)/i);
-  if (m) {
-    let h = m[1] ? +m[1] % 12 + (m[3].toLowerCase() === 'pm' ? 12 : 0) : 12;
-    time = `${String(h).padStart(2, '0')}:${m[2] || '00'}`;
-  }
-  const description = text.replace(/\s*Click\s+HERE for Frequently Asked Questions\.?/i, '').trim();
-  return { time, description };
-}
-
-async function fetchPunchestown(url) {
-  const events = parsePunchestown(await fetchPage(url), url);
-  for (const e of events) {
-    // A missing detail page costs the time, not the fixture.
-    try {
-      const { time, description } = punchestownDetails(await fetchPage(e.url));
-      if (time) e.startDate += `T${time}`;
-      e.description = description;
-    } catch { /* keep the fixture as all day */ }
-  }
-  return events;
-}
 
 // Naas Racecourse: one `race-event-block` per month ("October 2026"), holding a
 // row per fixture whose date cell reads only "Saturday 10th". Titled "Racing at
@@ -639,7 +589,6 @@ function parseOsprey(html, sourceUrl) {
 }
 
 const HTML_ADAPTERS = {
-  'punchestown.com':    fetchPunchestown,
   'naasracecourse.com': async (url) => parseNaasRacecourse(await fetchPage(url), url),
   'lawlors.ie':         async (url) => parseLawlors(await fetchPage(url), url),
   'ospreyhotel.ie':     async (url) => parseOsprey(await fetchPage(url), url),
@@ -820,5 +769,5 @@ if (require.main === module) {
 // are pure, so no test here touches the network either.
 module.exports = {
   extractJsonLd, isNaasEvent, squarespaceEventToLd, intoKildareToLd, detectFree,
-  jsonLdToEvent, parsePunchestown, punchestownDetails, parseNaasRacecourse, parseLawlors, parseOsprey,
+  jsonLdToEvent, parseNaasRacecourse, parseLawlors, parseOsprey,
 };
