@@ -509,89 +509,9 @@ function parseLawlors(html, sourceUrl) {
   return events;
 }
 
-// Osprey: a bold title, then an italic line of dates written by hand —
-// "Saturday – 19th June 2026 / 15th August 2026 / 26th September", "5th & 12th
-// December 2026", "27th April – 1st May 2026", "April, 2026". Weekdays are
-// ignored: on 2026-09-25 the page gave 13 November as a Saturday; it is a Friday.
-//
-// A date with no year takes the last year written above it on the page, never
-// the next occurrence. A page left stale then resolves to the past and is
-// dropped, instead of republishing last year's dates a year on — this source is
-// auto-approved and nobody reads it before it goes live.
-const OSPREY_DATE_RE = /(\d{1,2})(?:st|nd|rd|th)?(?:\s*&\s*(\d{1,2})(?:st|nd|rd|th)?)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)(?:,?\s+(\d{4}))?/gi;
-
-function ospreyDates(text, year) {
-  const iso = (y, month, d) => `${y}-${MONTH_MAP[month.toLowerCase()]}-${String(d).padStart(2, '0')}`;
-  const ms  = [...text.matchAll(OSPREY_DATE_RE)];
-  const out = [];
-  for (let i = 0; i < ms.length; i++) {
-    const m = ms[i], next = ms[i + 1];
-    const range = next && /^\s*[–-]\s*$/.test(text.slice(m.index + m[0].length, next.index));
-    if (range) {
-      const endYear = next[4] ? +next[4] : year;
-      if (!endYear) continue;
-      let start = iso(m[4] || endYear, m[3], m[1]);
-      const end = iso(endYear, next[3], next[1]);
-      if (start > end) start = iso(endYear - 1, m[3], m[1]);   // 27th December – 2nd January 2027
-      out.push({ date: start, end });
-      year = endYear;
-      i++;
-      continue;
-    }
-    if (m[4]) year = +m[4];
-    if (!year) continue;
-    for (const d of [m[1], m[2]].filter(Boolean)) out.push({ date: iso(year, m[3], d) });
-  }
-  return { dates: out, year };
-}
-
-function parseOsprey(html, sourceUrl) {
-  const start  = html.indexOf('Events Guide at');
-  const end    = html.indexOf('</main>', start);
-  const region = html.slice(Math.max(start, 0), end > 0 ? end : undefined);
-
-  // Bold runs are titles and italic runs are dates, except that a title can be
-  // followed by a date in bold italic — so a run is a date if it reads as one.
-  const runs = [...region.matchAll(/<(b|strong|em|i)\b[^>]*>([\s\S]*?)<\/\1>/gi)];
-  const events = [];
-  let year = null, title = null;
-  runs.forEach((run, k) => {
-    const text = stripHtml(run[2]);
-    const got  = ospreyDates(text, year);
-    year = got.year;
-    if (got.dates.length) {
-      if (title) {
-        // Description: what follows the date, up to the next title or heading —
-        // the last entry otherwise runs on into the spa and dining promos.
-        const next = runs.slice(k + 1).find(r => /^(b|strong)$/i.test(r[1]) && !ospreyDates(stripHtml(r[2]), year).dates.length);
-        const tail = region.slice(run.index + run[0].length, next ? next.index : undefined).split(/<h[1-6]\b/i)[0];
-        const description = stripHtml(tail)
-          .replace(/\s*\b(?:Buy Your Tickets Here|Get [\w ]*?Tickets|Learn More|Book Now)\b\.?/gi, '').trim();
-        for (const d of got.dates) {
-          events.push({
-            '@type':     'Event',
-            name:        title,
-            startDate:   d.date,
-            endDate:     d.end,
-            location:    { '@type': 'Place', name: 'Osprey Hotel, Naas' },
-            description,
-            // The page, not the ticket link: on 2026-09-25 a Bingo Loco date linked to DAREcon.
-            url:         sourceUrl,
-          });
-        }
-      }
-      title = null;
-    } else if (/^(b|strong)$/i.test(run[1]) && text) {
-      title = text;
-    }
-  });
-  return events;
-}
-
 const HTML_ADAPTERS = {
   'naasracecourse.com': async (url) => parseNaasRacecourse(await fetchPage(url), url),
   'lawlors.ie':         async (url) => parseLawlors(await fetchPage(url), url),
-  'ospreyhotel.ie':     async (url) => parseOsprey(await fetchPage(url), url),
 };
 
 // ── Extract events from one URL ───────────────────────────────────────────────
@@ -769,5 +689,5 @@ if (require.main === module) {
 // are pure, so no test here touches the network either.
 module.exports = {
   extractJsonLd, isNaasEvent, squarespaceEventToLd, intoKildareToLd, detectFree,
-  jsonLdToEvent, parseNaasRacecourse, parseLawlors, parseOsprey,
+  jsonLdToEvent, parseNaasRacecourse, parseLawlors,
 };
