@@ -95,11 +95,11 @@ Events appear on the site only when `approved` — set it in the admin panel or 
 | `scrape-sources.js` | Sources from `event-sources.md` → `isNaasEvent` → `jsonLdToEvent` → duplicate check → insert. **Prefer a `JSON_ADAPTERS` entry to an HTML parser** — the HTML path cannot extract times. Category flags come from the source's own tags ([ADR 0007](docs/adr/0007-category-flags-come-from-the-source.md)). Read `event-sources.md`'s removed and evaluated sections before adding a source. |
 | `pull-library-events.js` | Naas Library RSS. Runs from launchd, not CI ([ADR 0005](docs/adr/0005-fetchers-fail-loudly-and-retry-per-source.md)). |
 | `notify-pending.js` | Daily email while a live submission is pending. |
-| `audit-event-dates.js` | Read-only check of every stored row against the current validators. **Run after any scraper change** — auto-approved rows publish unread. |
+| `audit-event-dates.js` | Read-only check of every stored row against the current validators and `isSameEvent`. **Run after any scraper change** — auto-approved rows publish unread. |
 | `check-deploy-budget.js` | Read-only deploy count for the rebuild gate. |
 | `import-events.js`, `weekly-post.js` | CSV import; weekly social post. |
 
-Fetchers take `--auto-approve` and `--dry-run`, and exit non-zero when any source errors or comes back empty (a red run is how a broken parser reaches you). The library pull also posts a macOS notification when it fails. An importer using `createClient().isDuplicate` calls `cacheInserted(title, date)` after each insert, or the per-date cache misses rows written earlier in the same run.
+Fetchers take `--auto-approve` and `--dry-run`, and exit non-zero when any source errors or comes back empty (a red run is how a broken parser reaches you). The library pull also posts a macOS notification when it fails. Duplicates are `isSameEvent` in `scripts/lib.js` (title, or shared word plus url or time and venue). An importer using `createClient().isDuplicate(evt)` calls `cacheInserted(evt)` after each insert, or the per-date cache misses rows written earlier in the same run.
 
 ## Schedule and deploy
 

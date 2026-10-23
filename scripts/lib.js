@@ -79,9 +79,82 @@ function normaliseTitle(t) {
     .toLowerCase()
     .replace(/[–—]/g, '-')   // en dash, em dash → hyphen
     .replace(/[‘’]/g, "'")   // curly quotes → straight apostrophe
-    .replace(/\s*([:\-\/|,;])\s*/g, '$1')
+    .replace(/\s*[:\-\/|]\s*/g, '-')   // "A: B", "A - B", "A | B" are one separator
+    .replace(/\s*([,;])\s*/g, '$1')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+// ── Same-event check ──────────────────────────────────────────────────────────
+// Two rows on one date are the same event when their titles match (equal or one
+// a prefix of the other), or when the titles share two real words AND the rows
+// share a url or a start time and venue. The second rule catches what titles
+// alone miss: a source retitling an event ("Mindful Running with…" → "Mindful
+// Running for Performance…", same url), and two sites naming one concert
+// differently ("Bill Laurence" / "Music Network Presents Bill Laurance", same
+// time and church — a one-letter misspelling still counts as a shared word).
+// Two shared words, not one, keep a listing-page url or a busy venue from
+// merging "Re-pulp … Workshop" with "Cyber Safety Workshop".
+const FILLER_WORDS = new Set(['with', 'from', 'presents', 'featuring', 'live', 'music', 'night', 'naas', 'week', 'club', 'session', 'show', 'event']);
+
+function titleWords(t) {
+  return [...new Set(
+    t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .split(/[^a-z0-9]+/)
+      .filter(w => w.length >= 4 && !FILLER_WORDS.has(w)),
+  )];
+}
+
+// Equal, or for words of five letters or more, one letter added, dropped or changed.
+function sameWord(x, y) {
+  if (x === y) return true;
+  if (x.length < 5 || y.length < 5 || Math.abs(x.length - y.length) > 1) return false;
+  let i = 0;
+  while (i < x.length && x[i] === y[i]) i++;
+  const tail = (u, v) => u.slice(i + (u.length >= v.length ? 1 : 0)) === v.slice(i + (v.length >= u.length ? 1 : 0));
+  return tail(x, y);
+}
+
+function sharedWords(a, b) {
+  const wordsB = titleWords(b);
+  return titleWords(a).filter(w => wordsB.some(v => sameWord(w, v))).length;
+}
+
+// "The Moat Theatre, Abbey Rd" and "Moat Theatre" are one venue: compare the
+// part before the first comma, without a leading "the" or punctuation.
+function venueKey(loc) {
+  if (!loc) return null;
+  const key = loc.split(',')[0].toLowerCase().replace(/^the\s+/, '').replace(/[^a-z0-9]+/g, '');
+  return key || null;
+}
+
+function host(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return null; }
+}
+
+function isSameEvent(a, b) {
+  if (a.date !== b.date) return false;
+
+  const time = t => (t ? t.slice(0, 5) : null);   // Postgres returns HH:MM:SS
+  const timeA = time(a.time), timeB = time(b.time);
+  const timesAgree = timeA == null || timeB == null || timeA === timeB;
+  const ta = normaliseTitle(a.title), tb = normaliseTitle(b.title);
+
+  if (ta === tb || ta.startsWith(tb) || tb.startsWith(ta)) {
+    // A matinee and an evening showing: one site, one title, a page each. A time
+    // alone does not separate them — sites move a show's time on the same page
+    // (Dan McCabe 20:00 → 19:30), and that is still one event.
+    const twoShowings = ta === tb && !timesAgree
+      && a.url && b.url && a.url !== b.url && host(a.url) === host(b.url);
+    return !twoShowings;
+  }
+
+  if (!timesAgree || sharedWords(a.title, b.title) < 2) return false;
+
+  // A festival's events across town share one url, so a known venue must agree.
+  const venueA = venueKey(a.location), venueB = venueKey(b.location);
+  if (a.url && a.url === b.url) return venueA == null || venueB == null || venueA === venueB;
+  return timeA != null && venueA != null && venueA === venueB;
 }
 
 // ── Supabase client factory ───────────────────────────────────────────────────
@@ -90,7 +163,7 @@ function normaliseTitle(t) {
 // Call cacheInserted after each successful insert so subsequent isDuplicate calls
 // within the same run detect just-inserted events as duplicates.
 function createClient(url, key) {
-  const dateCache = new Map(); // date → { title: string }[]
+  const dateCache = new Map(); // date → rows with the fields isSameEvent reads
 
   async function get(p) {
     const res = await fetch(`${url}/rest/v1${p}`, {
@@ -113,24 +186,21 @@ function createClient(url, key) {
     if (!res.ok) throw new Error(`Supabase POST ${res.status}: ${await res.text()}`);
   }
 
-  async function isDuplicate(title, date) {
+  // evt: { title, date, time?, location?, url? }
+  async function isDuplicate(evt) {
     let rows;
-    if (dateCache.has(date)) {
-      rows = dateCache.get(date);
+    if (dateCache.has(evt.date)) {
+      rows = dateCache.get(evt.date);
     } else {
-      rows = await get(`/events?date=eq.${encodeURIComponent(date)}&select=title`);
-      dateCache.set(date, rows);
+      rows = await get(`/events?date=eq.${encodeURIComponent(evt.date)}&select=title,date,time,location,url`);
+      dateCache.set(evt.date, rows);
     }
-    const normNew = normaliseTitle(title);
-    return rows.some(r => {
-      const normEx = normaliseTitle(r.title);
-      return normNew === normEx || normNew.startsWith(normEx) || normEx.startsWith(normNew);
-    });
+    return rows.some(r => isSameEvent(evt, r));
   }
 
-  function cacheInserted(title, date) {
-    const rows = dateCache.get(date);
-    if (rows) rows.push({ title });
+  function cacheInserted(evt) {
+    const rows = dateCache.get(evt.date);
+    if (rows) rows.push(evt);
   }
 
   return { get, post, isDuplicate, cacheInserted };
@@ -228,6 +298,6 @@ async function fetchWithRetry(url, headers, attempts = 3, delayMs = 5000) {
 }
 
 module.exports = {
-  loadEnv, HTML_ENT, stripHtml, KIDS_RE, normaliseTitle, createClient, exitCode, sourceForUrl,
+  loadEnv, HTML_ENT, stripHtml, KIDS_RE, normaliseTitle, isSameEvent, createClient, exitCode, sourceForUrl,
   setOutput, printSummary, fetchWithRetry,
 };

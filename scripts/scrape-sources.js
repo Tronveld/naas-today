@@ -602,7 +602,7 @@ async function main() {
 
     for (const evt of result.events) {
       let dupe = false;
-      try { dupe = await sb.isDuplicate(evt.title, evt.date); }
+      try { dupe = await sb.isDuplicate(evt); }
       catch (err) {
         eventErrors++;
         log.push({ status: 'ERROR', date: evt.date, title: evt.title, note: err.message });
@@ -616,7 +616,7 @@ async function main() {
       }
 
       if (dryRun) {
-        sb.cacheInserted(evt.title, evt.date);   // so repeats within one run dedupe too
+        sb.cacheInserted(evt);   // so repeats within one run dedupe too
         totalInserted++;
         log.push({ status: 'DRY  ', date: evt.date, title: evt.title, kids: evt.is_for_kids, loc: evt.location });
         continue;
@@ -624,7 +624,7 @@ async function main() {
 
       try {
         await sb.post('/events', { ...evt, status: insertStatus, source });
-        sb.cacheInserted(evt.title, evt.date);
+        sb.cacheInserted(evt);
         totalInserted++;
         log.push({ status: 'NEW  ', date: evt.date, title: evt.title, kids: evt.is_for_kids });
       } catch (err) {

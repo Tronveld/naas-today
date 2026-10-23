@@ -167,7 +167,7 @@ async function main() {
 
     let dupe;
     try {
-      dupe = await sb.isDuplicate(evt.title, evt.date);
+      dupe = await sb.isDuplicate(evt);
     } catch (err) {
       skipInvalid++;
       log.push({ status: 'ERROR  ', date: evt.date, title: evt.title, note: err.message });
@@ -181,13 +181,13 @@ async function main() {
 
     if (dryRun) {
       // Cached so repeated rows within one CSV dedupe against each other too.
-      sb.cacheInserted(evt.title, evt.date);
+      sb.cacheInserted(evt);
       wouldInsert++;
       log.push({ status: 'DRY RUN', date: evt.date, title: evt.title });
     } else {
       try {
         await sb.post('/events', evt);
-        sb.cacheInserted(evt.title, evt.date);
+        sb.cacheInserted(evt);
         inserted++;
         log.push({ status: 'NEW    ', date: evt.date, title: evt.title });
       } catch (err) {

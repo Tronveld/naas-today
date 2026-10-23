@@ -16,11 +16,14 @@
  * Reads SUPABASE_URL and SUPABASE_SECRET_KEY from environment or .env file.
  * The secret key is used so pending (unapproved) rows are visible too.
  *
+ * It also lists pairs of rows that isSameEvent — the fetchers' duplicate check —
+ * would call one event, so duplicates stored before the check caught them show up.
+ *
  * Usage:
  *   node scripts/audit-event-dates.js
  */
 
-const { loadEnv, createClient } = require('./lib');
+const { loadEnv, createClient, isSameEvent } = require('./lib');
 const { validDate, validTime } = require('../netlify/functions/lib/validate.js');
 
 loadEnv();
@@ -28,7 +31,7 @@ loadEnv();
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SECRET_KEY   = process.env.SUPABASE_SECRET_KEY;
 
-const COLUMNS = 'id,title,date,end_date,time,time_end,is_all_day,status';
+const COLUMNS = 'id,title,date,end_date,time,time_end,is_all_day,status,location,url,source';
 const PAGE_LIMIT = 1000; // PostgREST default cap
 
 // Each check: a label, and a predicate that returns true when the row is BAD.
@@ -79,6 +82,25 @@ function report(rows) {
   return offenders;
 }
 
+// Rows arrive ordered by date, so only neighbours within one date are compared.
+function reportDuplicates(rows) {
+  const pairs = [];
+  for (let i = 0; i < rows.length; i++) {
+    for (let j = i + 1; j < rows.length && rows[j].date === rows[i].date; j++) {
+      if (isSameEvent(rows[i], rows[j])) pairs.push([rows[i], rows[j]]);
+    }
+  }
+  const mark = pairs.length === 0 ? 'ok  ' : 'FAIL';
+  console.log(`[${mark}] same event stored twice: ${pairs.length}`);
+  for (const pair of pairs) {
+    console.log(`         ${pair[0].date}`);
+    for (const r of pair) {
+      console.log(`           ${r.id}  ${r.status.padEnd(8)}  ${(r.source || '-').padEnd(20)}  ${r.title.slice(0, 48)}`);
+    }
+  }
+  return pairs.length;
+}
+
 async function main() {
   if (!SUPABASE_URL || !SECRET_KEY) {
     console.error('ERROR: SUPABASE_URL and SUPABASE_SECRET_KEY must be set (check .env).');
@@ -93,11 +115,11 @@ async function main() {
     console.log(`WARNING: hit the ${PAGE_LIMIT}-row page cap — results may be incomplete.\n`);
   }
 
-  const offenders = report(rows);
+  const offenders = report(rows) + reportDuplicates(rows);
 
   console.log('');
   if (offenders === 0) {
-    console.log('No stored row violates the current validators.');
+    console.log('No stored row violates the current validators or duplicates another.');
   } else {
     console.log(`${offenders} problem(s) found. Nothing was modified — fix these by hand.`);
     process.exitCode = 1;

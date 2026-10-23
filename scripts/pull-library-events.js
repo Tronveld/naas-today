@@ -208,7 +208,7 @@ async function main() {
 
   for (const evt of events) {
     let dupe = false;
-    try { dupe = await sb.isDuplicate(evt.title, evt.date); }
+    try { dupe = await sb.isDuplicate(evt); }
     catch (err) {
       errors++;
       log.push({ status: 'ERROR', date: evt.date, title: evt.title, note: err.message });
@@ -222,7 +222,7 @@ async function main() {
     }
 
     if (dryRun) {
-      sb.cacheInserted(evt.title, evt.date);   // so repeats within one feed dedupe too
+      sb.cacheInserted(evt);   // so repeats within one feed dedupe too
       inserted++;
       log.push({ status: 'DRY  ', date: evt.date, title: evt.title, kids: evt.is_for_kids });
       continue;
@@ -230,7 +230,7 @@ async function main() {
 
     try {
       await sb.post('/events', { ...evt, status: insertStatus, source: 'naas-library' });
-      sb.cacheInserted(evt.title, evt.date);
+      sb.cacheInserted(evt);
       inserted++;
       log.push({ status: 'NEW  ', date: evt.date, title: evt.title, kids: evt.is_for_kids });
     } catch (err) {
