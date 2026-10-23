@@ -25,7 +25,6 @@ Add a listing page for a venue or aggregator, not a link to tonight's gig.
 | `whatsontonight.ie` | Custom listing parser (`parseWhatsonTonight`) |
 | `naasracecourse.com` | HTML adapter — month blocks with "Saturday 10th" rows |
 | `lawlors.ie` | HTML adapter — `<h3>Title - date</h3>` headings |
-| `ospreyhotel.ie` | HTML adapter — bold title, italic hand-written dates |
 | `moattheatre.com` | JSON adapter — Squarespace `?format=json` → `upcoming[]` |
 | `kildareheritage.com` | JSON adapter — same Squarespace feed, same code |
 | `intokildare.ie` | JSON adapter — The Events Calendar REST API |
@@ -42,7 +41,7 @@ them to the same pipeline the JSON-LD sources use — the same Naas filter, the 
 duplicate check, the same insert. Adding another JSON-backed source means writing
 one mapper, not another script.
 
-`HTML_ADAPTERS` does the same for three venues with no JSON at all: each parses
+`HTML_ADAPTERS` does the same for two venues with no JSON at all: each parses
 its one page into `Event` shapes and joins the same pipeline. They are the
 fallback, not the pattern — a layout change breaks them quietly, returning no
 events and a warning rather than an error. If a venue's count drops to zero, look
@@ -125,18 +124,6 @@ bar music is mentioned only as prose with no acts named, so it is not listed.
 
 https://www.lawlors.ie/live-music-events.html
 
-### Osprey Hotel — events guide
-
-Marketing prose with hand-written dates: "Saturday – 19th June 2026 / 15th August
-2026 / 26th September / 13th November". The parser ignores weekdays (the page
-called Friday 13 November a Saturday), skips dates with no day ("April, 2026"),
-and gives a year-less date the last year written *above it* — never the next
-occurrence — so a page left stale resolves to the past and drops out instead of
-republishing a year on. Links go to the guide itself: its ticket links were wrong
-at least once (a Bingo Loco date pointed at DAREcon).
-
-https://www.ospreyhotel.ie/events-guide
-
 ## Removed sources
 
 ### Eventbrite — removed 2026-08-05
@@ -165,6 +152,20 @@ adapter was removed rather than worked around.
 
 Its fixtures run to 31 Dec 2027 in the table (`source = 'punchestown.com'`). Later
 fixtures go in by hand from the admin panel; the list is published a season ahead.
+
+### Osprey Hotel — removed 2026-10-23
+
+`https://www.ospreyhotel.ie/events-guide` — **do not add back** unless the block is lifted.
+
+Scraped from 2026-09-25 with an HTML adapter: bold titles, then italic hand-written
+dates ("Saturday – 19th June 2026 / 15th August 2026 / 26th September"). On
+2026-10-23 the whole site, `robots.txt` included, began answering scripts with a bare
+`HTTP 403` from Cloudflare, from CI and from a home connection alike, while a browser
+still loads it. Like Punchestown, that is the site asking not to be scraped, so the
+adapter was removed rather than worked around.
+
+Its dates run to 1 Jan 2027 in the table (`source = 'ospreyhotel.ie'`). Later events
+go in by hand from the admin panel.
 
 ## Evaluated, not used
 
